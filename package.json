@@ -1,0 +1,27 @@
+{
+  "name": "vibe-game-coding-testbed",
+  "version": "1.0.0",
+  "description": "An experimental platform for transforming abstract game concepts into playable text-based games using AI coding agents in a 40x25 ASCII terminal environment.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "sim:default": "npx tsx src/games/defaultGame/sim.ts",
+    "sim:blasnake": "npx tsx src/games/blasnake/sim.ts"
+  },
+  "keywords": [
+    "vibe-coding",
+    "game-development",
+    "text-based",
+    "rapid-prototyping"
+  ],
+  "author": "abagames",
+  "license": "MIT",
+  "devDependencies": {
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vite": "^5.1.4"
+  },
+  "dependencies": {
+    "crisp-game-lib": "^1.3.1"
+  }
+}

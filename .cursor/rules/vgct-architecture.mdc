@@ -1,0 +1,34 @@
+---
+description: VGCT Architecture and Structure
+globs: 
+alwaysApply: true
+---
+# VGCT Architecture and Structure
+
+## Overview
+Vibe Game Coding Testbed (VGCT) is a framework for developing text-based games in a 40x25 character terminal environment.
+
+## Core Architecture
+
+### Module Structure
+- **Core Module** ([src/core/](mdc:src/core)): Base classes and type definitions
+  - [BaseGame.ts](mdc:src/core/BaseGame.ts): Abstract base class for all games
+  - [coreTypes.ts](mdc:src/core/coreTypes.ts): Shared interfaces and constants
+- **Utils Module** ([src/utils/](mdc:src/utils)): Common utilities
+  - [browserHelper.ts](mdc:src/utils/browserHelper.ts): Browser integration helpers
+- **Games Module** ([src/games/](mdc:src/games)): Individual game implementations
+
+### Game Structure Pattern
+Each game follows this independent structure in `src/games/[gameName]/`:
+- `core.ts`: Game logic (extends BaseGame)
+- `sim.ts`: Simulation environment for testing
+- `browser.ts`: Browser environment entry point
+- `index.html`: Browser execution HTML
+
+### Key Constants
+- Screen size: 40 characters × 25 lines (VIRTUAL_SCREEN_WIDTH/HEIGHT)
+- Input: Standard keyboard (arrows, WASD, space, enter, Z/X)
+- Display: ASCII characters only with color support
+
+## Reference Implementation
+See [defaultGame](mdc:src/games/defaultGame) for a complete example of the architecture in action.

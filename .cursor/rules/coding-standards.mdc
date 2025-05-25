@@ -1,0 +1,78 @@
+---
+description: VGCT TypeScript Coding Standards
+globs: ./**/*.ts
+alwaysApply: false
+---
+# VGCT Coding Standards
+
+## Type Definitions
+Use types from [coreTypes.ts](mdc:src/core/coreTypes.ts):
+- `InputState` for input handling
+- `CellAttributes` for cell styling
+- `CellInfo` for grid data
+- `GridData` for the full screen
+- `cglColor` for color values
+
+## Performance Guidelines
+- Optimize for 40×25 grid operations
+- Minimize object creation in game loops
+- Use array indexing for frequent lookups
+- Cache frequently accessed values
+- **Prefer array-based collision detection** over screen-based
+
+## Code Organization
+- Keep game logic in `core.ts`
+- Separate simulation setup in `sim.ts`
+- Minimal browser integration in `browser.ts`
+- Follow [defaultGame example](mdc:src/games/defaultGame) structure
+
+## Example Reference
+See [defaultGame core.ts](mdc:src/games/defaultGame/core.ts) for examples of:
+- Proper BaseGame inheritance with named arguments
+- Array-based collision detection (`obstacles`, `items` arrays)
+- Efficient direction handling with numeric constants
+- Custom BaseGame method overriding (`loseLife()`)
+- Proper game state management
+
+## Commenting
+- Focus on *Why* not *What* in comments. Explain the reasoning behind code choices, not just what the code does.
+
+## Architectural Style
+- Prefer functions over classes. Aim for a more functional programming style where appropriate, using classes sparingly and only when their benefits (e.g., clear state encapsulation, inheritance) are significant.
+
+## Mandatory Patterns
+
+### ❌ Avoid Enums
+**NEVER use TypeScript enums**. Use numeric constants instead:
+```typescript
+// ✅ Correct
+const INITIAL_LIVES = 3;
+const PLAYER_MOVEMENT_INTERVAL = 3;
+
+// ❌ Incorrect
+enum GameConstants { INITIAL_LIVES = 3, MOVEMENT_INTERVAL = 3 }
+```
+
+### ✅ Use Named Arguments
+For optional parameters, use interface-based options:
+```typescript
+// ✅ Correct
+interface GameOptions {
+  initialLives?: number;
+  gameSpeed?: number;
+  movementInterval?: number;
+  obstacleCount?: number;
+}
+constructor(options: GameOptions = {}) {
+  const { 
+    initialLives = 3, 
+    gameSpeed = 1.0,
+    movementInterval = 3,
+    obstacleCount = 20 
+  } = options;
+  super({ initialLives, gameSpeed });
+}
+
+// ❌ Incorrect
+constructor(initialLives: number = 3, gameSpeed: number = 1.0, interval: number = 3) {}
+```

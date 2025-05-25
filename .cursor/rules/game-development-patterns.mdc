@@ -1,0 +1,154 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Game Development Patterns
+
+## BaseGame Inheritance Pattern
+
+### Required Implementation
+All games must extend [BaseGame.ts](mdc:src/core/BaseGame.ts) and implement:
+```typescript
+abstract initializeGame(): void;
+abstract updateGame(inputState: InputState): void;
+```
+
+### Constructor Pattern
+Use named arguments with interfaces:
+```typescript
+interface YourGameOptions {
+  initialLives?: number;
+  gameSpeed?: number;
+  // Add game-specific options
+}
+
+constructor(options: YourGameOptions = {}) {
+  super(options); // Passes { initialLives, gameSpeed } to BaseGame
+  // Game-specific initialization
+}
+```
+
+### Available BaseGame Methods
+- `drawText(text, x, y, attributes?)`: Draw text to virtual screen
+- `drawCenteredText(text, y, attributes?)`: Draw centered text at y coordinate
+- `getCellInfo(x, y)`: Get cell information at coordinates
+- `addScore(value)`: Modify score
+- `loseLife()`: Decrease lives, handle game over
+- `winGame()`: Mark game as won and trigger game over
+- `getScore()`, `getLives()`, `isGameOver()`, `isGameWon()`: State getters
+- `getVirtualScreenData()`: Get the full grid
+- `renderStandardUI()`: Render score and lives display
+- `renderGameOverScreen(wonGame?)`: Render game over screen
+- `setGameSpeed(speed)`, `getGameSpeed()`, `adjustGameSpeed(delta)`: Speed control
+
+### BaseGame Constructor Options
+```typescript
+interface BaseGameOptions {
+  initialLives?: number; // Default: 3
+  gameSpeed?: number;    // Default: 1.0, range: 0.1-3.0
+}
+```
+
+## Frame-by-Frame Rendering Pattern
+
+### Automatic Screen Clearing
+BaseGame automatically clears the screen each frame before calling `updateGame()`. This simplifies development by eliminating manual position tracking.
+
+### Critical: Draw Order and Collision Detection
+When using screen-based collision detection with `getCellInfo()`, **static elements must be drawn before collision checks**:
+
+```typescript
+public updateGame(inputState: InputState): void {
+  // 1. FIRST: Draw all static elements (walls, obstacles, items)
+  this.drawStaticElements();
+  
+  // 2. THEN: Process movement with collision detection
+  if (this.isPassable(newX, newY)) {
+    this.playerX = newX;
+    this.playerY = newY;
+  }
+  
+  // 3. FINALLY: Draw dynamic elements (player, enemies)
+  this.drawPlayer();
+}
+```
+
+### Collision Detection Strategies
+
+#### 1. Array-Based Detection (Recommended)
+Store game state in arrays, independent of screen rendering:
+```typescript
+private obstacles: Array<{x: number, y: number}> = [];
+
+private isPassable(x: number, y: number): boolean {
+  return !this.obstacles.some(obs => obs.x === x && obs.y === y);
+}
+```
+
+**Advantages:**
+- Drawing order independent
+- Better performance
+- Clearer game logic
+- Easier debugging
+
+#### 2. Screen-Based Detection
+Use `getCellInfo()` for collision detection:
+```typescript
+private isPassable(x: number, y: number): boolean {
+  const cell = this.getCellInfo(x, y);
+  return cell?.attributes.isPassable !== false;
+}
+```
+
+**Important:** Static elements **must** be drawn before collision checks when using this method.
+
+### Best Practices
+- **Prefer array-based collision detection** for game logic
+- Use screen-based detection only for visual effects or simple cases
+- Always document your collision detection strategy
+- Test collision edge cases thoroughly
+
+## Development Workflow
+
+### 1. Create Game Structure
+```bash
+mkdir src/games/yourGame
+```
+
+### 2. Implement Core Logic
+Start with [core.ts](mdc:src/games/defaultGame/core.ts) as reference:
+- Extend BaseGame with proper options interface
+- Implement required abstract methods
+- Use established patterns (see coding standards)
+
+### 3. Set Up Testing
+Create [sim.ts](mdc:src/games/defaultGame/sim.ts) for simulation testing:
+- Use `npm run sim:yourGame` for rapid iteration
+
+### 4. Browser Integration
+Create [browser.ts](mdc:src/games/defaultGame/browser.ts):
+```typescript
+import { initStandardTextGame } from "../../utils/browserHelper.js";
+
+const winCondition = (game: any) => {
+  // Define your win condition logic here
+  return game.isGameWon(); // Use BaseGame's built-in win state
+};
+
+initStandardTextGame(
+  () => new YourGame(),
+  winCondition
+);
+```
+
+### 5. Add NPM Script
+Add to [package.json](mdc:package.json):
+```json
+"sim:yourGame": "npx tsx src/games/yourGame/sim.ts"
+```
+
+## Testing Strategy
+- **Primary**: Use simulation (`npm run sim:yourGame`) for rapid development
+- **Secondary**: Browser testing with `npm run dev`
+
