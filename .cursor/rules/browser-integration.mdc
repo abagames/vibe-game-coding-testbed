@@ -1,5 +1,5 @@
 ---
-description: Browser Integration Patterns
+description: 
 globs: ./**/*.ts
 alwaysApply: false
 ---

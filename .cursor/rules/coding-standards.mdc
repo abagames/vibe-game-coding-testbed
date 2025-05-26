@@ -1,5 +1,5 @@
 ---
-description: VGCT TypeScript Coding Standards
+description: 
 globs: ./**/*.ts
 alwaysApply: false
 ---

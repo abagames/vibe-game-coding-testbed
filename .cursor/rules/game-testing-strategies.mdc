@@ -1,0 +1,188 @@
+---
+description: Comprehensive strategies for proactive bug discovery in game development using simulation, parameter manipulation, and systematic testing. Use this rule when debugging game mechanics, investigating reported bugs, implementing new features that need testing, or when game behavior seems inconsistent or unexpected.
+globs: 
+alwaysApply: false
+---
+# Game Testing Strategies
+
+## Proactive Bug Discovery Through Simulation
+
+### Core Philosophy
+Don't wait for bugs to surface naturally - actively hunt them down using controlled simulation environments and parameter manipulation.
+
+### Simulation-Based Testing Pattern
+
+#### 1. Create Dedicated Test Simulations
+For each game in `src/games/[gameName]/`, create a `sim.ts` file that:
+- Isolates specific game mechanics
+- Uses controlled input sequences
+- Provides detailed logging of internal state
+- Outputs visual representations of game state
+
+Example structure:
+```typescript
+// src/games/[gameName]/sim.ts
+import { CoreGameLogic } from "./core.js";
+
+const game = new CoreGameLogic({
+  // Modified parameters for testing
+  initialLives: 1,
+  movementInterval: 1, // Faster for testing
+});
+
+// Controlled input sequence
+const inputs = [
+  { right: true },
+  { down: true },
+  // ... specific sequence to test edge case
+];
+```
+
+#### 2. Parameter Manipulation for Edge Cases
+Temporarily modify game parameters to expose edge cases:
+
+**Snake Length Manipulation:**
+```typescript
+// Test with unusually long snake
+const initialSnakeLength = 20; // vs normal 10
+(game as any).snake = createLongSnake(initialSnakeLength);
+```
+
+**Speed Manipulation:**
+```typescript
+// Test rapid movement for timing issues
+movementInterval: 1, // vs normal 8
+```
+
+**Enemy System Manipulation:**
+```typescript
+// Disable enemies to isolate mechanics
+enemySystem.updateSpawnSettings({
+  minEnemyCount: 0,
+  spawnInterval: 1000000,
+});
+```
+
+#### 3. State Visualization and Logging
+Add comprehensive logging to expose internal state:
+
+```typescript
+// Visual state output
+console.log("=== CURRENT SCREEN STATE ===");
+const screenData = game.getVirtualScreenData();
+for (let y = 0; y < screenData.length; y++) {
+  let line = "|";
+  for (let x = 0; x < screenData[y].length; x++) {
+    line += screenData[y][x].char;
+  }
+  line += "|";
+  console.log(line);
+}
+
+// Internal state logging
+console.log(`Snake Head: (${head.x},${head.y}), Length: ${snake.length}`);
+console.log(`Guidelines: [${guidelines.map(g => `(${g.x},${g.y})`).join(" ")}]`);
+```
+
+### Specific Testing Strategies
+
+#### Area Enclosure Testing
+When testing area-based mechanics:
+1. **Vary enclosure sizes**: Test tiny (3-5 cells) to large (50+ cells) areas
+2. **Test boundary conditions**: Areas touching screen edges
+3. **Test complex shapes**: L-shapes, spirals, nested areas
+4. **Test guideline intersections**: Snake body crossing its own path
+
+#### Collision Detection Testing
+1. **Boundary testing**: Movement at screen edges
+2. **Self-collision**: Snake hitting its own body at various angles
+3. **Enemy collision**: Different enemy types and positions
+4. **Multi-object collision**: Simultaneous collisions
+
+#### Timing and Synchronization Testing
+1. **Rapid input changes**: Direction changes every frame
+2. **Frame-perfect scenarios**: Actions on exact frame boundaries
+3. **State transition testing**: Game over, restart, pause scenarios
+
+### Implementation Guidelines
+
+#### Debug Logging Strategy
+```typescript
+// Use conditional logging for specific areas
+if (x >= 10 && x <= 20 && y >= 10 && y <= 13) {
+  console.log(`[DebugArea] Checking (${x},${y}). State: ${state}`);
+}
+
+// Use prefixed logging for different systems
+console.log(`[AreaDetection] Found area: size=${size}`);
+console.log(`[Explosion] Covering ${cellCount} cells`);
+console.log(`[Movement] Snake head moved to (${x},${y})`);
+```
+
+#### Temporary Code Modifications
+When hunting specific bugs:
+1. **Add boundary visualization**: Draw debug markers
+2. **Slow down time**: Reduce movement intervals
+3. **Add invincibility**: Skip collision detection temporarily
+4. **Force specific states**: Set exact positions/conditions
+
+#### NPM Script Integration
+Add simulation scripts to [package.json](mdc:package.json):
+```json
+{
+  "scripts": {
+    "sim:gameName": "npx tsx src/games/gameName/sim.ts",
+    "sim:debug": "npx tsx src/games/gameName/sim.ts --debug"
+  }
+}
+```
+
+### Bug Discovery Checklist
+
+#### Before Implementing New Features
+- [ ] Create simulation for the new mechanic
+- [ ] Test with extreme parameters (very fast, very slow, very large, very small)
+- [ ] Test boundary conditions
+- [ ] Test interaction with existing systems
+
+#### When Bug Reports Come In
+- [ ] Reproduce in simulation first
+- [ ] Isolate the specific conditions
+- [ ] Add logging to suspected code paths
+- [ ] Test variations of the scenario
+- [ ] Verify fix doesn't break other scenarios
+
+#### Regular Regression Testing
+- [ ] Run existing simulations after code changes
+- [ ] Test with different parameter combinations
+- [ ] Verify visual output matches expectations
+- [ ] Check performance with extreme scenarios
+
+### Case Study: Blasnake Area Explosion Bug
+
+**Problem**: Vertical area creation caused horizontal explosion spread
+
+**Discovery Process**:
+1. Created simulation with controlled snake movement
+2. Used long snake (20 segments) to amplify the issue
+3. Added detailed logging to area detection functions
+4. Visualized screen state at key moments
+5. Compared expected vs actual explosion boundaries
+
+**Key Insight**: Boundary checking inconsistency between area detection and explosion filling
+
+**Resolution**: Unified boundary logic across both systems
+
+This demonstrates how proactive simulation testing can uncover subtle bugs that might otherwise go unnoticed in normal gameplay.
+
+### Best Practices
+
+1. **Start simple**: Begin with basic scenarios, then add complexity
+2. **Document scenarios**: Comment what each test is trying to achieve
+3. **Version control simulations**: Keep successful test cases for regression testing
+4. **Share findings**: Document discovered edge cases for team knowledge
+5. **Automate when possible**: Convert manual tests to automated checks
+
+Remember: The goal is not just to find bugs, but to understand the system deeply enough to prevent similar issues in the future.
+
+
