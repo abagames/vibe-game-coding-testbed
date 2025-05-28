@@ -119,6 +119,44 @@ console.log(`[Explosion] Covering ${cellCount} cells`);
 console.log(`[Movement] Snake head moved to (${x},${y})`);
 ```
 
+#### Avoid Masking Real Issues with Manual Overrides
+
+**DO NOT** use simulation to work around broken game logic. Manual positioning and forced spawning can hide actual implementation problems.
+
+**Bad Practice Example:**
+```typescript
+// ❌ This masks the real issue that Guards don't spawn near food automatically
+const guard1Id = guardManager.spawnGuard(
+  { x: 20, y: 9 }, // Manually positioned near food
+  { x: 20, y: 12 },
+  true
+);
+```
+
+**Good Practice Example:**
+```typescript
+// ✅ Test the actual game logic first
+enemySystem.updateSpawnSettings({
+  minEnemyCount: 3, // Enable automatic spawning
+  spawnInterval: 120,
+});
+
+// Let the system spawn naturally, then verify behavior
+// If Guards don't spawn near food, fix the spawn logic, don't override it
+```
+
+**Key Principles:**
+1. **Test real behavior first**: Always verify the actual game logic before adding manual overrides
+2. **Manual setup for specific scenarios only**: Use manual positioning only to test specific edge cases, not to work around broken systems
+3. **Document when overriding**: Clearly comment why manual setup is necessary
+4. **Fix root causes**: If manual setup is needed to make something work, there's likely a bug in the core logic
+
+**Case Study: Guard Enemy Spawn Issue**
+- **Problem**: Guards were spawning randomly instead of near food
+- **Wrong approach**: Manually spawn Guards near food in simulation
+- **Right approach**: Fix the `EnemySystemManager` to include food-aware spawn logic
+- **Result**: Discovered and fixed the actual issue in `findValidSpawnPositionNearFood`
+
 #### Temporary Code Modifications
 When hunting specific bugs:
 1. **Add boundary visualization**: Draw debug markers

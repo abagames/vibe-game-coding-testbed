@@ -40,6 +40,53 @@ See [defaultGame core.ts](mdc:src/games/defaultGame/core.ts) for examples of:
 ## Architectural Style
 - Prefer functions over classes. Aim for a more functional programming style where appropriate, using classes sparingly and only when their benefits (e.g., clear state encapsulation, inheritance) are significant.
 
+## Type Safety Guidelines
+
+### ❌ Avoid Type Weakening Features
+**Minimize use of type assertions and `any`** except for debugging purposes:
+
+```typescript
+// ✅ Correct - Use type guards
+function isEnemy(obj: unknown): obj is Enemy {
+  return typeof obj === 'object' && obj !== null && 'type' in obj;
+}
+
+if (isEnemy(entity)) {
+  // TypeScript knows entity is Enemy here
+  entity.moveCounter++;
+}
+
+// ✅ Correct - Use type predicates
+const splitters = enemies.filter((enemy): enemy is SplitterEnemy => 
+  enemy.type === EnemyType.SPLITTER
+);
+
+// ✅ Acceptable - String literal types with const assertion
+const CONFIG = {
+  color: "purple" as const,
+  displayChar: "S"
+};
+
+// ❌ Avoid - Type assertions without proper guards
+const enemy = getEntity() as Enemy; // Dangerous!
+
+// ❌ Avoid - any type (except for debugging)
+function processData(data: any) { // Loses all type safety
+  return data.someProperty;
+}
+
+// ⚠️ Debug only - Temporary type escape for investigation
+const debugData = unknownObject as any; // Only for debugging!
+console.log('Debug:', debugData.someProperty);
+```
+
+### ✅ Preferred Type Safety Patterns
+- Use discriminated unions with type guards
+- Leverage TypeScript's control flow analysis
+- Use type predicates for filtering
+- Employ const assertions for literal types
+- Define proper interfaces and types upfront
+
 ## Mandatory Patterns
 
 ### ❌ Avoid Enums
