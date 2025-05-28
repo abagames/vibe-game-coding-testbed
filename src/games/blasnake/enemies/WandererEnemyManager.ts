@@ -11,17 +11,32 @@ import {
 import { CellAttributes, cglColor } from "../../../core/coreTypes.js";
 
 export class WandererEnemyManager extends BaseEnemyManager {
-  private readonly WANDERER_CONFIG = {
-    displayChar: "X",
+  private readonly WANDERER_CONFIG: {
+    displayChar: string;
+    color: cglColor;
+    blinkingColor: cglColor;
+    blinkingChar: string;
+    moveInterval: number;
+    directionChangeChance: number;
+    blinkDuration: number;
+    baseScore: number;
+    threatLevel: ThreatLevel;
+  } = {
+    displayChar: "W",
+    color: "red",
+    blinkingColor: "light_red",
     blinkingChar: "o",
-    color: "red" as cglColor,
-    blinkingColor: "light_red" as cglColor,
     moveInterval: 96,
     directionChangeChance: 0.3,
     blinkDuration: 120,
     baseScore: 100,
     threatLevel: ThreatLevel.LOW,
   };
+
+  // 型ガード関数
+  private isWandererEnemy(enemy: Enemy): enemy is WandererEnemy {
+    return enemy.type === EnemyType.WANDERER;
+  }
 
   public createEnemy(
     type: EnemyType,
@@ -37,7 +52,7 @@ export class WandererEnemyManager extends BaseEnemyManager {
       : 0;
 
     const wanderer: WandererEnemy = {
-      id: this.generateEnemyId(),
+      id: this.generateEnemyId("wanderer"),
       x: position.x,
       y: position.y,
       direction: Math.floor(Math.random() * 4),
@@ -64,39 +79,37 @@ export class WandererEnemyManager extends BaseEnemyManager {
   }
 
   public updateEnemyLogic(enemy: Enemy, gameState: GameState): void {
-    if (enemy.type !== EnemyType.WANDERER) {
+    if (!this.isWandererEnemy(enemy)) {
       return;
     }
 
-    const wanderer = enemy as WandererEnemy;
-
+    // 型ガード後、enemyはWandererEnemyとして扱われる
     // ワンダラー固有のロジック
     // 特別な処理は現在なし（基本的なランダム移動のみ）
     // 将来的には群れ行動や学習機能を追加可能
   }
 
   protected moveEnemy(enemy: Enemy, gameState: GameState): void {
-    if (enemy.type !== EnemyType.WANDERER) {
+    if (!this.isWandererEnemy(enemy)) {
       return;
     }
 
-    const wanderer = enemy as WandererEnemy;
-
+    // 型ガード後、enemyはWandererEnemyとして扱われる
     // 方向変更の判定
-    if (Math.random() < wanderer.directionChangeChance) {
-      wanderer.direction = Math.floor(Math.random() * 4);
+    if (Math.random() < enemy.directionChangeChance) {
+      enemy.direction = Math.floor(Math.random() * 4);
     }
 
     // 新しい位置を計算
-    const newPos = this.calculateNewPosition(wanderer);
+    const newPos = this.calculateNewPosition(enemy);
 
     // 移動可能かチェック
     if (this.isValidPosition(newPos, gameState)) {
-      wanderer.x = newPos.x;
-      wanderer.y = newPos.y;
+      enemy.x = newPos.x;
+      enemy.y = newPos.y;
     } else {
       // 移動できない場合は方向を変更
-      wanderer.direction = Math.floor(Math.random() * 4);
+      enemy.direction = Math.floor(Math.random() * 4);
     }
   }
 
@@ -104,17 +117,14 @@ export class WandererEnemyManager extends BaseEnemyManager {
     char: string;
     attributes: CellAttributes;
   } {
-    if (enemy.type !== EnemyType.WANDERER) {
+    if (!this.isWandererEnemy(enemy)) {
       return { char: "?", attributes: { color: "white" } };
     }
 
-    const wanderer = enemy as WandererEnemy;
-
-    if (wanderer.isBlinking) {
+    if (enemy.isBlinking) {
       // 点滅中の表示（5フレームごとに表示/非表示切り替え）
       const blinkPhase =
-        Math.floor((wanderer.maxBlinkDuration - wanderer.blinkDuration) / 5) %
-        2;
+        Math.floor((enemy.maxBlinkDuration - enemy.blinkDuration) / 5) % 2;
 
       if (blinkPhase === 0) {
         return {
@@ -168,7 +178,9 @@ export class WandererEnemyManager extends BaseEnemyManager {
   }
 
   public getAllWanderers(): WandererEnemy[] {
-    return this.getEnemiesByType(EnemyType.WANDERER) as WandererEnemy[];
+    return this.getEnemiesByType(EnemyType.WANDERER).filter(
+      this.isWandererEnemy.bind(this)
+    );
   }
 
   // デバッグ用

@@ -39,7 +39,7 @@ export enum EnemyType {
   SPLITTER = "splitter",
   SPEEDSTER = "speedster",
   MIMIC = "mimic",
-  BOMBER = "bomber",
+  SNAKE = "snake",
   WALL_CREEPER = "wall_creeper",
   GHOST = "ghost",
   SWARM = "swarm",
@@ -94,6 +94,13 @@ export interface SpeedsterEnemy extends BaseEnemy {
   lastDirectionChange: number;
   boostCooldown: number;
   predictabilityCounter: number;
+  movementState: "moving" | "paused";
+  pauseDuration: number;
+  maxPauseDuration: number;
+  movementDistance: number;
+  maxMovementDistance: number;
+  rotationPattern: "clockwise" | "counterclockwise";
+  currentDirectionIndex: number; // 現在の方向のインデックス
 }
 
 export interface MimicEnemy extends BaseEnemy {
@@ -105,22 +112,27 @@ export interface MimicEnemy extends BaseEnemy {
   maxRecordLength: number;
 }
 
-export interface BomberEnemy extends BaseEnemy {
-  type: EnemyType.BOMBER;
-  explosionRadius: number;
-  chainReactionTriggered: boolean;
-  explosionDamage: number;
-  explosionEffectDuration: number;
-  explosionWarningTimer: number;
+export interface SnakeEnemy extends BaseEnemy {
+  type: EnemyType.SNAKE;
+  body: Position[];
+  maxLength: number;
+  currentLength: number;
+  growthRate: number;
+  lastGrowthTime: number;
+  movementPattern: "patrol" | "chase" | "territorial";
+  territoryCenter: Position;
+  territoryRadius: number;
+  pathHistory: Position[];
+  selfCollisionCheck: boolean;
 }
 
 export interface WallCreeperEnemy extends BaseEnemy {
   type: EnemyType.WALL_CREEPER;
-  wallFollowDirection: "clockwise" | "counterclockwise";
-  stuckCounter: number;
-  lastWallPosition: Position | null;
-  wallSearchRadius: number;
-  cornerPauseTimer: number;
+  currentBehaviorState: "in_wall" | "crossing_open_space";
+  wallFollowCardinalDirection: Direction;
+  targetCrossPosition: Position | null;
+  behaviorTimer: number;
+  exitWallDecisionTimer: number;
 }
 
 export interface GhostEnemy extends BaseEnemy {
@@ -129,19 +141,27 @@ export interface GhostEnemy extends BaseEnemy {
   phaseTimer: number;
   phaseChance: number;
   phaseCooldown: number;
-  explosionResistance: number;
   phaseWarningTimer: number;
 }
 
 export interface SwarmEnemy extends BaseEnemy {
   type: EnemyType.SWARM;
-  swarmSize: number;
-  isLeader: boolean;
-  leaderPosition: Position | null;
-  formationOffset: Position;
-  swarmId: string;
-  leadershipScore: number;
-  cohesionStrength: number;
+  swarmSize: number; // 群れ全体のサイズ
+  isLeader: boolean; // 群れのリーダーかどうか
+  leaderPosition: Position | null; // リーダーの位置（仲間用）
+  leaderId: string | null; // リーダーのID（仲間用）
+  formationOffset: Position; // 編隊内の相対位置
+  swarmId: string; // 群れID（同じ群れの識別用）
+  leadershipScore: number; // リーダーシップスコア（未使用、将来拡張用）
+  cohesionStrength: number; // 結束力（0.0-1.0）
+  formationType: "diamond" | "line" | "circle" | "v_formation"; // 編隊タイプ
+  maxDistanceFromLeader: number; // リーダーからの最大距離
+  followDelay: number; // 追従遅延フレーム数
+  lastLeaderPosition: Position | null; // リーダーの前回位置
+  separationTimer: number; // 分離タイマー
+  reunionTimer: number; // 再結合タイマー
+  isSeparated: boolean; // 分離状態フラグ
+  isReuniting: boolean; // 再結合中フラグ
 }
 
 // 判別可能な共用体型
@@ -152,7 +172,7 @@ export type Enemy =
   | SplitterEnemy
   | SpeedsterEnemy
   | MimicEnemy
-  | BomberEnemy
+  | SnakeEnemy
   | WallCreeperEnemy
   | GhostEnemy
   | SwarmEnemy;
@@ -186,8 +206,34 @@ export interface ScoreDisplayEffect {
   y: number;
   duration: number;
   maxDuration: number;
-  score: number;
+  score: number; // 最終スコア（基本点数 × 倍率）
+  baseScore: number; // 基本点数
   multiplier: number;
+}
+
+// レベルシステム関連の型定義
+export interface SimpleLevel {
+  id: number;
+  name: string;
+  timeThreshold: number; // ゲーム開始からの秒数
+  duration: number; // レベル持続時間（秒）
+  enemyTypes: EnemyType[]; // 出現する敵タイプ
+  spawnPattern: SimpleSpawnPattern;
+}
+
+export interface SimpleSpawnPattern {
+  enemyType: EnemyType;
+  count: number; // 同時出現数
+  interval: number; // スポーン間隔（フレーム数）
+  maxTotal: number; // 最大総数
+}
+
+// スポーン判定結果の型定義
+export interface SpawnDecision {
+  shouldSpawn: boolean;
+  reason: string;
+  isEmergency?: boolean;
+  interval?: number; // 使用された間隔（デバッグ用）
 }
 
 // ゲーム状態インターフェース
@@ -200,5 +246,6 @@ export interface GameState {
   playerPosition: Position;
   snakeSegments: Position[];
   enemies: Enemy[];
+  foodPosition?: Position; // 食べ物の位置を追加
   lastPlayerAction?: string;
 }

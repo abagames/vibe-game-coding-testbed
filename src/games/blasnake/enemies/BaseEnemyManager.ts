@@ -10,6 +10,29 @@ import {
 } from "./types.js";
 import { cglColor, CellAttributes } from "../../../core/coreTypes.js";
 
+// グローバルな敵ID生成システム
+export class GlobalEnemyIdGenerator {
+  private static instance: GlobalEnemyIdGenerator;
+  private nextId: number = 1;
+
+  private constructor() {}
+
+  public static getInstance(): GlobalEnemyIdGenerator {
+    if (!GlobalEnemyIdGenerator.instance) {
+      GlobalEnemyIdGenerator.instance = new GlobalEnemyIdGenerator();
+    }
+    return GlobalEnemyIdGenerator.instance;
+  }
+
+  public generateId(enemyType: string): string {
+    return `${enemyType}_${this.nextId++}`;
+  }
+
+  public reset(): void {
+    this.nextId = 1;
+  }
+}
+
 export interface EnemyUpdateResult {
   enemiesToRemove: string[];
   effectsToAdd: EnemyDestroyEffect[];
@@ -20,7 +43,6 @@ export abstract class BaseEnemyManager {
   protected enemies: Map<string, Enemy> = new Map();
   protected destroyEffects: EnemyDestroyEffect[] = [];
   protected scoreDisplayEffects: ScoreDisplayEffect[] = [];
-  protected nextEnemyId: number = 1;
 
   // 抽象メソッド - 各敵タイプで実装
   abstract createEnemy(
@@ -168,8 +190,8 @@ export abstract class BaseEnemyManager {
     return true;
   }
 
-  protected generateEnemyId(): string {
-    return `enemy_${this.nextEnemyId++}`;
+  protected generateEnemyId(enemyType: string = "enemy"): string {
+    return GlobalEnemyIdGenerator.getInstance().generateId(enemyType);
   }
 
   // エフェクト管理
@@ -186,12 +208,18 @@ export abstract class BaseEnemyManager {
 
         // 破壊エフェクト終了時にスコア表示エフェクトを作成
         if (finishedEffect.score > 0) {
+          const baseScore =
+            finishedEffect.multiplier > 0
+              ? Math.floor(finishedEffect.score / finishedEffect.multiplier)
+              : finishedEffect.score;
+
           this.scoreDisplayEffects.push({
             x: finishedEffect.x,
             y: finishedEffect.y,
             duration: 90, // 1.5秒間表示
             maxDuration: 90,
             score: finishedEffect.score,
+            baseScore: baseScore,
             multiplier: finishedEffect.multiplier,
           });
         }

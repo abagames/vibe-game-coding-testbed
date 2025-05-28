@@ -1,30 +1,32 @@
 import { CoreGameLogic } from "./core.js";
 import { InputState } from "../../core/coreTypes.js";
-// import { Position } from "./enemies/types.js"; // No enemies needed for this test
+
+// デバッグモード設定
+const DEBUG_MODE = true;
+const INVINCIBLE = true;
+const TIME_ACCELERATION = 100.0; // 100倍速でレベル進行を確認
+const CONSTRAIN_TO_BOUNDS = true;
 
 const game = new CoreGameLogic({
-  initialLives: 1,
-  movementInterval: 1, // Make snake move every tick for sim
+  initialLives: 3,
+  movementInterval: 8,
+  debugMode: DEBUG_MODE,
+  invincible: INVINCIBLE,
+  timeAcceleration: TIME_ACCELERATION,
+  constrainToBounds: CONSTRAIN_TO_BOUNDS,
 });
 
-console.log(
-  "🎮 Starting Blasnake simulation (Long snake with guideline intersection)..."
-);
+console.log("🎮 Starting Blasnake Simulation...");
+console.log(`🔧 Debug Mode: ${DEBUG_MODE ? "ON" : "OFF"}`);
+console.log(`🛡️ Invincible: ${INVINCIBLE ? "ON" : "OFF"}`);
+console.log(`⚡ Time Acceleration: ${TIME_ACCELERATION}x`);
+console.log(`🔒 Constrain to Bounds: ${CONSTRAIN_TO_BOUNDS ? "ON" : "OFF"}`);
+console.log("---");
 
-const enemySystem = (game as any).enemySystem;
-enemySystem.clearAllEnemies();
-enemySystem.updateSpawnSettings({
-  minEnemyCount: 0, // No enemies for this test
-  spawnInterval: 1000000,
-  fastSpawnInterval: 1000000,
-});
-
-(game as any).food = { x: 5, y: 5 }; // Food out of the way
-
-// Create a long horizontal snake that will have guideline intersecting its body
+// Create a shorter snake for easier movement
 const snakeStartX = 15;
-const snakeStartY = 10;
-const initialSnakeLength = 20; // Much longer snake
+const snakeStartY = 12;
+const initialSnakeLength = 6;
 (game as any).snake = [];
 
 // Create horizontal snake moving RIGHT
@@ -35,49 +37,20 @@ for (let i = 0; i < initialSnakeLength; i++) {
 (game as any).direction = 3; // Start RIGHT
 (game as any).nextDirection = 3; // Start RIGHT
 
-const maxTicks = 50;
+const maxTicks = 36000; // 100倍速で約60分間のゲーム時間をシミュレート（レベル15以降まで確認）
 let tick = 0;
 
-// Input sequence to create guideline intersection with snake body
+// Basic input sequence for general testing (レベル確認用に簡単な移動パターン)
 const inputs: Array<Partial<InputState>> = [
-  // Snake starts horizontal: Head at (15,10), body extends left to (-4,10)
-  // Move right a few steps to get away from negative coordinates
-  { right: true }, // H(16,10), tail at (-3,10)
-  { right: true }, // H(17,10), tail at (-2,10)
-  { right: true }, // H(18,10), tail at (-1,10)
-  { right: true }, // H(19,10), tail at (0,10)
-  { right: true }, // H(20,10), tail at (1,10)
-
-  // Now snake is: Head(20,10), body from (19,10) to (1,10)
-  // Turn DOWN and move longer to create a bigger vertical segment
-  { down: true }, // H(20,11), guideline will show DOWN from (20,11)
-  { down: true }, // H(20,12), guideline continues DOWN
-  { down: true }, // H(20,13), guideline continues DOWN
-  { down: true }, // H(20,14), continue DOWN longer
-  { down: true }, // H(20,15), continue DOWN longer
-  { down: true }, // H(20,16), continue DOWN longer
-
-  // Turn LEFT - but shorter movement this time
-  { left: true }, // H(19,16), guideline goes LEFT from here
-  { left: true }, // H(18,16), guideline goes LEFT
-  { left: true }, // H(17,16), guideline goes LEFT
-
-  // Turn UP to create the enclosure
-  { up: true }, // H(17,15), guideline goes UP from here
-  { up: true }, // H(17,14), guideline goes UP
-  { up: true }, // H(17,13), guideline goes UP
-  { up: true }, // H(17,12), guideline goes UP
-  { up: true }, // H(17,11), guideline goes UP
-  { up: true }, // H(17,10), this should intersect with the original horizontal body!
-
-  // Continue UP to see if enclosure is detected
-  { up: true }, // H(17,9), continue UP
-
-  // Hold to observe the area formation
-  ...Array(15).fill({}),
+  ...Array(10).fill({ right: true }),
+  ...Array(10).fill({ down: true }),
+  ...Array(10).fill({ left: true }),
+  ...Array(10).fill({ up: true }),
+  ...Array(35960).fill({}), // 残りは入力なしで時間経過を確認
 ];
 
 let inputIndex = 0;
+let lastLevel = 1; // 前回のレベルを記録
 
 while (tick < maxTicks && !game.isGameOver()) {
   let currentInput: InputState = {
@@ -91,50 +64,92 @@ while (tick < maxTicks && !game.isGameOver()) {
 
   game.update(currentInput);
 
-  console.log(`--- Tick ${tick} ---`);
-  const snakeHead = (game as any).snake[0];
-  if (snakeHead) {
-    const headPos = `(${snakeHead.x},${snakeHead.y})`;
-    const segments = (game as any).snake
-      .map((seg: any) => `(${seg.x},${seg.y})`)
-      .slice(0, 8) // Show first 8 segments to avoid too much output
-      .join(" ");
+  // レベル変更の検出
+  const spawnDebugInfo = game.getSpawnDebugInfo();
+  const currentLevel = spawnDebugInfo.currentLevel;
+
+  if (currentLevel !== lastLevel) {
+    console.log(`\n🎯🎯🎯 LEVEL CHANGE DETECTED! 🎯🎯🎯`);
+    console.log(`📈 Level ${lastLevel} → Level ${currentLevel}`);
+    console.log(`⏰ Game Time: ${spawnDebugInfo.gameTimeSeconds.toFixed(1)}s`);
+    console.log(`🎮 Level Name: ${game.getCurrentLevelInfo()}`);
+
+    // 新レベルで出現する敵タイプを表示
+    const levelInfo = spawnDebugInfo.levelName;
+    console.log(`👹 New Level Focus: ${levelInfo}`);
+    console.log(`🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯🎯\n`);
+
+    lastLevel = currentLevel;
+  }
+
+  // Log every few ticks
+  if (tick % 600 === 0 || tick < 30) {
+    // 600ティックごと（約10秒ごと）にログ出力
+    console.log(`--- Tick ${tick} ---`);
+    const snakeHead = (game as any).snake[0];
+    if (snakeHead) {
+      const headPos = `(${snakeHead.x},${snakeHead.y})`;
+      console.log(`Snake Head: ${headPos}, Score: ${game.getScore()}`);
+    }
+
+    // Log level information (デバッグ情報として表示)
+    const levelInfo = game.getCurrentLevelInfo();
+    console.log(`🎯 Current Level: ${levelInfo}`);
+
+    // Log spawn system debug info
+    const spawnDebugInfo = game.getSpawnDebugInfo();
     console.log(
-      `Snake Head: ${headPos}, Dir: ${(game as any).direction}, Length: ${
-        (game as any).snake.length
-      }`
+      `⏰ Game Time: ${spawnDebugInfo.gameTimeSeconds.toFixed(
+        1
+      )}s (${TIME_ACCELERATION}x accelerated)`
     );
-    console.log(`Snake Segments (first 8): [${segments}...]`);
+    console.log(
+      `📈 Level Difficulty Multiplier: ${spawnDebugInfo.levelDifficultyMultiplier}x`
+    );
 
-    // Log guideline info
-    const guidelines = (game as any).guideLines;
-    if (guidelines && guidelines.length > 0) {
-      const guidelineStr = guidelines
-        .map((g: any) => `(${g.x},${g.y})`)
-        .join(" ");
-      console.log(`Guidelines: [${guidelineStr}]`);
+    if (spawnDebugInfo.isEndlessMode) {
+      console.log(
+        `🔄 Endless Multiplier: ${spawnDebugInfo.endlessMultiplier.toFixed(1)}x`
+      );
+    }
+
+    // Log enemy information
+    const debugInfo = game.getEnemyDebugInfo();
+    console.log(`👹 Total Enemies: ${debugInfo.totalEnemies}`);
+
+    // Log enemy counts by type (非ゼロのもののみ)
+    const nonZeroCounts = Object.entries(spawnDebugInfo.enemyCounts)
+      .filter(([_, count]) => (count as number) > 0)
+      .map(([type, count]) => `${type}: ${count}`)
+      .join(", ");
+
+    if (nonZeroCounts) {
+      console.log(`📊 Enemy Counts: ${nonZeroCounts}`);
     } else {
-      console.log(`Guidelines: []`);
+      console.log(`📊 Enemy Counts: None`);
     }
-  }
 
-  // Display current game state screen for key ticks
-  if (tick >= 10 && tick <= 30) {
-    // Expanded range to include explosion ticks and more
-    console.log("=== CURRENT SCREEN STATE ===");
-    const screenData = game.getVirtualScreenData();
-    for (let y = 0; y < screenData.length; y++) {
-      let line = "|";
-      for (let x = 0; x < screenData[y].length; x++) {
-        line += screenData[y][x].char;
+    // Display current game state screen occasionally
+    if (tick % 3600 === 0) {
+      // 60秒ごとに画面表示
+      console.log("=== CURRENT SCREEN STATE ===");
+      const screenData = game.getVirtualScreenData();
+      for (let y = 0; y < screenData.length; y++) {
+        let line = "|";
+        for (let x = 0; x < screenData[y].length; x++) {
+          line += screenData[y][x].char;
+        }
+        line += "|";
+        console.log(line);
       }
-      line += "|";
-      console.log(line);
+      console.log("=== END SCREEN STATE ===");
+      console.log(
+        "Legend: @ = Snake Head, * = Snake Body, X = Wanderer, G = Guard, C = Chaser, S = Splitter, F = Speedster, M = Mimic, N = Snake, W = Wall Creeper, H = Ghost, R = Swarm, $ = Food, # = Wall"
+      );
     }
-    console.log("=== END SCREEN STATE ===");
-  }
 
-  console.log("------------------------------------------");
+    console.log("------------------------------------------");
+  }
 
   if (inputIndex < inputs.length - 1) {
     inputIndex++;
@@ -143,16 +158,41 @@ while (tick < maxTicks && !game.isGameOver()) {
   tick++;
 }
 
-console.log("🏁 Simulation finished.");
+console.log("🏁 Blasnake Simulation finished.");
 console.log("Final Score:", game.getScore(), "Lives:", game.getLives());
 
-// Display final game state
-const screenData = game.getVirtualScreenData();
-for (let y = 0; y < screenData.length; y++) {
-  let line = "|";
-  for (let x = 0; x < screenData[y].length; x++) {
-    line += screenData[y][x].char;
-  }
-  line += "|";
-  console.log(line);
+// Display final level and spawn system info
+const finalLevelInfo = game.getCurrentLevelInfo();
+const finalSpawnDebugInfo = game.getSpawnDebugInfo();
+console.log("=== FINAL LEVEL STATE ===");
+console.log(`🎯 Final Level: ${finalLevelInfo}`);
+console.log(
+  `⏰ Final Game Time: ${finalSpawnDebugInfo.gameTimeSeconds.toFixed(
+    1
+  )}s (${TIME_ACCELERATION}x accelerated)`
+);
+console.log(
+  `📈 Final Level Difficulty Multiplier: ${finalSpawnDebugInfo.levelDifficultyMultiplier}x`
+);
+
+if (finalSpawnDebugInfo.isEndlessMode) {
+  console.log(
+    `🔄 Endless Mode Reached - Multiplier: ${finalSpawnDebugInfo.endlessMultiplier.toFixed(
+      1
+    )}x`
+  );
+} else {
+  console.log(`📊 Normal Mode - Level ${finalSpawnDebugInfo.currentLevel}/20`);
+}
+
+// Display final enemy counts (非ゼロのもののみ)
+const finalNonZeroCounts = Object.entries(finalSpawnDebugInfo.enemyCounts)
+  .filter(([_, count]) => (count as number) > 0)
+  .map(([type, count]) => `${type}: ${count}`)
+  .join(", ");
+
+if (finalNonZeroCounts) {
+  console.log(`👹 Final Enemy Counts: ${finalNonZeroCounts}`);
+} else {
+  console.log(`👹 Final Enemy Counts: None`);
 }
