@@ -151,7 +151,6 @@ export function renderStandardUI(
  */
 export function renderGameOverScreen(
   game: GameCore,
-  winCondition: (game: GameCore) => boolean,
   screenWidth: number = VIRTUAL_SCREEN_WIDTH,
   screenHeight: number = VIRTUAL_SCREEN_HEIGHT
 ): void {
@@ -166,7 +165,6 @@ export function renderGameOverScreen(
  */
 export function createStandardGameLoop(
   gameFactory: () => GameCore,
-  winCondition: (game: GameCore) => boolean = (game) => game.getScore() >= 100,
   screenWidth: number = VIRTUAL_SCREEN_WIDTH,
   screenHeight: number = VIRTUAL_SCREEN_HEIGHT,
   charWidth: number = 4,
@@ -205,13 +203,12 @@ export function createStandardGameLoop(
  */
 export function initStandardTextGame(
   gameFactory: () => GameCore,
-  winCondition?: (game: GameCore) => boolean,
   customOptions?: Partial<Options>
 ): void {
   const defaultOptions = createStandardGameOptions();
   const cglOptions = { ...defaultOptions, ...customOptions };
 
-  const { gameUpdate } = createStandardGameLoop(gameFactory, winCondition);
+  const { gameUpdate } = createStandardGameLoop(gameFactory);
 
   init({
     update: gameUpdate,
