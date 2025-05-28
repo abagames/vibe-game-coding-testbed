@@ -1,10 +1,24 @@
 import { CoreGameLogic } from "./core.js";
 import { InputState } from "../../core/coreTypes.js";
 
-// デバッグモード設定
-const DEBUG_MODE = true;
-const INVINCIBLE = true;
-const TIME_ACCELERATION = 100.0; // 100倍速でレベル進行を確認
+// デバッグモード設定 - 通常プレイテスト用
+// Debug Mode Settings - For Normal Gameplay Testing
+//
+// FOR LEVEL DEBUGGING: Change these settings to quickly test level progression:
+// - Set INVINCIBLE = true (to avoid dying during level testing)
+// - Set TIME_ACCELERATION = 100.0 or higher (to speed up level progression)
+// - Increase maxTicks to 36000+ (for longer testing duration)
+// - Reduce input complexity (use simple movement patterns)
+//
+// FOR NORMAL GAMEPLAY TESTING: Use current settings:
+// - INVINCIBLE = false (to test collision mechanics)
+// - TIME_ACCELERATION = 1.0 (normal game speed)
+// - maxTicks = 3600 (about 60 seconds of testing)
+// - Complex input patterns (to test various gameplay scenarios)
+
+const DEBUG_MODE = true; // デバッグ情報は表示したまま
+const INVINCIBLE = false; // 無敵状態を解除 // Set to true for level debugging
+const TIME_ACCELERATION = 1.0; // 通常速度に戻す // Set to 100.0+ for level debugging
 const CONSTRAIN_TO_BOUNDS = true;
 
 const game = new CoreGameLogic({
@@ -16,7 +30,7 @@ const game = new CoreGameLogic({
   constrainToBounds: CONSTRAIN_TO_BOUNDS,
 });
 
-console.log("🎮 Starting Blasnake Simulation...");
+console.log("🎮 Starting Blasnake Simulation - Normal Gameplay Test...");
 console.log(`🔧 Debug Mode: ${DEBUG_MODE ? "ON" : "OFF"}`);
 console.log(`🛡️ Invincible: ${INVINCIBLE ? "ON" : "OFF"}`);
 console.log(`⚡ Time Acceleration: ${TIME_ACCELERATION}x`);
@@ -37,20 +51,53 @@ for (let i = 0; i < initialSnakeLength; i++) {
 (game as any).direction = 3; // Start RIGHT
 (game as any).nextDirection = 3; // Start RIGHT
 
-const maxTicks = 36000; // 100倍速で約60分間のゲーム時間をシミュレート（レベル15以降まで確認）
+const maxTicks = 3600; // 通常速度で約60秒間のテスト
+// For level debugging: Increase to 36000+ (about 60 minutes at 100x speed)
 let tick = 0;
 
-// Basic input sequence for general testing (レベル確認用に簡単な移動パターン)
+// より複雑な移動パターンで衝突や囲まれ状況をテスト
+// Complex movement patterns for collision and enclosure testing
+//
+// FOR LEVEL DEBUGGING: Replace with simpler patterns like:
+// const inputs: Array<Partial<InputState>> = [
+//   ...Array(10).fill({ right: true }),
+//   ...Array(10).fill({ down: true }),
+//   ...Array(10).fill({ left: true }),
+//   ...Array(10).fill({ up: true }),
+//   ...Array(35960).fill({}), // Remaining time with no input for time progression
+// ];
+//
 const inputs: Array<Partial<InputState>> = [
-  ...Array(10).fill({ right: true }),
+  // 初期移動 - 右に移動
+  ...Array(20).fill({ right: true }),
+  // 下に移動
+  ...Array(15).fill({ down: true }),
+  // 左に移動（壁に近づく）
+  ...Array(25).fill({ left: true }),
+  // 上に移動
+  ...Array(15).fill({ up: true }),
+  // 右に移動（敵との遭遇を狙う）
+  ...Array(20).fill({ right: true }),
+  // 複雑な移動パターン（囲まれ状況を作る）
   ...Array(10).fill({ down: true }),
   ...Array(10).fill({ left: true }),
   ...Array(10).fill({ up: true }),
-  ...Array(35960).fill({}), // 残りは入力なしで時間経過を確認
+  ...Array(10).fill({ right: true }),
+  // 危険な移動（敵の多い場所へ）
+  ...Array(15).fill({ down: true }),
+  ...Array(15).fill({ right: true }),
+  // 残りは様々な方向への移動
+  ...Array(50).fill({ left: true }),
+  ...Array(50).fill({ up: true }),
+  ...Array(50).fill({ right: true }),
+  ...Array(50).fill({ down: true }),
+  // 最後は入力なしで敵の動きを観察
+  ...Array(3000).fill({}),
 ];
 
 let inputIndex = 0;
 let lastLevel = 1; // 前回のレベルを記録
+let lastLives = 3; // 前回のライフ数を記録
 
 while (tick < maxTicks && !game.isGameOver()) {
   let currentInput: InputState = {
@@ -63,6 +110,27 @@ while (tick < maxTicks && !game.isGameOver()) {
   };
 
   game.update(currentInput);
+
+  // ライフ変更の検出（ミスや爆発の検出）
+  const currentLives = game.getLives();
+  if (currentLives !== lastLives) {
+    console.log(`\n💥💥💥 LIFE LOST! 💥💥💥`);
+    console.log(`💔 Lives: ${lastLives} → ${currentLives}`);
+    console.log(`⏰ Tick: ${tick}`);
+    console.log(`🎮 Score: ${game.getScore()}`);
+
+    // 死因を推測するための情報表示
+    const snakeHead = (game as any).snake[0];
+    if (snakeHead) {
+      console.log(`🐍 Snake Head Position: (${snakeHead.x}, ${snakeHead.y})`);
+    }
+
+    const debugInfo = game.getEnemyDebugInfo();
+    console.log(`👹 Enemies on field: ${debugInfo.totalEnemies}`);
+    console.log(`💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥💥\n`);
+
+    lastLives = currentLives;
+  }
 
   // レベル変更の検出
   const spawnDebugInfo = game.getSpawnDebugInfo();
@@ -82,36 +150,25 @@ while (tick < maxTicks && !game.isGameOver()) {
     lastLevel = currentLevel;
   }
 
-  // Log every few ticks
-  if (tick % 600 === 0 || tick < 30) {
-    // 600ティックごと（約10秒ごと）にログ出力
+  // Log every few ticks - より頻繁にログ出力（通常速度なので）
+  if (tick % 60 === 0 || tick < 30) {
+    // 60ティックごと（約1秒ごと）にログ出力
     console.log(`--- Tick ${tick} ---`);
     const snakeHead = (game as any).snake[0];
     if (snakeHead) {
       const headPos = `(${snakeHead.x},${snakeHead.y})`;
-      console.log(`Snake Head: ${headPos}, Score: ${game.getScore()}`);
+      console.log(
+        `🐍 Snake Head: ${headPos}, Score: ${game.getScore()}, Lives: ${game.getLives()}`
+      );
     }
 
-    // Log level information (デバッグ情報として表示)
+    // Log level information
     const levelInfo = game.getCurrentLevelInfo();
     console.log(`🎯 Current Level: ${levelInfo}`);
 
     // Log spawn system debug info
     const spawnDebugInfo = game.getSpawnDebugInfo();
-    console.log(
-      `⏰ Game Time: ${spawnDebugInfo.gameTimeSeconds.toFixed(
-        1
-      )}s (${TIME_ACCELERATION}x accelerated)`
-    );
-    console.log(
-      `📈 Level Difficulty Multiplier: ${spawnDebugInfo.levelDifficultyMultiplier}x`
-    );
-
-    if (spawnDebugInfo.isEndlessMode) {
-      console.log(
-        `🔄 Endless Multiplier: ${spawnDebugInfo.endlessMultiplier.toFixed(1)}x`
-      );
-    }
+    console.log(`⏰ Game Time: ${spawnDebugInfo.gameTimeSeconds.toFixed(1)}s`);
 
     // Log enemy information
     const debugInfo = game.getEnemyDebugInfo();
@@ -129,9 +186,9 @@ while (tick < maxTicks && !game.isGameOver()) {
       console.log(`📊 Enemy Counts: None`);
     }
 
-    // Display current game state screen occasionally
-    if (tick % 3600 === 0) {
-      // 60秒ごとに画面表示
+    // Display current game state screen more frequently for collision analysis
+    if (tick % 300 === 0) {
+      // 5秒ごとに画面表示
       console.log("=== CURRENT SCREEN STATE ===");
       const screenData = game.getVirtualScreenData();
       for (let y = 0; y < screenData.length; y++) {
@@ -161,29 +218,23 @@ while (tick < maxTicks && !game.isGameOver()) {
 console.log("🏁 Blasnake Simulation finished.");
 console.log("Final Score:", game.getScore(), "Lives:", game.getLives());
 
+if (game.isGameOver()) {
+  console.log("💀 GAME OVER!");
+  if (game.getLives() <= 0) {
+    console.log("💔 All lives lost!");
+  }
+} else {
+  console.log("⏰ Simulation time limit reached");
+}
+
 // Display final level and spawn system info
 const finalLevelInfo = game.getCurrentLevelInfo();
 const finalSpawnDebugInfo = game.getSpawnDebugInfo();
-console.log("=== FINAL LEVEL STATE ===");
+console.log("=== FINAL GAME STATE ===");
 console.log(`🎯 Final Level: ${finalLevelInfo}`);
 console.log(
-  `⏰ Final Game Time: ${finalSpawnDebugInfo.gameTimeSeconds.toFixed(
-    1
-  )}s (${TIME_ACCELERATION}x accelerated)`
+  `⏰ Final Game Time: ${finalSpawnDebugInfo.gameTimeSeconds.toFixed(1)}s`
 );
-console.log(
-  `📈 Final Level Difficulty Multiplier: ${finalSpawnDebugInfo.levelDifficultyMultiplier}x`
-);
-
-if (finalSpawnDebugInfo.isEndlessMode) {
-  console.log(
-    `🔄 Endless Mode Reached - Multiplier: ${finalSpawnDebugInfo.endlessMultiplier.toFixed(
-      1
-    )}x`
-  );
-} else {
-  console.log(`📊 Normal Mode - Level ${finalSpawnDebugInfo.currentLevel}/20`);
-}
 
 // Display final enemy counts (非ゼロのもののみ)
 const finalNonZeroCounts = Object.entries(finalSpawnDebugInfo.enemyCounts)
