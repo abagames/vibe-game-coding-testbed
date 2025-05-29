@@ -1467,19 +1467,65 @@ export class CoreGameLogic extends BaseGame {
 
   // デバッグ用：スポーンシステムの状態表示
   public getSpawnDebugInfo(): any {
-    const levelInfo = this.levelManager.getDebugInfo();
-    const enemyCounts: { [key: string]: number } = {};
+    const levelManagerDebugInfo = this.levelManager.getDebugInfo();
 
-    Object.values(EnemyType).forEach((type) => {
-      enemyCounts[type] = this.getEnemyCount(type);
-    });
+    if (
+      !levelManagerDebugInfo ||
+      typeof levelManagerDebugInfo.currentFrame === "undefined" ||
+      typeof levelManagerDebugInfo.currentLevelNumber === "undefined"
+    ) {
+      console.warn(
+        "CoreGameLogic.getSpawnDebugInfo: levelManagerDebugInfo is incomplete. Returning default debug info."
+      );
+      // Ensure this defensive return matches the structure sim.ts expects for currentLevel and gameTimeSeconds
+      return {
+        currentLevel: this.levelManager.getCurrentLevelNumber(),
+        gameTimeSeconds: this.levelManager.getCurrentFrame() / 60,
+        levelName: "Unknown (Error)",
+        enemyCounts: {},
+        spawnPattern: {},
+        isEndlessMode: this.levelManager.isInEndlessMode(), // Use direct getter for consistency
+        endlessMultiplier: 1.0,
+        emergencyInterval: 300, // Fallback
+        normalInterval: 300, // Fallback
+        // Add other fields that might be expected with default values
+        totalEnemies: 0,
+        lastSpawnTimes: {},
+        gameFrameCounter: this.gameFrameCounter,
+        levelEnemyTypes: [],
+        levelDifficultyMultiplier: 1.0,
+      };
+    }
+
+    const enemyCountsByType = Object.values(EnemyType).reduce(
+      (counts, type) => {
+        counts[type] = this.getEnemyCount(type);
+        return counts;
+      },
+      {} as Record<EnemyType, number>
+    );
 
     return {
-      ...levelInfo,
+      // Explicitly map fields needed by sim.ts from levelManagerDebugInfo
+      currentLevel: levelManagerDebugInfo.currentLevelNumber,
+      gameTimeSeconds: levelManagerDebugInfo.currentFrame / 60,
+      levelName: levelManagerDebugInfo.levelName,
+
+      // Other properties from levelManagerDebugInfo
+      isEndlessMode: levelManagerDebugInfo.isEndlessMode,
+      endlessMultiplier: levelManagerDebugInfo.endlessMultiplier,
+      levelDifficultyMultiplier:
+        levelManagerDebugInfo.levelDifficultyMultiplier,
+      levelEnemyTypes: levelManagerDebugInfo.levelEnemyTypes,
+      spawnPattern: levelManagerDebugInfo.spawnPattern,
+      emergencyInterval: levelManagerDebugInfo.emergencyInterval,
+      normalInterval: levelManagerDebugInfo.normalInterval,
+
+      // Properties from CoreGameLogic itself
       totalEnemies: this.getTotalEnemyCount(),
-      enemyCounts,
+      enemyCounts: enemyCountsByType, // This is CoreGameLogic's calculation of counts
       lastSpawnTimes: Object.fromEntries(this.lastSpawnTimes),
-      gameFrameCounter: this.gameFrameCounter,
+      gameFrameCounter: this.gameFrameCounter, // This is CoreGameLogic's own frame counter
     };
   }
 

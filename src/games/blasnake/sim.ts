@@ -7,7 +7,7 @@ import { InputState } from "../../core/coreTypes.js";
 // FOR LEVEL DEBUGGING: Change these settings to quickly test level progression:
 // - Set INVINCIBLE = true (to avoid dying during level testing)
 // - Set TIME_ACCELERATION = 100.0 or higher (to speed up level progression)
-// - Increase maxTicks to 36000+ (for longer testing duration)
+// - Set maxTicks = 3600 (simulates 100 game minutes with 100x acceleration)
 // - Reduce input complexity (use simple movement patterns)
 //
 // FOR NORMAL GAMEPLAY TESTING: Use current settings:
@@ -52,20 +52,21 @@ for (let i = 0; i < initialSnakeLength; i++) {
 (game as any).nextDirection = 3; // Start RIGHT
 
 const maxTicks = 3600; // 通常速度で約60秒間のテスト
-// For level debugging: Increase to 36000+ (about 60 minutes at 100x speed)
 let tick = 0;
 
 // より複雑な移動パターンで衝突や囲まれ状況をテスト
 // Complex movement patterns for collision and enclosure testing
 //
 // FOR LEVEL DEBUGGING: Replace with simpler patterns like:
-// const inputs: Array<Partial<InputState>> = [
-//   ...Array(10).fill({ right: true }),
-//   ...Array(10).fill({ down: true }),
-//   ...Array(10).fill({ left: true }),
-//   ...Array(10).fill({ up: true }),
-//   ...Array(35960).fill({}), // Remaining time with no input for time progression
-// ];
+/*
+const inputs: Array<Partial<InputState>> = [
+  ...Array(10).fill({ right: true }),
+  ...Array(10).fill({ down: true }),
+  ...Array(10).fill({ left: true }),
+  ...Array(10).fill({ up: true }),
+  ...Array(35960).fill({}), // Remaining time with no input for time progression
+];
+*/
 //
 const inputs: Array<Partial<InputState>> = [
   // 初期移動 - 右に移動

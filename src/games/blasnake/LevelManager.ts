@@ -339,13 +339,14 @@ export class SimpleLevelManager {
   private endlessMultiplier: number = 1.0;
   private lastEndlessLevelFrame: number = 0;
   private currentEndlessLevel: SimpleLevel | null = null;
+  private timeAcceleration: number;
 
-  constructor() {
-    // Constructor is now empty as gameStartTime and timeAcceleration are removed
+  constructor(timeAcceleration: number = 1.0) {
+    this.timeAcceleration = timeAcceleration;
   }
 
   public incrementFrame(): void {
-    this.currentFrame++;
+    this.currentFrame += this.timeAcceleration;
   }
 
   public getCurrentLevel(): SimpleLevel {
@@ -356,7 +357,7 @@ export class SimpleLevelManager {
   }
 
   public update(): boolean {
-    this.incrementFrame(); // Increment frame internally on each update call
+    this.incrementFrame();
     if (!this.isEndlessMode) {
       return this.checkLevelUp();
     } else {
@@ -368,7 +369,6 @@ export class SimpleLevelManager {
     const nextLevelIndex = this.currentLevel - 1;
 
     if (nextLevelIndex < this.levels.length) {
-      // If we are at the last defined level
       if (this.currentLevel === this.levels.length) {
         const levelData = this.levels[this.currentLevel - 1];
         if (this.currentFrame >= levelData.timeThreshold + levelData.duration) {
@@ -376,7 +376,6 @@ export class SimpleLevelManager {
           return true;
         }
       } else {
-        // For other levels, check if currentFrame reached the next level's timeThreshold
         const nextLevelData = this.levels[this.currentLevel];
         if (nextLevelData && this.currentFrame >= nextLevelData.timeThreshold) {
           this.currentLevel++;
@@ -421,18 +420,16 @@ export class SimpleLevelManager {
   }
 
   private selectRandomEndlessLevel(): void {
-    // レベル3以降からランダム選択（基本敵のみのレベルを避ける）
-    const availableLevels = this.levels.slice(2); // レベル3以降
+    const availableLevels = this.levels.slice(2);
     const randomIndex = Math.floor(Math.random() * availableLevels.length);
     const baseLevel = availableLevels[randomIndex];
     const endlessLevelDurationFrames = 20 * FRAMES_PER_SECOND;
 
-    // エンドレス用に調整されたレベル
     this.currentEndlessLevel = {
       ...baseLevel,
-      id: 999, // エンドレス識別用
+      id: 999,
       name: `${baseLevel.name} (Endless x${this.endlessMultiplier.toFixed(1)})`,
-      timeThreshold: 0, // Endless levels start immediately relevant to their own duration
+      timeThreshold: 0,
       duration: endlessLevelDurationFrames,
       spawnPattern: {
         ...baseLevel.spawnPattern,
@@ -445,14 +442,13 @@ export class SimpleLevelManager {
           Math.floor(baseLevel.spawnPattern.maxTotal * this.endlessMultiplier)
         ),
         interval: Math.max(
-          60, // 最小1秒間隔 (60 frames)
+          60,
           Math.floor(baseLevel.spawnPattern.interval / this.endlessMultiplier)
         ),
       },
     };
   }
 
-  // ハイブリッドスポーンロジック：最小数維持 + レベル設計 + 動的間隔調整
   public shouldSpawnEnemy(
     enemyType: EnemyType,
     currentCount: number,
@@ -461,26 +457,22 @@ export class SimpleLevelManager {
   ): SpawnDecision {
     const level = this.getCurrentLevel();
 
-    // 1. このレベルで出現しない敵タイプはスキップ
     if (!level.enemyTypes.includes(enemyType)) {
       return { shouldSpawn: false, reason: "not_in_level" };
     }
 
-    // 2. 強力な敵の個別制限チェック
     const powerfulEnemyLimit = this.getPowerfulEnemyLimit(enemyType);
     if (powerfulEnemyLimit > 0 && currentCount >= powerfulEnemyLimit) {
       return { shouldSpawn: false, reason: "powerful_enemy_limit_reached" };
     }
 
-    // 3. 緊急スポーン判定（現在のロジックを採用）
     const minEnemyCount = Math.max(
-      3, // 最小3匹は常に維持
-      Math.floor(level.spawnPattern.maxTotal * 0.6) // 60%の閾値に変更（40%→60%）
+      3,
+      Math.floor(level.spawnPattern.maxTotal * 0.6)
     );
     const isEmergencySpawn = totalEnemyCount < minEnemyCount;
 
     if (isEmergencySpawn) {
-      // 緊急時は動的間隔でスポーン（難易度に応じて調整）
       const emergencyInterval = this.calculateEmergencyInterval();
       if (framesSinceLastSpawn >= emergencyInterval) {
         return {
@@ -492,13 +484,10 @@ export class SimpleLevelManager {
       }
     }
 
-    // 4. 通常スポーン判定
-    // 最大数チェック（敵タイプ別の上限）
     if (currentCount >= level.spawnPattern.maxTotal) {
       return { shouldSpawn: false, reason: "max_count_reached" };
     }
 
-    // スポーン間隔チェック（敵タイプ別の間隔 + 難易度調整）
     const adjustedInterval = this.calculateNormalInterval(
       level.spawnPattern.interval
     );
@@ -514,83 +503,70 @@ export class SimpleLevelManager {
     };
   }
 
-  // 強力な敵の個別制限を取得
   private getPowerfulEnemyLimit(enemyType: EnemyType): number {
-    // レベルに応じて強力な敵の最大数を制限
     const currentLevelNumber = this.currentLevel;
 
     switch (enemyType) {
       case EnemyType.CHASER:
-        if (currentLevelNumber <= 10) return 2; // 初期レベルでは2匹まで
-        if (currentLevelNumber <= 15) return 3; // 中期レベルでは3匹まで
-        return 4; // 後期レベルでは4匹まで
+        if (currentLevelNumber <= 10) return 2;
+        if (currentLevelNumber <= 15) return 3;
+        return 4;
 
       case EnemyType.SPEEDSTER:
-        if (currentLevelNumber <= 12) return 1; // 初期レベルでは1匹まで
-        if (currentLevelNumber <= 17) return 2; // 中期レベルでは2匹まで
-        return 3; // 後期レベルでは3匹まで
+        if (currentLevelNumber <= 12) return 1;
+        if (currentLevelNumber <= 17) return 2;
+        return 3;
 
       case EnemyType.SNAKE:
-        if (currentLevelNumber <= 15) return 1; // 初期・中期レベルでは1匹まで
-        return 2; // 後期レベルでは2匹まで
+        if (currentLevelNumber <= 15) return 1;
+        return 2;
 
       case EnemyType.SWARM:
-        if (currentLevelNumber <= 15) return 4; // 初期・中期レベルでは1グループ（4匹）まで
-        return 8; // 後期レベルでは2グループ（8匹）まで
+        if (currentLevelNumber <= 15) return 4;
+        return 8;
 
       default:
-        return 0; // 制限なし
+        return 0;
     }
   }
 
-  // 緊急スポーン間隔の動的計算
   private calculateEmergencyInterval(): number {
-    const baseEmergencyInterval = 180; // 基本3秒間隔
+    const baseEmergencyInterval = 180;
 
     if (this.isEndlessMode) {
-      // エンドレスモードでは難易度倍率に応じて短縮
       const adjustedInterval = Math.max(
         Math.floor(baseEmergencyInterval / this.endlessMultiplier),
-        60 // 最小1秒間隔
+        60
       );
       return adjustedInterval;
     } else {
-      // 通常レベルでは段階的に短縮
       const levelDifficultyMultiplier = this.getLevelDifficultyMultiplier();
       const adjustedInterval = Math.max(
         Math.floor(baseEmergencyInterval / levelDifficultyMultiplier),
-        90 // 最小1.5秒間隔（通常レベルでは緩やか）
+        90
       );
       return adjustedInterval;
     }
   }
 
-  // 通常スポーン間隔の動的計算
   private calculateNormalInterval(baseInterval: number): number {
     if (this.isEndlessMode) {
-      // エンドレスモードでは難易度倍率に応じて短縮
       const adjustedInterval = Math.max(
         Math.floor(baseInterval / this.endlessMultiplier),
-        120 // 最小2秒間隔
+        120
       );
       return adjustedInterval;
     } else {
-      // 通常レベルでは段階的に短縮
       const levelDifficultyMultiplier = this.getLevelDifficultyMultiplier();
       const adjustedInterval = Math.max(
         Math.floor(baseInterval / levelDifficultyMultiplier),
-        180 // 最小3秒間隔（通常レベルでは緩やか）
+        180
       );
       return adjustedInterval;
     }
   }
 
-  // レベル難易度倍率の計算
   private getLevelDifficultyMultiplier(): number {
-    // レベル1-5: 1.0倍（基本）
-    // レベル6-10: 1.1倍
-    // レベル11-15: 1.2倍
-    // レベル16-20: 1.3倍
     if (this.currentLevel <= 5) {
       return 1.0;
     } else if (this.currentLevel <= 10) {
@@ -615,11 +591,9 @@ export class SimpleLevelManager {
   }
 
   public getCurrentFrame(): number {
-    // Added getter for currentFrame
     return this.currentFrame;
   }
 
-  // UI表示用のレベル情報取得
   public getCurrentLevelInfo(): string {
     const level = this.getCurrentLevel();
     if (this.isEndlessMode) {
@@ -628,15 +602,38 @@ export class SimpleLevelManager {
     return `Level ${level.id}: ${level.name}`;
   }
 
-  // デバッグ用：現在のレベル状態を取得
   public getDebugInfo(): any {
     const level = this.getCurrentLevel();
+
+    if (!level) {
+      const fallbackLevelName = this.isEndlessMode
+        ? "Endless (Initializing)"
+        : "Level (Invalid)";
+      return {
+        currentLevelNumber: this.currentLevel,
+        isEndlessMode: this.isEndlessMode,
+        endlessMultiplier: this.endlessMultiplier,
+        levelDifficultyMultiplier: this.getLevelDifficultyMultiplier(),
+        currentFrame: this.currentFrame,
+        levelName: fallbackLevelName,
+        levelEnemyTypes: [],
+        spawnPattern: {
+          enemyType: EnemyType.WANDERER,
+          count: 0,
+          interval: 300,
+          maxTotal: 0,
+        },
+        emergencyInterval: this.calculateEmergencyInterval(),
+        normalInterval: this.calculateNormalInterval(300),
+      };
+    }
+
     return {
       currentLevelNumber: this.currentLevel,
       isEndlessMode: this.isEndlessMode,
       endlessMultiplier: this.endlessMultiplier,
       levelDifficultyMultiplier: this.getLevelDifficultyMultiplier(),
-      currentFrame: this.currentFrame, // Ensure this uses the property
+      currentFrame: this.currentFrame,
       levelName: level.name,
       levelEnemyTypes: level.enemyTypes,
       spawnPattern: level.spawnPattern,
