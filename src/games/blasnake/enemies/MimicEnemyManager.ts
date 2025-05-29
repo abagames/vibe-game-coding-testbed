@@ -92,11 +92,6 @@ export class MimicEnemyManager extends BaseEnemyManager {
     // プレイヤーの現在位置を記録
     this.playerTrajectoryBuffer.push({ ...playerPosition });
 
-    // デバッグ用ログ（軌跡記録）
-    console.log(
-      `📍 Player trajectory recorded: (${playerPosition.x},${playerPosition.y}) - Buffer length: ${this.playerTrajectoryBuffer.length}`
-    );
-
     // バッファサイズを制限
     if (
       this.playerTrajectoryBuffer.length >
@@ -127,16 +122,6 @@ export class MimicEnemyManager extends BaseEnemyManager {
 
       // 常に100%の精度でミミック動作（ランダム移動を無効化）
       enemy.direction = direction;
-
-      // デバッグ用ログ
-      console.log(
-        `🪞 Mimic ${enemy.id}: targeting (${targetPosition.x},${targetPosition.y}) from (${enemy.x},${enemy.y}) -> direction ${direction}`
-      );
-    } else {
-      // 模倣対象がない場合は現在の方向を維持（ランダム移動を無効化）
-      console.log(
-        `🪞 Mimic ${enemy.id}: no target available, maintaining direction ${enemy.direction}`
-      );
     }
   }
 
@@ -144,21 +129,11 @@ export class MimicEnemyManager extends BaseEnemyManager {
     // 遅延分だけ過去のプレイヤー位置を取得
     const delayIndex = this.playerTrajectoryBuffer.length - enemy.mimicDelay;
 
-    console.log(
-      `🎯 Mimic ${enemy.id}: buffer length=${this.playerTrajectoryBuffer.length}, delay=${enemy.mimicDelay}, delayIndex=${delayIndex}`
-    );
-
     if (delayIndex >= 0 && delayIndex < this.playerTrajectoryBuffer.length) {
       const targetPos = this.playerTrajectoryBuffer[delayIndex];
-      console.log(
-        `🎯 Mimic ${enemy.id}: found target at (${targetPos.x},${targetPos.y})`
-      );
       return targetPos;
     }
 
-    console.log(
-      `🎯 Mimic ${enemy.id}: no valid target (delayIndex out of range)`
-    );
     return null;
   }
 
@@ -169,28 +144,12 @@ export class MimicEnemyManager extends BaseEnemyManager {
     const dx = target.x - enemy.x;
     const dy = target.y - enemy.y;
 
-    console.log(
-      `🧭 Mimic ${enemy.id}: dx=${dx}, dy=${dy}, |dx|=${Math.abs(
-        dx
-      )}, |dy|=${Math.abs(dy)}`
-    );
-
     // より大きな差分の方向を優先
     let direction: Direction;
     if (Math.abs(dx) > Math.abs(dy)) {
       direction = dx > 0 ? Direction.RIGHT : Direction.LEFT;
-      console.log(
-        `🧭 Mimic ${enemy.id}: choosing horizontal direction: ${
-          direction === Direction.RIGHT ? "RIGHT" : "LEFT"
-        }`
-      );
     } else {
       direction = dy > 0 ? Direction.DOWN : Direction.UP;
-      console.log(
-        `🧭 Mimic ${enemy.id}: choosing vertical direction: ${
-          direction === Direction.DOWN ? "DOWN" : "UP"
-        }`
-      );
     }
 
     return direction;
@@ -208,12 +167,6 @@ export class MimicEnemyManager extends BaseEnemyManager {
     if (this.isValidPosition(newPos, gameState)) {
       enemy.x = newPos.x;
       enemy.y = newPos.y;
-      console.log(`🚶 Mimic ${enemy.id}: moved to (${enemy.x},${enemy.y})`);
-    } else {
-      // 移動できない場合はその場で停止
-      console.log(
-        `🚫 Mimic ${enemy.id}: blocked, staying at (${enemy.x},${enemy.y})`
-      );
     }
   }
 
