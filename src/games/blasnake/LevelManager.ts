@@ -5,20 +5,22 @@ import {
   SpawnDecision,
 } from "./enemies/types.js";
 
+const FRAMES_PER_SECOND = 60;
+
 // レベル定義データ
 const SIMPLE_LEVELS: SimpleLevel[] = [
   // レベル1: ワンダラー導入（簡単）
   {
     id: 1,
     name: "基本訓練",
-    timeThreshold: 0, // ゲーム開始時
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 0 * FRAMES_PER_SECOND, // ゲーム開始時
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.WANDERER],
     spawnPattern: {
       enemyType: EnemyType.WANDERER,
       count: 3,
-      interval: 600, // 10秒間隔
-      maxTotal: 6, // 6匹に増加
+      interval: 600, // 10秒間隔 (600 frames)
+      maxTotal: 6,
     },
   },
 
@@ -26,14 +28,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 2,
     name: "守護者登場",
-    timeThreshold: 20, // 30から20に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 20 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.GUARD],
     spawnPattern: {
       enemyType: EnemyType.GUARD,
       count: 1,
-      interval: 900, // 15秒間隔
-      maxTotal: 3, // 3匹に増加
+      interval: 900, // 15秒間隔 (900 frames)
+      maxTotal: 3,
     },
   },
 
@@ -41,14 +43,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 3,
     name: "混合戦闘I",
-    timeThreshold: 40, // 60から40に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 40 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.WANDERER, EnemyType.GUARD],
     spawnPattern: {
       enemyType: EnemyType.WANDERER, // メイン
       count: 2,
-      interval: 480, // 8秒間隔
-      maxTotal: 7, // 7匹に増加（ワンダラー中心）
+      interval: 480, // 8秒間隔 (480 frames)
+      maxTotal: 7,
     },
   },
 
@@ -56,14 +58,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 4,
     name: "追跡者登場",
-    timeThreshold: 60, // 90から60に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 60 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.CHASER],
     spawnPattern: {
       enemyType: EnemyType.CHASER,
       count: 1,
-      interval: 720, // 12秒間隔
-      maxTotal: 2, // 3匹→2匹に減少（強力な敵）
+      interval: 720, // 12秒間隔 (720 frames)
+      maxTotal: 2,
     },
   },
 
@@ -71,14 +73,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 5,
     name: "混合戦闘II",
-    timeThreshold: 80, // 120から80に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 80 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.WANDERER, EnemyType.CHASER],
     spawnPattern: {
       enemyType: EnemyType.WANDERER,
       count: 2,
-      interval: 420, // 7秒間隔
-      maxTotal: 8, // 8匹に増加
+      interval: 420, // 7秒間隔 (420 frames)
+      maxTotal: 8,
     },
   },
 
@@ -86,14 +88,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 6,
     name: "分裂者登場",
-    timeThreshold: 100, // 150から100に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 100 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.SPLITTER],
     spawnPattern: {
       enemyType: EnemyType.SPLITTER,
       count: 1,
-      interval: 900, // 15秒間隔
-      maxTotal: 3, // 3匹に増加
+      interval: 900, // 15秒間隔 (900 frames)
+      maxTotal: 3,
     },
   },
 
@@ -101,14 +103,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 7,
     name: "混合戦闘III",
-    timeThreshold: 120, // 180から120に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 120 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.WANDERER, EnemyType.CHASER, EnemyType.SPLITTER],
     spawnPattern: {
       enemyType: EnemyType.WANDERER,
       count: 1,
-      interval: 360, // 6秒間隔
-      maxTotal: 10, // 10匹（標準的難易度）
+      interval: 360, // 6秒間隔 (360 frames)
+      maxTotal: 10,
     },
   },
 
@@ -116,14 +118,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 8,
     name: "高速戦闘",
-    timeThreshold: 140, // 210から140に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 140 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.SPEEDSTER],
     spawnPattern: {
       enemyType: EnemyType.SPEEDSTER,
       count: 1,
-      interval: 1080, // 18秒間隔
-      maxTotal: 2, // 3匹→2匹に減少（強力な敵）
+      interval: 1080, // 18秒間隔 (1080 frames)
+      maxTotal: 2,
     },
   },
 
@@ -131,14 +133,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 9,
     name: "模倣者登場",
-    timeThreshold: 160, // 240から160に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 160 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.MIMIC],
     spawnPattern: {
       enemyType: EnemyType.MIMIC,
       count: 1,
-      interval: 1200, // 20秒間隔
-      maxTotal: 2, // 2匹に増加
+      interval: 1200, // 20秒間隔 (1200 frames)
+      maxTotal: 2,
     },
   },
 
@@ -146,14 +148,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 10,
     name: "スネーク登場",
-    timeThreshold: 180, // 270から180に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 180 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.SNAKE],
     spawnPattern: {
       enemyType: EnemyType.SNAKE,
       count: 1,
-      interval: 1500, // 25秒間隔
-      maxTotal: 2, // 3匹→2匹に減少（強力な敵）
+      interval: 1500, // 25秒間隔 (1500 frames)
+      maxTotal: 2,
     },
   },
 
@@ -161,14 +163,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 11,
     name: "壁這い登場",
-    timeThreshold: 200, // 300から200に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 200 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.WALL_CREEPER],
     spawnPattern: {
       enemyType: EnemyType.WALL_CREEPER,
       count: 1,
-      interval: 900, // 15秒間隔
-      maxTotal: 4, // 4匹に増加
+      interval: 900, // 15秒間隔 (900 frames)
+      maxTotal: 4,
     },
   },
 
@@ -176,14 +178,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 12,
     name: "幽霊登場",
-    timeThreshold: 220, // 330から220に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 220 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.GHOST],
     spawnPattern: {
       enemyType: EnemyType.GHOST,
       count: 1,
-      interval: 1800, // 30秒間隔
-      maxTotal: 3, // 3匹に増加
+      interval: 1800, // 30秒間隔 (1800 frames)
+      maxTotal: 3,
     },
   },
 
@@ -191,14 +193,14 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 13,
     name: "群れ登場",
-    timeThreshold: 240, // 360から240に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 240 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.SWARM],
     spawnPattern: {
       enemyType: EnemyType.SWARM,
       count: 4, // リーダー1 + 仲間3
-      interval: 1200, // 20秒間隔
-      maxTotal: 4, // 8匹→4匹に減少（強力な敵、1グループのみ）
+      interval: 1200, // 20秒間隔 (1200 frames)
+      maxTotal: 4,
     },
   },
 
@@ -206,50 +208,50 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
   {
     id: 14,
     name: "混合戦闘IV",
-    timeThreshold: 260, // 390から260に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 260 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.CHASER, EnemyType.SPLITTER, EnemyType.SPEEDSTER],
     spawnPattern: {
       enemyType: EnemyType.CHASER,
       count: 1,
-      interval: 300, // 5秒間隔
-      maxTotal: 10, // 12匹→10匹に減少（強力な敵が多いため）
+      interval: 300, // 5秒間隔 (300 frames)
+      maxTotal: 10,
     },
   },
 
   {
     id: 15,
     name: "混合戦闘V",
-    timeThreshold: 280, // 420から280に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 280 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.MIMIC, EnemyType.SNAKE, EnemyType.WALL_CREEPER],
     spawnPattern: {
       enemyType: EnemyType.WALL_CREEPER,
       count: 1,
-      interval: 360, // 6秒間隔
-      maxTotal: 11, // 13匹→11匹に減少（スネークが強力なため）
+      interval: 360, // 6秒間隔 (360 frames)
+      maxTotal: 11,
     },
   },
 
   {
     id: 16,
     name: "混合戦闘VI",
-    timeThreshold: 300, // 450から300に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 300 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.GHOST, EnemyType.SWARM, EnemyType.SPEEDSTER],
     spawnPattern: {
       enemyType: EnemyType.SPEEDSTER,
       count: 1,
-      interval: 300, // 5秒間隔
-      maxTotal: 10, // 14匹→10匹に減少（スピードスター・スワームが強力なため）
+      interval: 300, // 5秒間隔 (300 frames)
+      maxTotal: 10,
     },
   },
 
   {
     id: 17,
     name: "混合戦闘VII",
-    timeThreshold: 320, // 480から320に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 320 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [
       EnemyType.WANDERER,
       EnemyType.CHASER,
@@ -259,16 +261,16 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.WANDERER,
       count: 1,
-      interval: 240, // 4秒間隔
-      maxTotal: 12, // 15匹→12匹に減少（チェイサーが強力なため）
+      interval: 240, // 4秒間隔 (240 frames)
+      maxTotal: 12,
     },
   },
 
   {
     id: 18,
     name: "混合戦闘VIII",
-    timeThreshold: 340, // 510から340に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 340 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [
       EnemyType.SNAKE,
       EnemyType.WALL_CREEPER,
@@ -278,16 +280,16 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.WALL_CREEPER,
       count: 1,
-      interval: 240, // 4秒間隔
-      maxTotal: 11, // 16匹→11匹に減少（スネーク・スワームが強力なため）
+      interval: 240, // 4秒間隔 (240 frames)
+      maxTotal: 11,
     },
   },
 
   {
     id: 19,
     name: "最終試練",
-    timeThreshold: 360, // 540から360に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 360 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [
       EnemyType.CHASER,
       EnemyType.SPEEDSTER,
@@ -298,16 +300,16 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.CHASER,
       count: 1,
-      interval: 180, // 3秒間隔
-      maxTotal: 12, // 18匹→12匹に減少（強力な敵ばかりのため）
+      interval: 180, // 3秒間隔 (180 frames)
+      maxTotal: 12,
     },
   },
 
   {
     id: 20,
     name: "全敵統合",
-    timeThreshold: 380, // 570から380に変更
-    duration: 20, // 30秒から20秒に変更
+    timeThreshold: 380 * FRAMES_PER_SECOND,
+    duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [
       EnemyType.WANDERER,
       EnemyType.GUARD,
@@ -323,8 +325,8 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.WANDERER,
       count: 1,
-      interval: 180, // 3秒間隔
-      maxTotal: 15, // 20匹→15匹に減少（強力な敵も含むため）
+      interval: 180, // 3秒間隔 (180 frames)
+      maxTotal: 15,
     },
   },
 ];
@@ -332,20 +334,18 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
 export class SimpleLevelManager {
   private currentLevel: number = 1;
   private levels: SimpleLevel[] = SIMPLE_LEVELS;
-  private gameStartTime: number;
+  private currentFrame: number = 0;
   private isEndlessMode: boolean = false;
   private endlessMultiplier: number = 1.0;
-  private lastEndlessLevelTime: number = 0;
+  private lastEndlessLevelFrame: number = 0;
   private currentEndlessLevel: SimpleLevel | null = null;
-  private timeAcceleration: number = 1.0; // 時間加速倍率
 
-  constructor(timeAcceleration: number = 1.0) {
-    this.gameStartTime = Date.now();
-    this.timeAcceleration = timeAcceleration;
+  constructor() {
+    // Constructor is now empty as gameStartTime and timeAcceleration are removed
   }
 
-  public setTimeAcceleration(acceleration: number): void {
-    this.timeAcceleration = acceleration;
+  public incrementFrame(): void {
+    this.currentFrame++;
   }
 
   public getCurrentLevel(): SimpleLevel {
@@ -356,48 +356,59 @@ export class SimpleLevelManager {
   }
 
   public update(): boolean {
-    const gameTimeSeconds = this.getGameTimeSeconds();
-
+    this.incrementFrame(); // Increment frame internally on each update call
     if (!this.isEndlessMode) {
-      // 通常レベル進行
-      return this.checkLevelUp(gameTimeSeconds);
+      return this.checkLevelUp();
     } else {
-      // エンドレスモード
-      return this.updateEndlessMode(gameTimeSeconds);
+      return this.updateEndlessMode();
     }
   }
 
-  private checkLevelUp(gameTimeSeconds: number): boolean {
-    const nextLevel = this.levels[this.currentLevel];
+  private checkLevelUp(): boolean {
+    const nextLevelIndex = this.currentLevel - 1;
 
-    if (nextLevel && gameTimeSeconds >= nextLevel.timeThreshold) {
-      this.currentLevel++;
-      console.log(`Level Up! Now at level ${this.currentLevel}`);
-      return true;
+    if (nextLevelIndex < this.levels.length) {
+      // If we are at the last defined level
+      if (this.currentLevel === this.levels.length) {
+        const levelData = this.levels[this.currentLevel - 1];
+        if (this.currentFrame >= levelData.timeThreshold + levelData.duration) {
+          this.startEndlessMode();
+          return true;
+        }
+      } else {
+        // For other levels, check if currentFrame reached the next level's timeThreshold
+        const nextLevelData = this.levels[this.currentLevel];
+        if (nextLevelData && this.currentFrame >= nextLevelData.timeThreshold) {
+          this.currentLevel++;
+          console.log(`Level Up! Now at level ${this.currentLevel}`);
+          return true;
+        }
+      }
+    } else {
+      if (!this.isEndlessMode) {
+        this.startEndlessMode();
+        return true;
+      }
     }
-
-    // 全レベル完了後、エンドレスモード開始
-    if (this.currentLevel > this.levels.length && !this.isEndlessMode) {
-      this.startEndlessMode();
-      return true;
-    }
-
     return false;
   }
 
   private startEndlessMode(): void {
     this.isEndlessMode = true;
     this.endlessMultiplier = 1.0;
-    this.lastEndlessLevelTime = this.getGameTimeSeconds();
+    this.lastEndlessLevelFrame = this.currentFrame;
     this.selectRandomEndlessLevel();
     console.log("🔄 Endless Mode Started!");
   }
 
-  private updateEndlessMode(gameTimeSeconds: number): boolean {
-    // 20秒ごとに新しいランダムレベル（30秒から20秒に変更）
-    if (gameTimeSeconds - this.lastEndlessLevelTime >= 20) {
-      this.endlessMultiplier += 0.2; // 20%ずつ難易度上昇
-      this.lastEndlessLevelTime = gameTimeSeconds;
+  private updateEndlessMode(): boolean {
+    const endlessLevelDurationFrames = 20 * FRAMES_PER_SECOND;
+    if (
+      this.currentFrame - this.lastEndlessLevelFrame >=
+      endlessLevelDurationFrames
+    ) {
+      this.endlessMultiplier += 0.2;
+      this.lastEndlessLevelFrame = this.currentFrame;
       this.selectRandomEndlessLevel();
       console.log(
         `🔄 Endless Level Change! Multiplier: ${this.endlessMultiplier.toFixed(
@@ -414,25 +425,28 @@ export class SimpleLevelManager {
     const availableLevels = this.levels.slice(2); // レベル3以降
     const randomIndex = Math.floor(Math.random() * availableLevels.length);
     const baseLevel = availableLevels[randomIndex];
+    const endlessLevelDurationFrames = 20 * FRAMES_PER_SECOND;
 
     // エンドレス用に調整されたレベル
     this.currentEndlessLevel = {
       ...baseLevel,
       id: 999, // エンドレス識別用
       name: `${baseLevel.name} (Endless x${this.endlessMultiplier.toFixed(1)})`,
-      timeThreshold: 0,
-      duration: 20, // 30秒から20秒に変更
+      timeThreshold: 0, // Endless levels start immediately relevant to their own duration
+      duration: endlessLevelDurationFrames,
       spawnPattern: {
         ...baseLevel.spawnPattern,
-        count: Math.floor(
-          baseLevel.spawnPattern.count * this.endlessMultiplier
+        count: Math.max(
+          1,
+          Math.floor(baseLevel.spawnPattern.count * this.endlessMultiplier)
         ),
-        maxTotal: Math.floor(
-          baseLevel.spawnPattern.maxTotal * this.endlessMultiplier
+        maxTotal: Math.max(
+          1,
+          Math.floor(baseLevel.spawnPattern.maxTotal * this.endlessMultiplier)
         ),
         interval: Math.max(
-          Math.floor(baseLevel.spawnPattern.interval / this.endlessMultiplier),
-          60 // 最小1秒間隔
+          60, // 最小1秒間隔 (60 frames)
+          Math.floor(baseLevel.spawnPattern.interval / this.endlessMultiplier)
         ),
       },
     };
@@ -588,10 +602,6 @@ export class SimpleLevelManager {
     }
   }
 
-  public getGameTimeSeconds(): number {
-    return ((Date.now() - this.gameStartTime) / 1000) * this.timeAcceleration;
-  }
-
   public isInEndlessMode(): boolean {
     return this.isEndlessMode;
   }
@@ -602,6 +612,11 @@ export class SimpleLevelManager {
 
   public getCurrentLevelNumber(): number {
     return this.currentLevel;
+  }
+
+  public getCurrentFrame(): number {
+    // Added getter for currentFrame
+    return this.currentFrame;
   }
 
   // UI表示用のレベル情報取得
@@ -617,11 +632,11 @@ export class SimpleLevelManager {
   public getDebugInfo(): any {
     const level = this.getCurrentLevel();
     return {
-      currentLevel: this.currentLevel,
+      currentLevelNumber: this.currentLevel,
       isEndlessMode: this.isEndlessMode,
       endlessMultiplier: this.endlessMultiplier,
       levelDifficultyMultiplier: this.getLevelDifficultyMultiplier(),
-      gameTimeSeconds: this.getGameTimeSeconds(),
+      currentFrame: this.currentFrame, // Ensure this uses the property
       levelName: level.name,
       levelEnemyTypes: level.enemyTypes,
       spawnPattern: level.spawnPattern,
