@@ -7,11 +7,16 @@ import {
   VIRTUAL_SCREEN_HEIGHT,
   GameCore,
 } from "./coreTypes.js";
+import {
+  playSoundEffect,
+  playMml as playMmlFromHelper,
+} from "../utils/browserHelper.js"; // Import playSoundEffect and playMml
 
 // ベースゲーム設定オプション
 interface BaseGameOptions {
   initialLives?: number;
   gameSpeed?: number; // ゲーム速度設定を追加
+  isDemoPlay?: boolean; // Demo play mode
 }
 
 export abstract class BaseGame implements GameCore {
@@ -21,6 +26,7 @@ export abstract class BaseGame implements GameCore {
   protected gameOverState: boolean;
   protected wonGame: boolean;
   private readonly initialLives: number; // 初期ライフ数を保存
+  protected isDemoPlay: boolean; // Demo play mode flag
 
   // gameSpeed制御機能
   protected gameSpeed: number; // ゲーム速度倍率
@@ -28,9 +34,10 @@ export abstract class BaseGame implements GameCore {
   private readonly initialGameSpeed: number; // 初期速度を保存
 
   constructor(options: BaseGameOptions = {}) {
-    const { initialLives = 3, gameSpeed = 1.0 } = options;
+    const { initialLives = 3, gameSpeed = 1.0, isDemoPlay = false } = options; // Destructure isDemoPlay
     this.initialLives = initialLives; // 初期値を保存
     this.initialGameSpeed = gameSpeed; // 初期速度を保存
+    this.isDemoPlay = isDemoPlay; // Set demo play mode
     this.score = 0;
     this.lives = initialLives;
     this.gameOverState = false;
@@ -189,6 +196,39 @@ export abstract class BaseGame implements GameCore {
 
   public adjustGameSpeed(delta: number): void {
     this.setGameSpeed(this.gameSpeed + delta);
+  }
+
+  /**
+   * Sets the demo play mode.
+   * @param isDemo Whether the game is in demo play mode.
+   */
+  public setIsDemoPlay(isDemo: boolean): void {
+    this.isDemoPlay = isDemo;
+  }
+
+  /**
+   * Plays a sound effect if not in demo play mode.
+   * @param sound The type of sound effect to play (from crisp-game-lib).
+   * @param seed An optional seed for sound variation.
+   */
+  public playSound(sound: SoundEffectType, seed?: number): void {
+    if (!this.isDemoPlay) {
+      playSoundEffect(sound, seed);
+    }
+  }
+
+  /**
+   * Plays MML (Music Macro Language) if not in demo play mode.
+   * @param mml The MML string or array of MML strings to play.
+   */
+  public playMml(mml: string | string[]): void {
+    if (!this.isDemoPlay) {
+      if (typeof mml === "string") {
+        playMmlFromHelper([mml]);
+      } else {
+        playMmlFromHelper(mml);
+      }
+    }
   }
 
   // Abstract methods that must be implemented by subclasses
