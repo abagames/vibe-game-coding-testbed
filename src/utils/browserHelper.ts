@@ -9,21 +9,35 @@ import {
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
 } from "../core/coreTypes.js";
+import { BaseGame } from "../core/BaseGame.js";
 
 /**
  * Maps crisp-game-lib keyboard input to the game's InputState.
  */
 export function mapCrispInputToGameInputState(): InputState {
+  const code = keyboard.code;
   return {
-    up: keyboard.code.ArrowUp.isPressed || keyboard.code.KeyW.isPressed,
-    down: keyboard.code.ArrowDown.isPressed || keyboard.code.KeyS.isPressed,
-    left: keyboard.code.ArrowLeft.isPressed || keyboard.code.KeyA.isPressed,
-    right: keyboard.code.ArrowRight.isPressed || keyboard.code.KeyD.isPressed,
+    up: code.ArrowUp.isPressed || code.KeyW.isPressed,
+    down: code.ArrowDown.isPressed || code.KeyS.isPressed,
+    left: code.ArrowLeft.isPressed || code.KeyA.isPressed,
+    right: code.ArrowRight.isPressed || code.KeyD.isPressed,
+
+    // X, Slash, Space
     action1:
-      keyboard.code.Space.isPressed ||
-      keyboard.code.Enter.isPressed ||
-      keyboard.code.KeyZ.isPressed ||
-      keyboard.code.KeyX.isPressed,
+      code.KeyX.isPressed || code.Slash.isPressed || code.Space.isPressed,
+
+    // Z, Period, Enter
+    action2:
+      code.KeyZ.isPressed || code.Period.isPressed || code.Enter.isPressed,
+
+    // Individual key states, can be useful for other specific bindings
+    enter: code.Enter.isPressed,
+    space: code.Space.isPressed,
+    escape: code.Escape.isPressed, // Assuming Escape key for escape functionality
+    r: code.KeyR.isPressed, // Assuming R key for restart
+    period: code.Period.isPressed,
+    slash: code.Slash.isPressed,
+    // Note: KeyZ and KeyX are already part of action1/action2
   };
 }
 
@@ -178,11 +192,53 @@ export function createStandardGameLoop(
   }
 
   function gameUpdate() {
-    if (!game || keyboard.code.KeyR.isJustPressed) {
+    // Standard reset on 'R' key press, but only if it's *just* pressed to avoid multiple resets.
+    // GameManager will handle its own 'r' input for restart in GAME_OVER state.
+    // BaseGame used to handle a global R for reset. If that's still desired outside of specific states,
+    // it might need to be passed to the game's update method or handled here.
+    // For now, the crisp-game-lib specific KeyR.isJustPressed is commented out from here,
+    // as game.update(inputState) will receive { r: true } and can decide.
+    // if (!game || keyboard.code.KeyR.isJustPressed) {
+    //   resetGame();
+    // }
+    if (!game) {
+      // Initialize game on first update if not already
       resetGame();
     }
 
     const gameInputState: InputState = mapCrispInputToGameInputState();
+
+    // Handle global R for reset if no specific game state handles it
+    // This is closer to how BaseGame handled it.
+    if (gameInputState.r && keyboard.code.KeyR.isJustPressed) {
+      // Check isJustPressed here to avoid continuous reset
+      // Check if game manager is in a state that handles R itself (e.g. GameOver)
+      // This is a bit of a hack. Ideally, GameCore would have a reset method that GameManager calls.
+      // Or, InputState could include isJustPressed flags.
+      if (
+        game instanceof BaseGame &&
+        (game as any).currentFlowState !== undefined
+      ) {
+        const gm = game as any; // GameManager specific logic
+        if (
+          gm.currentFlowState !== 3 /* GAME_OVER */ &&
+          gm.currentFlowState !== 2 /* PLAYING */
+        ) {
+          console.log(
+            "[browserHelper] Global R pressed, resetting game via resetGame()."
+          );
+          resetGame();
+        }
+        // If in PLAYING or GAME_OVER, let the GameManager handle 'r' via its update method.
+      } else {
+        // If not a GameManager or state is unknown, default to reset.
+        console.log(
+          "[browserHelper] Global R pressed (non-GameManager or unknown state), resetting game via resetGame()."
+        );
+        resetGame();
+      }
+    }
+
     game.update(gameInputState);
 
     const virtualScreenData = game.getVirtualScreenData();
@@ -214,4 +270,20 @@ export function initStandardTextGame(
     update: gameUpdate,
     options: cglOptions,
   });
+}
+
+/**
+ * Plays a sound effect using crisp-game-lib.
+ * @param sound The type of sound effect to play.
+ */
+export function playSoundEffect(sound: SoundEffectType, seed?: number): void {
+  play(sound, { seed });
+}
+
+/**
+ * Plays a MML (Music Macro Language) string using crisp-game-lib.
+ * @param mml The MML string to play.
+ */
+export function playMml(mmlStrings: string[]): void {
+  sss.playMml(mmlStrings, { isLooping: false });
 }

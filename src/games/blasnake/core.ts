@@ -52,7 +52,7 @@ interface GameMessage {
   color: cglColor;
 }
 
-interface BlasnakeGameOptions {
+export interface BlasnakeGameOptions {
   initialLives?: number;
   movementInterval?: number;
   enemyCount?: number;
@@ -61,9 +61,12 @@ interface BlasnakeGameOptions {
   invincible?: boolean;
   timeAcceleration?: number; // 時間進行の倍率（1.0 = 通常、2.0 = 2倍速）
   constrainToBounds?: boolean; // 画面境界での移動制約
+  startInPlayingState?: boolean; // Option to start the game directly in the playing state
 }
 
-export class CoreGameLogic extends BaseGame {
+export class CoreGameLogic {
+  private renderer: BaseGame; // For drawing
+
   // Enemy system integration
   private enemySystem: EnemySystemManager;
   // Level system integration
@@ -93,12 +96,24 @@ export class CoreGameLogic extends BaseGame {
   // Message system
   private gameMessages: GameMessage[];
 
-  // 蛇の長さ制御システム
-  private lastScoreGrowthCheck: number; // 最後にスコア成長をチェックしたスコア
-  private hasGrownThisEnclosure: boolean; // 今回の囲みで既に成長したかどうか
-  private preservedSnakeLength: number; // プレイヤーがやられた時の蛇の長さを保持
+  // Snake length control system
+  private lastScoreGrowthCheck: number;
+  private hasGrownThisEnclosure: boolean;
+  private preservedSnakeLength: number;
 
-  constructor(options: BlasnakeGameOptions = {}) {
+  // Internal game state properties (previously from BaseGame)
+  protected score: number;
+  protected lives: number;
+  protected gameOverState: boolean;
+  protected wonGame: boolean;
+  private readonly initialLivesCount: number;
+
+  // Cooldown for area explosion sound
+  private lastAreaExplosionSoundTime: number = -Infinity;
+  private readonly areaExplosionSoundCooldown: number = 60; // Match explosion effect duration
+
+  constructor(options: BlasnakeGameOptions = {}, renderer: BaseGame) {
+    this.renderer = renderer;
     const {
       initialLives = INITIAL_LIVES,
       movementInterval = SNAKE_MOVEMENT_INTERVAL,
@@ -107,7 +122,13 @@ export class CoreGameLogic extends BaseGame {
       timeAcceleration = 1.0,
       constrainToBounds = false,
     } = options;
-    super({ initialLives });
+
+    // Initialize internal game state properties
+    this.initialLivesCount = initialLives;
+    this.score = 0;
+    this.lives = this.initialLivesCount;
+    this.gameOverState = false;
+    this.wonGame = false;
 
     // Initialize debug options
     this.debugMode = debugMode;
@@ -147,12 +168,10 @@ export class CoreGameLogic extends BaseGame {
     this.lastScoreGrowthCheck = 0;
     this.hasGrownThisEnclosure = false;
     this.preservedSnakeLength = INITIAL_SNAKE_LENGTH;
-
-    this.initializeGame();
   }
 
   public initializeGame(): void {
-    this.resetGame();
+    this.resetGameInternal();
 
     // Reset level manager
     this.levelManager = new SimpleLevelManager(this.timeAcceleration);
@@ -163,7 +182,6 @@ export class CoreGameLogic extends BaseGame {
       this.lastSpawnTimes.set(type, 0);
     });
 
-    // スネークの初期位置（画面中央付近）
     const startX = Math.floor(VIRTUAL_SCREEN_WIDTH / 2);
     const startY = Math.floor(VIRTUAL_SCREEN_HEIGHT / 2);
 
@@ -176,22 +194,102 @@ export class CoreGameLogic extends BaseGame {
     this.nextDirection = Direction.RIGHT;
     this.movementFrameCounter = 0;
 
-    // Reset snake length control system
     this.lastScoreGrowthCheck = 0;
     this.hasGrownThisEnclosure = false;
     this.preservedSnakeLength = INITIAL_SNAKE_LENGTH;
 
-    // Reset message system
     this.gameMessages = [];
-
     this.generateFood();
-
-    // Clear enemy system (auto-replenishment will handle spawning)
     this.enemySystem.clearAllEnemies();
   }
 
+  protected resetGameInternal(): void {
+    this.score = 0;
+    this.lives = this.initialLivesCount;
+    this.gameOverState = false;
+    this.wonGame = false;
+  }
+
+  public getScore(): number {
+    return this.score;
+  }
+
+  public getHighScore(): number {
+    return this.highScore;
+  }
+
+  public getLives(): number {
+    return this.lives;
+  }
+
+  public isGameOver(): boolean {
+    return this.gameOverState;
+  }
+
+  public isGameWon(): boolean {
+    return this.wonGame;
+  }
+
+  public getSnakeHeadPosition(): Position | null {
+    if (this.snake.length > 0) {
+      return { ...this.snake[0] }; // Return a copy
+    }
+    return null;
+  }
+
+  public isCellSafeForMovement(x: number, y: number): boolean {
+    // Check bounds against actual game walls
+    if (
+      x < 1 || // Wall at x = 0
+      x >= VIRTUAL_SCREEN_WIDTH - 1 || // Wall at x = VIRTUAL_SCREEN_WIDTH - 1
+      y < 2 || // Wall at y = 1 (row 0 is often UI)
+      y >= VIRTUAL_SCREEN_HEIGHT - 1 // Wall at y = VIRTUAL_SCREEN_HEIGHT - 1
+    ) {
+      return false; // Wall collision
+    }
+
+    // Check self-collision (excluding the very tip of the tail, as it will move)
+    // For demo AI, we are only concerned with walls and self.
+    for (let i = 0; i < this.snake.length - 1; i++) {
+      if (this.snake[i].x === x && this.snake[i].y === y) {
+        return false; // Self-collision
+      }
+    }
+    return true;
+  }
+
+  protected winGame(): void {
+    this.wonGame = true;
+    this.gameOverState = true;
+  }
+
+  protected loseLife(): void {
+    this.lives--;
+    if (this.lives <= 0) {
+      this.lives = 0;
+      this.gameOverState = true;
+    }
+  }
+
+  private drawText(
+    text: string,
+    x: number,
+    y: number,
+    attributes?: CellAttributes
+  ): void {
+    this.renderer.drawText(text, x, y, attributes);
+  }
+
+  private drawCenteredText(
+    text: string,
+    y: number,
+    attributes?: CellAttributes
+  ): void {
+    const startX = Math.floor(VIRTUAL_SCREEN_WIDTH / 2 - text.length / 2);
+    this.drawText(text, startX, y, attributes);
+  }
+
   private drawStaticElements(): void {
-    // Draw border walls
     const wallChar = "#";
     const wallAttributes = {
       entityType: "wall",
@@ -208,7 +306,6 @@ export class CoreGameLogic extends BaseGame {
       this.drawText(wallChar, VIRTUAL_SCREEN_WIDTH - 1, y, wallAttributes);
     }
 
-    // Draw food
     this.drawText("$", this.food.x, this.food.y, {
       entityType: "food",
       isPassable: true,
@@ -217,7 +314,6 @@ export class CoreGameLogic extends BaseGame {
   }
 
   private drawSnake(): void {
-    // Draw snake head
     if (this.snake.length > 0) {
       const head = this.snake[0];
       this.drawText("@", head.x, head.y, {
@@ -227,7 +323,6 @@ export class CoreGameLogic extends BaseGame {
       });
     }
 
-    // Draw snake body
     for (let i = 1; i < this.snake.length; i++) {
       const segment = this.snake[i];
       this.drawText("*", segment.x, segment.y, {
@@ -242,13 +337,11 @@ export class CoreGameLogic extends BaseGame {
     const enemies = this.enemySystem.getAllEnemies();
 
     for (const enemy of enemies) {
-      // スネーク敵の場合は胴体も描画
       if (enemy.type === EnemyType.SNAKE) {
         const snakeEnemy = enemy as SnakeEnemy;
         const snakeManager = (this.enemySystem as any)
           .snakeManager as SnakeEnemyManager;
 
-        // 胴体セグメントを描画
         const bodyDisplayInfo =
           snakeManager.getSnakeBodyDisplayInfo(snakeEnemy);
         for (const bodySegment of bodyDisplayInfo) {
@@ -261,7 +354,6 @@ export class CoreGameLogic extends BaseGame {
         }
       }
 
-      // 頭部（または通常の敵）を描画
       const displayInfo = this.enemySystem.getEnemyDisplayInfo(enemy);
       this.drawText(displayInfo.char, enemy.x, enemy.y, displayInfo.attributes);
     }
@@ -341,7 +433,6 @@ export class CoreGameLogic extends BaseGame {
     for (const effect of effects) {
       const progress = effect.duration / effect.maxDuration;
 
-      // スコア表示（基本点数を表示）
       if (effect.baseScore > 0 && progress > 0.1) {
         const scoreText = `${effect.baseScore}`;
         this.drawText(scoreText, effect.x, effect.y, {
@@ -350,7 +441,6 @@ export class CoreGameLogic extends BaseGame {
           color: "white",
         });
 
-        // 倍率表示（2倍以上の場合、スコアの上に表示）
         if (effect.multiplier > 1) {
           const multiplierText = `x${effect.multiplier}`;
           const multiplierY = Math.max(1, effect.y - 1);
@@ -370,7 +460,6 @@ export class CoreGameLogic extends BaseGame {
       if (this.explosions[i].duration <= 0) {
         this.explosions.splice(i, 1);
 
-        // プレイヤー爆発エフェクトが終了したらリスタート
         if (
           this.playerExplosionPosition &&
           this.explosions.length === 0 &&
@@ -388,7 +477,7 @@ export class CoreGameLogic extends BaseGame {
     this.explosions.push({
       x: x,
       y: y,
-      duration: 60, // 1秒間（60fps想定）
+      duration: 60,
       maxDuration: 60,
     });
   }
@@ -418,15 +507,12 @@ export class CoreGameLogic extends BaseGame {
   private drawGameMessages(): void {
     if (this.gameMessages.length === 0) return;
 
-    // Display the most recent message at the bottom center of the screen
     const message = this.gameMessages[this.gameMessages.length - 1];
-    const messageY = VIRTUAL_SCREEN_HEIGHT - 1; // Bottom of the screen
+    const messageY = VIRTUAL_SCREEN_HEIGHT - 1;
 
-    // Add fade effect based on remaining duration
     const progress = message.duration / message.maxDuration;
     let displayColor = message.color;
 
-    // Fade out in the last 25% of duration
     if (progress < 0.25) {
       displayColor = "light_black";
     }
@@ -447,9 +533,8 @@ export class CoreGameLogic extends BaseGame {
     let currentX = head.x;
     let currentY = head.y;
     let lineLength = 0;
-    const maxLineLength = 5; // Max 5 characters for the guide line
+    const maxLineLength = 5;
 
-    // Extend guide line in current direction
     while (lineLength < maxLineLength) {
       switch (this.direction) {
         case Direction.UP:
@@ -466,7 +551,6 @@ export class CoreGameLogic extends BaseGame {
           break;
       }
 
-      // Stop if wall is hit
       if (
         currentX < 1 ||
         currentX >= VIRTUAL_SCREEN_WIDTH - 1 ||
@@ -476,7 +560,6 @@ export class CoreGameLogic extends BaseGame {
         break;
       }
 
-      // Stop if snake body is hit
       const hitSnake = this.snake.some(
         (segment) => segment.x === currentX && segment.y === currentY
       );
@@ -484,7 +567,6 @@ export class CoreGameLogic extends BaseGame {
         break;
       }
 
-      // Stop if enemy is hit
       const hitEnemy =
         this.enemySystem.getEnemyAtPosition({ x: currentX, y: currentY }) !==
         null;
@@ -492,7 +574,6 @@ export class CoreGameLogic extends BaseGame {
         break;
       }
 
-      // Stop if food is hit
       if (currentX === this.food.x && currentY === this.food.y) {
         break;
       }
@@ -505,10 +586,9 @@ export class CoreGameLogic extends BaseGame {
   private drawGuideLines(): void {
     for (const guide of this.guideLines) {
       this.drawText(".", guide.x, guide.y, {
-        // Use '.' for guide lines
         entityType: "guide_line",
         isPassable: true,
-        color: "light_blue", // Standard guide line color
+        color: "light_blue",
       });
     }
   }
@@ -519,8 +599,8 @@ export class CoreGameLogic extends BaseGame {
 
     do {
       foodPosition = {
-        x: Math.floor(Math.random() * (VIRTUAL_SCREEN_WIDTH - 6)) + 3, // 3 から 36 の範囲（壁から2マス離れる）
-        y: Math.floor(Math.random() * (VIRTUAL_SCREEN_HEIGHT - 7)) + 4, // 4 から 21 の範囲（壁から2マス離れる）
+        x: Math.floor(Math.random() * (VIRTUAL_SCREEN_WIDTH - 6)) + 3,
+        y: Math.floor(Math.random() * (VIRTUAL_SCREEN_HEIGHT - 7)) + 4,
       };
 
       const hasSnake = this.snake.some(
@@ -534,8 +614,6 @@ export class CoreGameLogic extends BaseGame {
     } while (!validPosition);
 
     this.food = foodPosition;
-
-    // ガード敵のターゲットを新しい食べ物の位置に更新
     this.enemySystem.updateGuardTargets(foodPosition);
   }
 
@@ -561,7 +639,6 @@ export class CoreGameLogic extends BaseGame {
         break;
     }
 
-    // デバッグモード：境界制約
     if (this.constrainToBounds) {
       head.x = Math.max(1, Math.min(VIRTUAL_SCREEN_WIDTH - 2, head.x));
       head.y = Math.max(2, Math.min(VIRTUAL_SCREEN_HEIGHT - 2, head.y));
@@ -569,14 +646,11 @@ export class CoreGameLogic extends BaseGame {
 
     this.snake.unshift(head);
 
-    // 食べ物を食べたかチェック
     if (head.x === this.food.x && head.y === this.food.y) {
+      this.renderer.playSound("powerUp");
       this.addScore(10);
       this.generateFood();
-      // 食べ物を食べて伸びた場合、保存された長さも更新
       this.preservedSnakeLength = this.snake.length;
-
-      // 食べ物を食べた時のGROWメッセージを表示
       this.addGameMessage("GROW!", "green", 60);
     } else {
       this.snake.pop();
@@ -584,7 +658,6 @@ export class CoreGameLogic extends BaseGame {
   }
 
   private checkCollisions(): void {
-    // 無敵モードの場合は衝突判定をスキップ
     if (this.invincible) {
       return;
     }
@@ -593,13 +666,11 @@ export class CoreGameLogic extends BaseGame {
 
     const head = this.snake[0];
 
-    // 壁との衝突
     if (head.x < 1 || head.x >= 39 || head.y < 2 || head.y >= 24) {
       this.explodePlayer();
       return;
     }
 
-    // 自分の体との衝突
     for (let i = 1; i < this.snake.length; i++) {
       if (head.x === this.snake[i].x && head.y === this.snake[i].y) {
         this.explodePlayer();
@@ -607,14 +678,12 @@ export class CoreGameLogic extends BaseGame {
       }
     }
 
-    // 敵との衝突（新しい敵システムを使用）
     const collidedEnemy = this.enemySystem.checkEnemyCollision(head);
     if (collidedEnemy) {
       this.explodePlayer();
       return;
     }
 
-    // スネーク敵の胴体との衝突チェック
     const enemies = this.enemySystem.getAllEnemies();
     for (const enemy of enemies) {
       if (enemy.type === EnemyType.SNAKE && !enemy.isBlinking) {
@@ -637,40 +706,21 @@ export class CoreGameLogic extends BaseGame {
     if (this.snake.length < 8) return;
 
     const separateAreas = this.findSeparateAreas();
-    console.log(
-      `[AreaCheck] Found ${separateAreas.length} separate areas from checkAreaEnclosure.`
-    );
-
     let anyAreaExploded = false;
 
     for (const area of separateAreas) {
-      console.log(
-        `[AreaCheckLoop] Area: size=${area.size}, start=(${area.startPos.x},${area.startPos.y}), borderConn=${area.isBorderConnected}`
-      );
       if (!area.isBorderConnected && area.size > 0) {
-        console.log(
-          `[AreaCheckLoop] Potential enclosed area for explosion at (${area.startPos.x},${area.startPos.y}), size ${area.size}`
-        );
         const destroyedEnemies = this.explodeAreaFromPosition(area.startPos);
         if (destroyedEnemies > 0) {
-          console.log(
-            `💥 BLAST! ${destroyedEnemies} enemies destroyed in area starting at (${area.startPos.x},${area.startPos.y})!`
-          );
           anyAreaExploded = true;
         } else if (area.size > 0) {
-          // Log explosion even if no enemies
-          console.log(
-            `💥 BLAST! Dry run (no enemies) in area starting at (${area.startPos.x},${area.startPos.y}), size ${area.size}!`
-          );
           anyAreaExploded = true;
         }
       }
     }
 
-    // 囲み破壊が発生した場合、次の囲みでのスコア成長を可能にする
     if (anyAreaExploded) {
       this.hasGrownThisEnclosure = false;
-      console.log("🔄 Enclosure growth flag reset for next enclosure");
     }
   }
 
@@ -679,7 +729,6 @@ export class CoreGameLogic extends BaseGame {
     startPos: Position;
     isBorderConnected: boolean;
   }> {
-    console.log("[FindSeparateAreas] Starting area search...");
     const visited = Array(VIRTUAL_SCREEN_HEIGHT)
       .fill(null)
       .map(() => Array(VIRTUAL_SCREEN_WIDTH).fill(false));
@@ -693,9 +742,6 @@ export class CoreGameLogic extends BaseGame {
     for (let y = 2; y < VIRTUAL_SCREEN_HEIGHT - 1; y++) {
       for (let x = 1; x < VIRTUAL_SCREEN_WIDTH - 1; x++) {
         if (!visited[y][x] && this.isTraversableForAreaFinding(x, y)) {
-          console.log(
-            `[FindSeparateAreas] Potential area start at (${x}, ${y})`
-          );
           const area = this.floodFillArea(
             x,
             y,
@@ -703,9 +749,6 @@ export class CoreGameLogic extends BaseGame {
             this.isTraversableForAreaFinding.bind(this)
           );
           if (area.size > 0) {
-            console.log(
-              `[FindSeparateAreas] Found area: size=${area.size}, start=(${x},${y}), borderConn=${area.isBorderConnected}`
-            );
             areas.push({
               size: area.size,
               startPos: { x, y },
@@ -715,21 +758,10 @@ export class CoreGameLogic extends BaseGame {
         }
       }
     }
-    console.log(
-      `[FindSeparateAreas] Finished area search. Found ${areas.length} areas.`
-    );
     return areas;
   }
 
   private isTraversableForAreaFinding(x: number, y: number): boolean {
-    // Log specific points of interest based on guideline intersection area
-    // if (x >= 10 && x <= 20 && y >= 10 && y <= 13) {
-    //   const isSnake = this.snake.some(seg => seg.x === x && seg.y === y);
-    //   const isGuide = this.guideLines.some(guide => guide.x === x && guide.y === y);
-    //   console.log(`[isTFAF_Guideline] Checking (${x},${y}). isSnake: ${isSnake}, isGuide: ${isGuide}`);
-    // }
-
-    // 壁チェック（画面境界）
     if (
       x <= 0 ||
       x >= VIRTUAL_SCREEN_WIDTH - 1 ||
@@ -753,7 +785,6 @@ export class CoreGameLogic extends BaseGame {
   }
 
   private isEmptySpace(x: number, y: number): boolean {
-    // 壁チェック
     if (
       x <= 0 ||
       x >= VIRTUAL_SCREEN_WIDTH - 1 ||
@@ -763,20 +794,16 @@ export class CoreGameLogic extends BaseGame {
       return false;
     }
 
-    // スネークチェック
     const hasSnake = this.snake.some(
       (segment) => segment.x === x && segment.y === y
     );
     if (hasSnake) return false;
 
-    // 食べ物チェック
     if (this.food.x === x && this.food.y === y) return false;
 
-    // 敵チェック（新しい敵システムを使用）
     const hasEnemy = this.enemySystem.getEnemyAtPosition({ x, y }) !== null;
     if (hasEnemy) return false;
 
-    // スネーク敵の胴体チェック
     const enemies = this.enemySystem.getAllEnemies();
     for (const enemy of enemies) {
       if (enemy.type === EnemyType.SNAKE && !enemy.isBlinking) {
@@ -793,7 +820,6 @@ export class CoreGameLogic extends BaseGame {
       }
     }
 
-    // ガイドラインチェック
     const hasGuideLine = this.guideLines.some(
       (guide) => guide.x === x && guide.y === y
     );
@@ -810,7 +836,6 @@ export class CoreGameLogic extends BaseGame {
       this
     )
   ): { size: number; isBorderConnected: boolean } {
-    // console.log(`[FloodFillArea] Start flood fill at (${startX}, ${startY})`); // Optional detailed log for floodFillArea start
     if (
       startX < 0 ||
       startX >= VIRTUAL_SCREEN_WIDTH ||
@@ -843,7 +868,6 @@ export class CoreGameLogic extends BaseGame {
         continue;
       }
 
-      // 境界に接している場合
       if (
         x === 1 ||
         x === VIRTUAL_SCREEN_WIDTH - 2 ||
@@ -870,9 +894,6 @@ export class CoreGameLogic extends BaseGame {
   }
 
   private explodeArea(startX: number, startY: number): number {
-    console.log(`[ExplodeArea] Called for start (${startX},${startY})`);
-
-    // First, find the actual enclosed area size to limit explosion
     const visited = Array(VIRTUAL_SCREEN_HEIGHT)
       .fill(null)
       .map(() => Array(VIRTUAL_SCREEN_WIDTH).fill(false));
@@ -883,20 +904,11 @@ export class CoreGameLogic extends BaseGame {
       visited,
       this.isTraversableForAreaFinding.bind(this)
     );
-    console.log(
-      `[ExplodeArea] Enclosed area for explosion: size=${enclosedArea.size}, borderConnected=${enclosedArea.isBorderConnected}`
-    );
 
-    // If the area is border connected, it's not truly enclosed - don't explode
     if (enclosedArea.isBorderConnected && enclosedArea.size > 10) {
-      // Allow small border connected areas to not explode, but log if they would have
-      console.log(
-        `[ExplodeArea] Area is border connected or too small, skipping explosion. Size: ${enclosedArea.size}`
-      );
       return 0;
     }
 
-    // Reset visited array for the actual explosion fill
     const explosionVisited = Array(VIRTUAL_SCREEN_HEIGHT)
       .fill(null)
       .map(() => Array(VIRTUAL_SCREEN_WIDTH).fill(false));
@@ -913,48 +925,32 @@ export class CoreGameLogic extends BaseGame {
       (x, y) => {
         this.addExplosionEffect(x, y);
 
-        // 敵チェック（頭部のみ、スネーク敵も頭部のみで判定）
         const enemyAtPos = this.enemySystem.getEnemyAtPosition({ x, y });
         if (
           enemyAtPos &&
           !enemyAtPos.isBlinking &&
           !seenEnemyIds.has(enemyAtPos.id)
         ) {
-          // console.log(`[ExplodeAreaFill] Found enemy ${enemyAtPos.id} at (${x},${y}) in fill.`);
           enemiesInArea.push(enemyAtPos);
           seenEnemyIds.add(enemyAtPos.id);
         }
       }
     );
-    console.log(
-      `[ExplodeArea] Flood fill for explosion covered ${fillState.filledCellCount} cells. Found ${enemiesInArea.length} unique enemies.`
-    );
 
     let actualDestroyedCount = 0;
     if (enemiesInArea.length > 0) {
-      // 倍率計算時はbaseScore > 0の敵のみをカウント
       const scorableEnemies = enemiesInArea.filter(
         (enemy) => enemy.baseScore > 0
       );
-      const multiplier = scorableEnemies.length; // baseScore > 0の敵のみで倍率計算
+      const multiplier = scorableEnemies.length;
       let totalScoreFromBlast = 0;
 
-      console.log(
-        `[ExplodeArea] Total enemies in area: ${enemiesInArea.length}, Scorable enemies: ${scorableEnemies.length}, Multiplier: ${multiplier}`
-      );
-
       for (const enemyToBlast of enemiesInArea) {
-        // ★★★ 追加: baseScoreが0の敵は囲み破壊の対象外とする ★★★
         if (enemyToBlast.baseScore === 0) {
-          console.log(
-            `[ExplodeArea] Skipping destruction of enemy ${enemyToBlast.id} (type: ${enemyToBlast.type}) due to baseScore === 0.`
-          );
-          continue; // スコア0の敵は破壊しない
+          continue;
         }
 
-        // 敵の実際のbaseScoreを使用
         const enemyScore = enemyToBlast.baseScore * multiplier;
-        // Use the new destroyEnemyById from EnemySystemManager
         if (
           this.enemySystem.destroyEnemyById(
             enemyToBlast.id,
@@ -964,10 +960,29 @@ export class CoreGameLogic extends BaseGame {
         ) {
           actualDestroyedCount++;
           totalScoreFromBlast += enemyScore;
+          const enemyTypeSeed = Object.values(EnemyType).indexOf(
+            enemyToBlast.type
+          );
+          this.renderer.playSound(
+            "coin",
+            enemyTypeSeed >= 0 ? enemyTypeSeed : undefined
+          );
         }
       }
       if (totalScoreFromBlast > 0) {
-        this.addScore(totalScoreFromBlast); // Add accumulated score once
+        this.addScore(totalScoreFromBlast);
+      }
+    }
+    if (
+      actualDestroyedCount > 0 ||
+      (enclosedArea.size > 0 && enemiesInArea.length === 0)
+    ) {
+      if (
+        this.gameFrameCounter >=
+        this.lastAreaExplosionSoundTime + this.areaExplosionSoundCooldown
+      ) {
+        this.renderer.playSound("explosion", 100); // Seed 100 for area explosion (area clear itself)
+        this.lastAreaExplosionSoundTime = this.gameFrameCounter;
       }
     }
     return actualDestroyedCount;
@@ -980,21 +995,17 @@ export class CoreGameLogic extends BaseGame {
     fillState: { filledCellCount: number; maxCellsToFill: number },
     callback: (x: number, y: number) => void
   ): void {
-    // Log entry and current fill state
-    // console.log(`[FFAD] Start: (${startX},${startY}), Count: ${fillState.filledCellCount}, Max: ${fillState.maxCellsToFill}`);
-
     if (
       fillState.filledCellCount >= fillState.maxCellsToFill ||
-      startX <= 0 || // Fixed: Match isTraversableForAreaFinding boundary
+      startX <= 0 ||
       startX >= VIRTUAL_SCREEN_WIDTH - 1 ||
-      startY <= 1 || // Fixed: Match isTraversableForAreaFinding boundary
+      startY <= 1 ||
       startY >= VIRTUAL_SCREEN_HEIGHT - 1 ||
       visited[startY][startX]
     ) {
       return;
     }
 
-    // Use the same traversability check as area detection to ensure consistency
     if (!this.isTraversableForAreaFinding(startX, startY)) {
       return;
     }
@@ -1003,33 +1014,28 @@ export class CoreGameLogic extends BaseGame {
     fillState.filledCellCount++;
     callback(startX, startY);
 
-    // Log after processing a cell
-    // console.log(`[FFAD] Processed: (${startX},${startY}), NewCount: ${fillState.filledCellCount}`);
-
     this.floodFillAndDestroy(startX + 1, startY, visited, fillState, callback);
     this.floodFillAndDestroy(startX - 1, startY, visited, fillState, callback);
     this.floodFillAndDestroy(startX, startY + 1, visited, fillState, callback);
     this.floodFillAndDestroy(startX, startY - 1, visited, fillState, callback);
   }
 
-  protected updateGame(inputState: InputState): void {
+  public update(inputState: InputState): void {
+    if (this.gameOverState) {
+      return;
+    }
+
     this.gameFrameCounter++;
     this.drawStaticElements();
 
     if (this.isWaitingForRestart) {
       this.drawExplosions();
       this.updateExplosions();
-      // 画面上部の表示
-      // 左上: スコア
       this.drawText(`${this.getScore()}`, 1, 0, { color: "white" });
-
-      // 右上: ハイスコア
       const hiScoreText = `HI ${this.highScore}`;
       const hiScoreX = VIRTUAL_SCREEN_WIDTH - hiScoreText.length - 1;
       this.drawText(hiScoreText, hiScoreX, 0, { color: "yellow" });
-
-      // 中央: 残機アイコン（現在のライフ数-1個の@マークを表示）
-      const remainingLives = this.getLives() - 1; // 現在プレイ中の分を除く
+      const remainingLives = this.getLives() - 1;
       if (remainingLives > 0) {
         const livesStartX = Math.floor(
           (VIRTUAL_SCREEN_WIDTH - remainingLives * 2) / 2
@@ -1041,12 +1047,10 @@ export class CoreGameLogic extends BaseGame {
       return;
     }
 
-    // Update level system
     const levelChanged = this.levelManager.update();
     if (levelChanged) {
       const currentLevel = this.levelManager.getCurrentLevel();
       console.log(`🎯 Level Changed: ${currentLevel.name}`);
-
       if (this.levelManager.isInEndlessMode()) {
         console.log(
           `🔄 Endless Mode - Multiplier: ${this.levelManager
@@ -1060,19 +1064,17 @@ export class CoreGameLogic extends BaseGame {
       gameTime: this.gameFrameCounter,
       score: this.getScore(),
       snakeLength: this.snake.length,
-      totalEnemiesDestroyed: 0, // TODO: Track this
+      totalEnemiesDestroyed: 0,
       lives: this.getLives(),
       playerPosition: this.snake[0] || { x: 0, y: 0 },
-      snakeSegments: [...this.snake], // スネーク全体の位置情報を追加
+      snakeSegments: [...this.snake],
       enemies: this.enemySystem.getAllEnemies(),
-      foodPosition: this.food, // 食べ物の位置を追加
+      foodPosition: this.food,
     } as GameState;
 
-    // Update all enemies EVERY tick
     const enemyUpdateResult = this.enemySystem.updateAllEnemies(gameState);
     this.addScore(enemyUpdateResult.scoreToAdd);
 
-    // New level-based spawning system
     this.updateEnemySpawning(gameState);
 
     this.movementFrameCounter++;
@@ -1093,6 +1095,10 @@ export class CoreGameLogic extends BaseGame {
       this.checkCollisions();
     }
 
+    if (this.gameOverState) {
+      return;
+    }
+
     this.updateGuideLines();
     this.drawGuideLines();
     this.drawSnake();
@@ -1104,21 +1110,14 @@ export class CoreGameLogic extends BaseGame {
     this.drawScoreDisplayEffects();
     this.checkAreaEnclosure();
 
-    // Update and draw messages
     this.updateGameMessages();
     this.drawGameMessages();
 
-    // 画面上部の表示
-    // 左上: スコア
     this.drawText(`${this.getScore()}`, 1, 0, { color: "white" });
-
-    // 右上: ハイスコア
     const hiScoreText = `HI ${this.highScore}`;
     const hiScoreX = VIRTUAL_SCREEN_WIDTH - hiScoreText.length - 1;
     this.drawText(hiScoreText, hiScoreX, 0, { color: "yellow" });
-
-    // 中央: 残機アイコン（現在のライフ数-1個の@マークを表示）
-    const remainingLives = this.getLives() - 1; // 現在プレイ中の分を除く
+    const remainingLives = this.getLives() - 1;
     if (remainingLives > 0) {
       const livesStartX = Math.floor(
         (VIRTUAL_SCREEN_WIDTH - remainingLives * 2) / 2
@@ -1130,37 +1129,34 @@ export class CoreGameLogic extends BaseGame {
   }
 
   private explodePlayer(): void {
-    const head = this.snake[0];
+    if (this.snake.length === 0 && !this.playerExplosionPosition) return;
 
-    // 自機の位置に爆発エフェクトを追加
+    const head = this.playerExplosionPosition || this.snake[0];
+    if (!head) return;
+
+    this.renderer.playSound("explosion", 200);
     this.addExplosionEffect(head.x, head.y);
-
-    // プレイヤー爆発位置を記録
     this.playerExplosionPosition = { x: head.x, y: head.y };
-
-    // 全ての敵を消滅させる（得点は入らない）
     this.enemySystem.clearAllEnemies();
-
-    // ライフを減らす
     this.loseLife();
 
-    // ゲームオーバーでなければリスタート待機状態に
     if (!this.isGameOver()) {
       this.isWaitingForRestart = true;
-      // 現在の蛇の長さを保存してから非表示にする
-      this.preservedSnakeLength = this.snake.length;
+      this.preservedSnakeLength =
+        this.snake.length > 0 ? this.snake.length : this.preservedSnakeLength;
+      this.snake = [];
+    } else {
+      this.isWaitingForRestart = true;
       this.snake = [];
     }
   }
 
   private restartFromBeginning(): void {
-    // 保存された蛇の長さを使用（最低でも初期長さを保証）
     const currentLength = Math.max(
       this.preservedSnakeLength,
       INITIAL_SNAKE_LENGTH
     );
 
-    // スネークの頭を画面中央に戻し、保存された長さを維持
     const startX = Math.floor(VIRTUAL_SCREEN_WIDTH / 2);
     const startY = Math.floor(VIRTUAL_SCREEN_HEIGHT / 2);
 
@@ -1172,72 +1168,54 @@ export class CoreGameLogic extends BaseGame {
     this.direction = Direction.RIGHT;
     this.nextDirection = Direction.RIGHT;
     this.movementFrameCounter = 0;
-
-    // 新しい食べ物を生成
     this.generateFood();
-
     console.log(`🔄 Snake restarted with preserved length: ${currentLength}`);
-
-    // Enemy system will auto-replenish enemies
-    // Note: レベルマネージャーはリセットしない（ライフを失ってもレベルは継続）
   }
 
   public addScore(points: number): void {
-    const oldScore = this.getScore();
-    super.addScore(points);
-    const newScore = this.getScore();
+    if (points === 0) return;
+    const oldScore = this.score;
+    this.score += points;
+    const newScore = this.score;
 
-    // ハイスコア更新
     if (newScore > this.highScore) {
       this.highScore = newScore;
     }
 
-    // スコアによる蛇の成長チェック（1000点ごと）
     const oldThresholds = Math.floor(
       this.lastScoreGrowthCheck / SCORE_GROWTH_THRESHOLD
     );
     const newThresholds = Math.floor(newScore / SCORE_GROWTH_THRESHOLD);
 
     if (newThresholds > oldThresholds && !this.hasGrownThisEnclosure) {
-      // 1000点の閾値を超えた場合、蛇を1つ伸ばす
       this.growSnake();
-      this.hasGrownThisEnclosure = true; // 今回の囲みでの成長フラグを設定
+      this.hasGrownThisEnclosure = true;
       console.log(
         `🐍 Snake grew due to score! Length: ${this.snake.length}, Score: ${newScore}`
       );
     }
 
     this.lastScoreGrowthCheck = newScore;
-
-    // 長さが30以上になった場合の機数増加チェック
     this.checkExtraLifeFromLength();
   }
 
-  // 蛇を1つ伸ばすメソッド
   private growSnake(): void {
     if (this.snake.length > 0) {
-      // 最後のセグメントを複製して追加
       const lastSegment = this.snake[this.snake.length - 1];
       this.snake.push({ ...lastSegment });
-      // 保存された長さも更新
       this.preservedSnakeLength = this.snake.length;
-
-      // 成長メッセージを表示
       this.addGameMessage("GROW!", "green", 90);
     }
   }
 
-  // Debug method for enemy system
   public getEnemyDebugInfo(): any {
     return this.enemySystem.getDebugInfo();
   }
 
-  // New level-based enemy spawning system
   private updateEnemySpawning(gameState: GameState): void {
     const currentLevel = this.levelManager.getCurrentLevel();
     const totalEnemyCount = this.getTotalEnemyCount();
 
-    // Check each enemy type for spawning
     for (const enemyType of currentLevel.enemyTypes) {
       const currentCount = this.getEnemyCount(enemyType);
       const lastSpawnTime = this.lastSpawnTimes.get(enemyType) || 0;
@@ -1253,17 +1231,6 @@ export class CoreGameLogic extends BaseGame {
       if (spawnDecision.shouldSpawn) {
         this.spawnEnemyOfType(enemyType, gameState);
         this.lastSpawnTimes.set(enemyType, this.gameFrameCounter);
-
-        // Debug logging
-        if (spawnDecision.isEmergency) {
-          console.log(
-            `🚨 Emergency spawn: ${enemyType} (total: ${totalEnemyCount}, current: ${currentCount})`
-          );
-        } else {
-          console.log(
-            `✨ Normal spawn: ${enemyType} (${spawnDecision.reason}, total: ${totalEnemyCount})`
-          );
-        }
       }
     }
   }
@@ -1281,7 +1248,6 @@ export class CoreGameLogic extends BaseGame {
   private spawnEnemyOfType(enemyType: EnemyType, gameState: GameState): void {
     let position: Position | null = null;
 
-    // Guard の場合は食べ物の近くにスポーン
     if (enemyType === EnemyType.GUARD) {
       const foodPosition = gameState.foodPosition;
       if (foodPosition) {
@@ -1289,13 +1255,11 @@ export class CoreGameLogic extends BaseGame {
       }
     }
 
-    // Guard用の位置が見つからない場合、または他の敵の場合は通常のランダム位置
     if (!position) {
       position = this.findValidSpawnPosition(gameState);
     }
 
     if (!position) {
-      console.log(`❌ No valid spawn position found for ${enemyType}`);
       return;
     }
 
@@ -1361,18 +1325,21 @@ export class CoreGameLogic extends BaseGame {
         );
         break;
       case EnemyType.SWARM:
-        // Swarmは特別な処理が必要
         const swarmLeader = (
           this.enemySystem as any
         ).swarmManager.spawnSwarmGroup(position);
         enemyId = swarmLeader ? swarmLeader.id : null;
         break;
       default:
-        console.log(`❌ Unknown enemy type: ${enemyType}`);
         return;
     }
 
     if (enemyId) {
+      const enemyTypeSeed = Object.values(EnemyType).indexOf(enemyType);
+      this.renderer.playSound(
+        "laser",
+        enemyTypeSeed >= 0 ? enemyTypeSeed : undefined
+      );
       console.log(
         `👹 ${enemyType} spawned at (${position.x}, ${position.y}) - ID: ${enemyId}`
       );
@@ -1424,7 +1391,6 @@ export class CoreGameLogic extends BaseGame {
   }
 
   private isValidSpawnPosition(pos: Position, gameState: GameState): boolean {
-    // Check bounds
     if (
       pos.x <= 1 ||
       pos.x >= VIRTUAL_SCREEN_WIDTH - 2 ||
@@ -1434,14 +1400,12 @@ export class CoreGameLogic extends BaseGame {
       return false;
     }
 
-    // Check snake collision
     for (const segment of gameState.snakeSegments) {
       if (segment.x === pos.x && segment.y === pos.y) {
         return false;
       }
     }
 
-    // Check food collision
     if (
       gameState.foodPosition &&
       gameState.foodPosition.x === pos.x &&
@@ -1450,7 +1414,6 @@ export class CoreGameLogic extends BaseGame {
       return false;
     }
 
-    // Check enemy collision
     for (const enemy of gameState.enemies) {
       if (enemy.x === pos.x && enemy.y === pos.y) {
         return false;
@@ -1460,12 +1423,10 @@ export class CoreGameLogic extends BaseGame {
     return true;
   }
 
-  // UI表示用のレベル情報取得
   public getCurrentLevelInfo(): string {
     return this.levelManager.getCurrentLevelInfo();
   }
 
-  // デバッグ用：スポーンシステムの状態表示
   public getSpawnDebugInfo(): any {
     const levelManagerDebugInfo = this.levelManager.getDebugInfo();
 
@@ -1477,18 +1438,16 @@ export class CoreGameLogic extends BaseGame {
       console.warn(
         "CoreGameLogic.getSpawnDebugInfo: levelManagerDebugInfo is incomplete. Returning default debug info."
       );
-      // Ensure this defensive return matches the structure sim.ts expects for currentLevel and gameTimeSeconds
       return {
         currentLevel: this.levelManager.getCurrentLevelNumber(),
         gameTimeSeconds: this.levelManager.getCurrentFrame() / 60,
         levelName: "Unknown (Error)",
         enemyCounts: {},
         spawnPattern: {},
-        isEndlessMode: this.levelManager.isInEndlessMode(), // Use direct getter for consistency
+        isEndlessMode: this.levelManager.isInEndlessMode(),
         endlessMultiplier: 1.0,
-        emergencyInterval: 300, // Fallback
-        normalInterval: 300, // Fallback
-        // Add other fields that might be expected with default values
+        emergencyInterval: 300,
+        normalInterval: 300,
         totalEnemies: 0,
         lastSpawnTimes: {},
         gameFrameCounter: this.gameFrameCounter,
@@ -1506,12 +1465,9 @@ export class CoreGameLogic extends BaseGame {
     );
 
     return {
-      // Explicitly map fields needed by sim.ts from levelManagerDebugInfo
       currentLevel: levelManagerDebugInfo.currentLevelNumber,
       gameTimeSeconds: levelManagerDebugInfo.currentFrame / 60,
       levelName: levelManagerDebugInfo.levelName,
-
-      // Other properties from levelManagerDebugInfo
       isEndlessMode: levelManagerDebugInfo.isEndlessMode,
       endlessMultiplier: levelManagerDebugInfo.endlessMultiplier,
       levelDifficultyMultiplier:
@@ -1520,54 +1476,34 @@ export class CoreGameLogic extends BaseGame {
       spawnPattern: levelManagerDebugInfo.spawnPattern,
       emergencyInterval: levelManagerDebugInfo.emergencyInterval,
       normalInterval: levelManagerDebugInfo.normalInterval,
-
-      // Properties from CoreGameLogic itself
       totalEnemies: this.getTotalEnemyCount(),
-      enemyCounts: enemyCountsByType, // This is CoreGameLogic's calculation of counts
+      enemyCounts: enemyCountsByType,
       lastSpawnTimes: Object.fromEntries(this.lastSpawnTimes),
-      gameFrameCounter: this.gameFrameCounter, // This is CoreGameLogic's own frame counter
+      gameFrameCounter: this.gameFrameCounter,
     };
   }
 
-  // 長さが30以上になった場合の機数増加チェック
   private checkExtraLifeFromLength(): void {
-    if (
-      this.snake.length >= LENGTH_FOR_EXTRA_LIFE &&
-      this.getLives() < MAX_LIVES
-    ) {
-      // 機数を1つ増やす
-      const currentLives = this.getLives();
-      // BaseGameのライフ管理を直接操作（addLifeメソッドがない場合の対応）
-      // 一時的にライフを増やすためにloseLifeの逆操作を行う
-      // ここではBaseGameの内部実装に依存するため、より良い方法があれば修正が必要
+    if (this.snake.length >= LENGTH_FOR_EXTRA_LIFE && this.lives < MAX_LIVES) {
       console.log(
-        `🎯 Extra life gained! Snake length: ${
-          this.snake.length
-        }, Lives: ${currentLives} -> ${currentLives + 1}`
+        `🎯 Extra life gained! Snake length: ${this.snake.length}, Lives: ${
+          this.lives
+        } -> ${this.lives + 1}`
       );
 
-      // 蛇を初期状態に戻す
       this.resetSnakeToInitialLength();
-
-      // ライフを増やす（BaseGameにaddLifeメソッドがない場合の対応）
-      // 直接的な方法がないため、一時的な解決策として実装
-      this.addLife();
+      this.addLifeInternal();
     }
   }
 
-  // 蛇を初期の長さに戻すメソッド
   private resetSnakeToInitialLength(): void {
     if (this.snake.length > INITIAL_SNAKE_LENGTH) {
-      // 現在の頭の位置を保持
       const head = this.snake[0];
-
-      // 初期の長さまで縮める
       this.snake = [];
       for (let i = 0; i < INITIAL_SNAKE_LENGTH; i++) {
         let segmentX = head.x;
         let segmentY = head.y;
 
-        // 現在の方向の逆方向に配置
         switch (this.direction) {
           case Direction.RIGHT:
             segmentX = head.x - i;
@@ -1582,24 +1518,18 @@ export class CoreGameLogic extends BaseGame {
             segmentY = head.y - i;
             break;
         }
-
         this.snake.push({ x: segmentX, y: segmentY });
       }
-
       console.log(`🔄 Snake reset to initial length: ${INITIAL_SNAKE_LENGTH}`);
     }
-
-    // 保存された長さも更新
     this.preservedSnakeLength = INITIAL_SNAKE_LENGTH;
   }
 
-  // ライフを増やすメソッド（BaseGameにない場合の実装）
-  private addLife(): void {
+  private addLifeInternal(): void {
     if (this.lives < MAX_LIVES) {
       this.lives++;
+      this.renderer.playSound("powerUp");
       console.log(`💖 Life added! Current lives: ${this.lives}`);
-
-      // エクストラライフメッセージを表示
       this.addGameMessage("EXTRA LIFE!", "cyan", 120);
     }
   }
