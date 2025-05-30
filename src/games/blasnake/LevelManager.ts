@@ -513,17 +513,17 @@ export class SimpleLevelManager {
         return 4;
 
       case EnemyType.SPEEDSTER:
-        if (currentLevelNumber <= 12) return 1;
-        if (currentLevelNumber <= 17) return 2;
-        return 3;
+        if (currentLevelNumber <= 12) return 2;
+        if (currentLevelNumber <= 17) return 3;
+        return 4;
 
       case EnemyType.SNAKE:
-        if (currentLevelNumber <= 15) return 1;
-        return 2;
+        if (currentLevelNumber <= 15) return 2;
+        return 3;
 
       case EnemyType.SWARM:
-        if (currentLevelNumber <= 15) return 4;
-        return 8;
+        if (currentLevelNumber <= 15) return 3;
+        return 5;
 
       default:
         return 0;
