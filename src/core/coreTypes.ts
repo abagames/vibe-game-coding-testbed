@@ -35,7 +35,14 @@ export interface InputState {
   down?: boolean;
   left?: boolean;
   right?: boolean;
-  action1?: boolean; // Generic action button
+  action1?: boolean; // Generic action button 1 (X, Slash, Space)
+  action2?: boolean; // Generic action button 2 (Z, Period, Enter)
+  enter?: boolean; // Added for GameManager
+  space?: boolean; // Added for GameManager
+  escape?: boolean; // Added for GameManager
+  r?: boolean; // Added for GameManager (restart)
+  period?: boolean; // Added for game start
+  slash?: boolean; // Added for game start
   // Add other input states as needed
 }
 
