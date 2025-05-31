@@ -7,18 +7,17 @@ import {
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
   AudioService,
+  BaseGameOptions,
 } from "../../core/coreTypes.js";
 import { BaseGame } from "../../core/BaseGame.js";
 
 const INITIAL_LIVES = 3;
 const PLAYER_MOVEMENT_INTERVAL = 3; // Move once every 3 frames
 
-interface DefaultGameOptions {
-  initialLives?: number;
+interface DefaultGameOptions extends BaseGameOptions {
   movementInterval?: number;
   obstacleCount?: number;
   itemCount?: number;
-  audioService?: AudioService;
 }
 
 export class CoreGameLogic extends BaseGame {
@@ -33,14 +32,13 @@ export class CoreGameLogic extends BaseGame {
 
   constructor(options: DefaultGameOptions = {}) {
     const {
-      initialLives = INITIAL_LIVES,
       movementInterval = PLAYER_MOVEMENT_INTERVAL,
       obstacleCount = 20,
       itemCount = 10,
-      audioService,
+      ...baseOptions
     } = options;
 
-    super({ initialLives, audioService });
+    super(baseOptions);
     this.playerX = Math.floor(VIRTUAL_SCREEN_WIDTH / 2);
     this.playerY = Math.floor(VIRTUAL_SCREEN_HEIGHT / 2);
     this.movementFrameCounter = 0;
@@ -234,7 +232,7 @@ export class CoreGameLogic extends BaseGame {
     if (this.items.length === 0) {
       // Player won by collecting all items
       this.addScore(100); // Bonus for winning
-      this.triggerGameOver();
+      this.triggerGameOver(); // Now just trigger game over
     }
   }
 

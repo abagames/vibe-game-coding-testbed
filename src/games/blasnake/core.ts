@@ -67,7 +67,7 @@ export interface BlasnakeGameOptions {
 }
 
 export class CoreGameLogic {
-  private renderer: BaseGame; // For drawing
+  private renderer: BaseGame; // For drawing & core state management
 
   // Enemy system integration
   private enemySystem: EnemySystemManager;
@@ -93,7 +93,6 @@ export class CoreGameLogic {
   private movementInterval: number;
   private isWaitingForRestart: boolean;
   private playerExplosionPosition: Position | null;
-  private highScore: number;
 
   // Message system
   private gameMessages: GameMessage[];
@@ -103,20 +102,13 @@ export class CoreGameLogic {
   private hasGrownThisEnclosure: boolean;
   private preservedSnakeLength: number;
 
-  // Internal game state properties (previously from BaseGame)
-  protected score: number;
-  protected lives: number;
-  protected gameOverState: boolean;
-  private readonly initialLivesCount: number;
-
-  // Cooldown for area explosion sound
+  // Cooldown for area explosion sound - RE-ADD THESE
   private lastAreaExplosionSoundTime: number = -Infinity;
   private readonly areaExplosionSoundCooldown: number = 60; // Match explosion effect duration
 
   constructor(options: BlasnakeGameOptions = {}, renderer: BaseGame) {
     this.renderer = renderer;
     const {
-      initialLives = INITIAL_LIVES,
       movementInterval = SNAKE_MOVEMENT_INTERVAL,
       debugMode = false,
       invincible = false,
@@ -125,10 +117,8 @@ export class CoreGameLogic {
     } = options;
 
     // Initialize internal game state properties
-    this.initialLivesCount = initialLives;
-    this.score = 0;
-    this.lives = this.initialLivesCount;
-    this.gameOverState = false;
+    this.playerExplosionPosition = null;
+    this.gameFrameCounter = 0;
 
     // Initialize debug options
     this.debugMode = debugMode;
@@ -157,9 +147,6 @@ export class CoreGameLogic {
     this.movementFrameCounter = 0;
     this.movementInterval = movementInterval;
     this.isWaitingForRestart = false;
-    this.playerExplosionPosition = null;
-    this.highScore = 0;
-    this.gameFrameCounter = 0;
 
     // Initialize message system
     this.gameMessages = [];
@@ -171,7 +158,6 @@ export class CoreGameLogic {
   }
 
   public initializeGame(): void {
-    this.resetGameInternal();
     this.renderer.playBgm(); // Start BGM
 
     // Reset level manager
@@ -202,28 +188,23 @@ export class CoreGameLogic {
     this.gameMessages = [];
     this.generateFood();
     this.enemySystem.clearAllEnemies();
-  }
 
-  protected resetGameInternal(): void {
-    this.score = 0;
-    this.lives = this.initialLivesCount;
-    this.gameOverState = false;
+    // Explicitly reset explosion-related states
+    this.explosions = [];
+    this.playerExplosionPosition = null;
+    this.isWaitingForRestart = false;
   }
 
   public getScore(): number {
-    return this.score;
-  }
-
-  public getHighScore(): number {
-    return this.highScore;
+    return this.renderer.getScore();
   }
 
   public getLives(): number {
-    return this.lives;
+    return this.renderer.getLives();
   }
 
   public isGameOver(): boolean {
-    return this.gameOverState;
+    return this.renderer.isGameOver();
   }
 
   public getSnakeHeadPosition(): Position | null {
@@ -255,12 +236,7 @@ export class CoreGameLogic {
   }
 
   protected loseLife(): void {
-    this.lives--;
-    if (this.lives <= 0) {
-      this.lives = 0;
-      this.gameOverState = true;
-      this.renderer.stopBgm(); // Stop BGM on game over (loss)
-    }
+    this.renderer.loseLife();
   }
 
   private drawText(
@@ -973,7 +949,7 @@ export class CoreGameLogic {
         this.gameFrameCounter >=
         this.lastAreaExplosionSoundTime + this.areaExplosionSoundCooldown
       ) {
-        this.renderer.play("explosion", 100); // Seed 100 for area explosion (area clear itself)
+        this.renderer.play("explosion", 100);
         this.lastAreaExplosionSoundTime = this.gameFrameCounter;
       }
     }
@@ -1013,7 +989,7 @@ export class CoreGameLogic {
   }
 
   public update(inputState: InputState): void {
-    if (this.gameOverState) {
+    if (this.isGameOver()) {
       return;
     }
 
@@ -1024,7 +1000,7 @@ export class CoreGameLogic {
       this.drawExplosions();
       this.updateExplosions();
       this.drawText(`${this.getScore()}`, 1, 0, { color: "white" });
-      const hiScoreText = `HI ${this.highScore}`;
+      const hiScoreText = `HI ${this.renderer.getHighScore()}`;
       const hiScoreX = VIRTUAL_SCREEN_WIDTH - hiScoreText.length - 1;
       this.drawText(hiScoreText, hiScoreX, 0, { color: "yellow" });
       const remainingLives = this.getLives() - 1;
@@ -1087,10 +1063,6 @@ export class CoreGameLogic {
       this.checkCollisions();
     }
 
-    if (this.gameOverState) {
-      return;
-    }
-
     this.updateGuideLines();
     this.drawGuideLines();
     this.drawSnake();
@@ -1106,7 +1078,7 @@ export class CoreGameLogic {
     this.drawGameMessages();
 
     this.drawText(`${this.getScore()}`, 1, 0, { color: "white" });
-    const hiScoreText = `HI ${this.highScore}`;
+    const hiScoreText = `HI ${this.renderer.getHighScore()}`;
     const hiScoreX = VIRTUAL_SCREEN_WIDTH - hiScoreText.length - 1;
     this.drawText(hiScoreText, hiScoreX, 0, { color: "yellow" });
     const remainingLives = this.getLives() - 1;
@@ -1166,13 +1138,8 @@ export class CoreGameLogic {
 
   public addScore(points: number): void {
     if (points === 0) return;
-    const oldScore = this.score;
-    this.score += points;
-    const newScore = this.score;
-
-    if (newScore > this.highScore) {
-      this.highScore = newScore;
-    }
+    this.renderer.addScore(points);
+    const newScore = this.getScore();
 
     const oldThresholds = Math.floor(
       this.lastScoreGrowthCheck / SCORE_GROWTH_THRESHOLD
@@ -1478,13 +1445,13 @@ export class CoreGameLogic {
   private checkExtraLifeFromLength(): void {
     if (this.snake.length >= LENGTH_FOR_EXTRA_LIFE) {
       console.log(
-        `🎯 Extra life gained! Snake length: ${this.snake.length}, Lives: ${
-          this.lives
-        } -> ${this.lives + 1}`
+        `🎯 Extra life gained! Snake length: ${
+          this.snake.length
+        }, Lives: ${this.getLives()} -> ${this.getLives() + 1}`
       );
 
       this.resetSnakeToInitialLength();
-      if (this.lives < MAX_LIVES) {
+      if (this.getLives() < MAX_LIVES) {
         this.addLifeInternal();
       }
     }
@@ -1520,10 +1487,10 @@ export class CoreGameLogic {
   }
 
   private addLifeInternal(): void {
-    if (this.lives < MAX_LIVES) {
-      this.lives++;
+    if (this.getLives() < MAX_LIVES) {
+      this.renderer.gainLife(1);
       this.renderer.play("powerUp");
-      console.log(`💖 Life added! Current lives: ${this.lives}`);
+      console.log(`💖 Life added! Current lives: ${this.getLives()}`);
       this.addGameMessage("EXTRA LIFE!", "cyan", 120);
     }
   }

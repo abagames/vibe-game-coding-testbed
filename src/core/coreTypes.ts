@@ -66,6 +66,17 @@ export type SoundEffectType =
   | "tone";
 // NOTE: This is a placeholder. Actual values should match crisp-game-lib's SoundEffectType
 
+export interface BaseGameOptions {
+  initialLives?: number; // Default: 3
+  isDemoPlay?: boolean; // Default: false. If true, disables sound and other features for automated testing or demonstration.
+  audioService?: AudioService; // Optional audio service for sound and music
+
+  // High score related options
+  gameName?: string; // Name of the game, used for high score storage key
+  enableHighScoreStorage?: boolean; // Default: false. If true, enables localStorage for high scores.
+  isBrowserEnvironment?: boolean; // Default: false. Must be true to enable localStorage.
+}
+
 export interface AudioService {
   playSoundEffect(sound: SoundEffectType, seed?: number): void;
   playMml(mml: string | string[]): void;

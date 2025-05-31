@@ -129,7 +129,6 @@ export class GameManager extends BaseGame {
   private gameOptions: BlasnakeGameOptions;
 
   private lastScore: number = 0;
-  private highScore: number = 0; // To display high score on game over
 
   private gameOverTimer: number = 0;
 
@@ -221,31 +220,26 @@ export class GameManager extends BaseGame {
 
   private initializeCoreGame(): void {
     if (!this.actualGame || this.actualGame.isGameOver()) {
-      // Re-initialize if not present or previous game ended
       this.actualGame = new CoreGameLogic(this.gameOptions, this);
     }
     this.actualGame.initializeGame();
-    // Carry over high score if actualGame tracks it and GameManager wants to maintain it across sessions
-    if (this.actualGame.getHighScore) {
-      // Check if method exists
-      this.highScore = Math.max(this.highScore, this.actualGame.getHighScore());
-    }
   }
 
   // Method for sim.ts to access CoreGameLogic instance for debug setup
   public getCoreGameLogic(): CoreGameLogic {
     if (!this.actualGame) {
-      // This case should ideally be handled by ensuring startGameImmediately or transition to PLAYING has occurred.
       console.warn("Accessing CoreGameLogic before it is initialized!");
-      this.initializeCoreGame(); // Initialize if accessed early, though flow might be unexpected
+      this.initializeCoreGame();
     }
     return this.actualGame;
   }
 
-  protected updateGame(inputState: InputState): void {
-    // Note: clearVirtualScreen is now conditionally called based on currentFlowState
-    // So, when GAME_OVER, the screen from the last PLAYING frame remains.
+  // BaseGameのupdateをオーバーライド
+  public override update(inputState: InputState): void {
+    // 1. 画面クリア制御 (GameManagerでオーバーライドされたclearVirtualScreenが呼ばれる)
+    this.clearVirtualScreen();
 
+    // 2. 現在のフロー状態に基づいて、固有の更新ロジックと描画ロジックを実行
     switch (this.currentFlowState) {
       case GameFlowState.TITLE:
         this.updateTitleScreen(inputState);
@@ -257,36 +251,25 @@ export class GameManager extends BaseGame {
         break;
       case GameFlowState.PLAYING:
         if (!this.actualGame) {
-          // Should be initialized by now
           this.initializeCoreGame();
         }
-        this.actualGame.update(inputState);
+        this.actualGame.update(inputState); // CoreGameLogic が自身の描画を行う
         if (this.actualGame.isGameOver()) {
-          // CoreGameLogic needs isGameOver()
-          this.lastScore = this.actualGame.getScore(); // CoreGameLogic needs getScore()
-          if (this.actualGame.getHighScore) {
-            // Check if method exists
-            this.highScore = Math.max(
-              this.highScore,
-              this.actualGame.getHighScore()
-            );
-          }
+          this.lastScore = this.actualGame.getScore();
           this.currentFlowState = GameFlowState.GAME_OVER;
-          this.gameOverTimer = GAME_OVER_SCREEN_DURATION; // Start the timer
+          this.gameOverTimer = GAME_OVER_SCREEN_DURATION;
+          this.stopBgm(); // ゲームオーバーになったらBGMを停止
         }
         break;
       case GameFlowState.GAME_OVER:
-        // The screen is not cleared here due to the override.
-        // We just update logic and redraw overlays.
         this.updateGameOverScreen(inputState);
-        this.drawGameOverScreen(); // This will draw on top of the frozen game screen
+        this.drawGameOverScreen();
         break;
     }
-
-    // Note: BaseGame.update also calls this.renderStandardUI() after this.updateGame().
-    // We might want to prevent renderStandardUI in TITLE or DEMO states if it's not desired.
-    // For now, we'll let it draw. It shows "R: Restart"
   }
+
+  // Abstract member from BaseGame, now empty as logic moved to public override update.
+  protected updateGame(inputState: InputState): void {}
 
   // --- TITLE SCREEN ---
   private updateTitleScreen(inputState: InputState): void {
@@ -425,7 +408,7 @@ export class GameManager extends BaseGame {
     // Display Last Score and High Score
     const lastScoreText = `${this.lastScore}`;
     this.drawText(lastScoreText, 1, 0, { color: "white" });
-    const highScoreText = `HI: ${this.highScore}`;
+    const highScoreText = `HI: ${this.getHighScore()}`;
     this.drawText(
       highScoreText,
       VIRTUAL_SCREEN_WIDTH - highScoreText.length - 1,
@@ -638,7 +621,7 @@ export class GameManager extends BaseGame {
     // Display Last Score and High Score
     const lastScoreText = `${this.lastScore}`;
     this.drawText(lastScoreText, 1, 0, { color: "white" });
-    const highScoreText = `HI: ${this.highScore}`;
+    const highScoreText = `HI: ${this.getHighScore()}`;
     this.drawText(
       highScoreText,
       VIRTUAL_SCREEN_WIDTH - highScoreText.length - 1,
@@ -659,7 +642,7 @@ export class GameManager extends BaseGame {
 
   // --- GAME START LOGIC ---
   private startGameFromTitleOrDemo(): void {
-    this.setIsDemoPlay(false); // Moved before playMml
+    this.setIsDemoPlay(false);
     const gameStartMml = [
       // Part 1: Melody - All note durations halved
       "@synth@s1 v70 l32 o5 g16 e16 c16 e16 g8 >c8 <g16 e16 c16 e16 g8 >d8",
@@ -671,9 +654,12 @@ export class GameManager extends BaseGame {
       "@synth@s3 v60 l16 o3 c c g g c c >c <c",
     ];
     this.playMml(gameStartMml);
-    this.initializeCoreGame();
+
+    this.resetGame(); // Call BaseGame's resetGame to clear gameOverState, reset score/lives for the GameManager instance
+    this.initializeCoreGame(); // This will set up actualGame for a new session
+
     this.currentFlowState = GameFlowState.PLAYING;
-    this.resetTitleAnimationStates(); // Reset title/demo related timers
+    this.resetTitleAnimationStates();
   }
 
   // --- GAME OVER SCREEN ---
@@ -706,23 +692,9 @@ export class GameManager extends BaseGame {
     const scoreText = `Score: ${this.lastScore}`;
     this.drawCenteredText(scoreText, 10, { color: "white" });
 
-    const highScoreText = `Hi-Score: ${this.highScore}`;
-    this.drawCenteredText(highScoreText, 12, { color: "yellow" });
+    const highScoreDisplayText = `Hi-Score: ${this.getHighScore()}`;
+    this.drawCenteredText(highScoreDisplayText, 12, { color: "yellow" });
 
     this.drawCenteredText("Z/X/Space Key to Restart", 16, { color: "cyan" });
-  }
-
-  // Override renderStandardUI to prevent it from drawing during Title/Demo
-  public renderStandardUI(): void {
-    if (this.currentFlowState === GameFlowState.GAME_OVER) {
-      super.drawText("R: Restart", 1, VIRTUAL_SCREEN_HEIGHT - 1, {
-        color: "light_black",
-      });
-    }
-    // For PLAYING: Assume CoreGameLogic draws its own HUD (score, lives) during its update.
-    // For TITLE: Custom UI is drawn by drawTitleScreen.
-    // For DEMO: Custom UI is drawn by drawDemoScreen (overlays), CoreGameLogic draws game.
-    // Thus, we don't call super.renderStandardUI() for PLAYING, TITLE, or DEMO
-    // unless BaseGame's default UI is specifically desired for those states.
   }
 }

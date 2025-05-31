@@ -7,6 +7,7 @@ import {
   GameCore,
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
+  BaseGameOptions,
 } from "../core/coreTypes.js";
 import { BaseGame } from "../core/BaseGame.js";
 
@@ -97,7 +98,9 @@ export function createStandardGameOptions(
  * Standard game loop handler that can be used by both games.
  */
 export function createStandardGameLoop(
-  gameFactory: () => GameCore,
+  gameFactory: (options?: Partial<BaseGameOptions>) => GameCore,
+  gameName?: string,
+  enableHighScoreStorage?: boolean,
   screenWidth: number = VIRTUAL_SCREEN_WIDTH,
   screenHeight: number = VIRTUAL_SCREEN_HEIGHT,
   charWidth: number = 4,
@@ -107,7 +110,11 @@ export function createStandardGameLoop(
   let game: GameCore;
 
   function resetGame() {
-    game = gameFactory();
+    game = gameFactory({
+      isBrowserEnvironment: true,
+      gameName: gameName,
+      enableHighScoreStorage: enableHighScoreStorage === true,
+    });
     game.initializeGame();
   }
 
@@ -183,14 +190,16 @@ export function createStandardGameLoop(
  */
 export interface StandardGameHelperOptions {
   enableGlobalReset?: boolean;
+  gameName?: string;
+  enableHighScoreStorage?: boolean;
 }
 
 /**
  * Initializes a standard text-based game with crisp-game-lib.
  */
 export function initStandardTextGame(
-  gameFactory: () => GameCore,
-  helperOptions: StandardGameHelperOptions = {},
+  gameFactory: (options?: Partial<BaseGameOptions>) => GameCore,
+  helperOptions: Partial<StandardGameHelperOptions> = {},
   cglOptions?: Partial<Options>,
   audioFiles?: { [key: string]: string }
 ): void {
@@ -199,11 +208,13 @@ export function initStandardTextGame(
 
   const { gameUpdate } = createStandardGameLoop(
     gameFactory,
-    VIRTUAL_SCREEN_WIDTH, // Assuming default screenWidth
-    VIRTUAL_SCREEN_HEIGHT, // Assuming default screenHeight
-    4, // Assuming default charWidth
-    6, // Assuming default charHeight
-    helperOptions.enableGlobalReset !== false // Pass the option, default to true if not specified
+    helperOptions.gameName,
+    helperOptions.enableHighScoreStorage === true,
+    VIRTUAL_SCREEN_WIDTH,
+    VIRTUAL_SCREEN_HEIGHT,
+    4,
+    6,
+    helperOptions.enableGlobalReset !== false
   );
 
   init({

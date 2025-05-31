@@ -8,15 +8,8 @@ import {
   GameCore,
   AudioService,
   SoundEffectType,
+  BaseGameOptions,
 } from "./coreTypes.js";
-
-// ベースゲーム設定オプション
-interface BaseGameOptions {
-  initialLives?: number;
-  gameSpeed?: number; // ゲーム速度設定を追加
-  isDemoPlay?: boolean; // Demo play mode
-  audioService?: AudioService; // Added audioService option
-}
 
 export abstract class BaseGame implements GameCore {
   protected virtualScreen: GridData;
@@ -27,28 +20,55 @@ export abstract class BaseGame implements GameCore {
   protected isDemoPlay: boolean; // Demo play mode flag
   protected audioService?: AudioService; // Added audioService instance variable
 
-  // gameSpeed制御機能
-  protected gameSpeed: number; // ゲーム速度倍率
-  protected gameSpeedAccumulator: number; // 時間蓄積値
-  private readonly initialGameSpeed: number; // 初期速度を保存
+  // High score options
+  protected gameName?: string;
+  protected enableHighScoreStorage: boolean;
+  protected isBrowserEnvironment: boolean;
+  protected internalHighScore: number = 0; // Session high score
 
   constructor(options: BaseGameOptions = {}) {
     const {
       initialLives = 3,
-      gameSpeed = 1.0,
       isDemoPlay = false,
       audioService,
-    } = options; // Destructure isDemoPlay and audioService
-    this.initialLives = initialLives; // 初期値を保存
-    this.initialGameSpeed = gameSpeed; // 初期速度を保存
-    this.isDemoPlay = isDemoPlay; // Set demo play mode
-    this.audioService = audioService; // Set audioService
+      gameName, // Added
+      enableHighScoreStorage = false, // Added
+      isBrowserEnvironment = false, // Added
+    } = options;
+    this.initialLives = initialLives;
+    this.isDemoPlay = isDemoPlay;
+    this.audioService = audioService;
     this.score = 0;
     this.lives = initialLives;
     this.gameOverState = false;
-    this.gameSpeed = gameSpeed;
-    this.gameSpeedAccumulator = 0.0;
     this.virtualScreen = this.initializeVirtualScreen();
+
+    // Store high score options
+    this.gameName = gameName;
+    this.enableHighScoreStorage = enableHighScoreStorage;
+    this.isBrowserEnvironment = isBrowserEnvironment;
+
+    // Load high score from localStorage at construction
+    this.internalHighScore = 0; // Default
+    if (this.enableHighScoreStorage && this.isBrowserEnvironment) {
+      const key = this.getHighScoreKey();
+      if (key) {
+        try {
+          const storedScore = localStorage.getItem(key);
+          if (storedScore) {
+            const parsedScore = parseInt(storedScore, 10);
+            if (!isNaN(parsedScore)) {
+              this.internalHighScore = parsedScore;
+            }
+          }
+        } catch (e) {
+          console.error(
+            "Failed to retrieve high score from localStorage during init:",
+            e
+          );
+        }
+      }
+    }
   }
 
   protected initializeVirtualScreen(): GridData {
@@ -105,10 +125,10 @@ export abstract class BaseGame implements GameCore {
 
   public renderStandardUI(): void {
     // Display score
-    //this.drawText(`Score: ${this.score}`, 1, 0, { color: "white" });
+    this.drawText(`Score: ${this.score}`, 1, 0, { color: "white" });
 
-    // Display lives if more than 1 life system
-    //this.drawText(`Lives: ${this.lives}`, 31, 0, { color: "white" });
+    // Display lives
+    this.drawText(`Lives: ${this.lives}`, 31, 0, { color: "white" });
 
     // Display restart instruction
     this.drawText("R: Restart", 1, VIRTUAL_SCREEN_HEIGHT - 1, {
@@ -118,13 +138,30 @@ export abstract class BaseGame implements GameCore {
 
   public renderGameOverScreen(): void {
     const gameOverMessage = "Game Over!";
-    const gameOverMessageY = Math.floor(VIRTUAL_SCREEN_HEIGHT / 2) - 1;
+    const messageColor = "red";
+    const gameOverMessageY = Math.floor(VIRTUAL_SCREEN_HEIGHT / 2) - 2;
 
     this.drawCenteredText(gameOverMessage, gameOverMessageY, {
-      color: "red",
+      color: messageColor as any,
     });
 
-    const restartPromptY = Math.floor(VIRTUAL_SCREEN_HEIGHT / 2) + 1;
+    const finalScoreY = gameOverMessageY + 1;
+    this.drawCenteredText(`Score: ${this.score}`, finalScoreY, {
+      color: "white",
+    });
+
+    const highScore = this.getHighScore();
+    if (highScore !== null) {
+      const highScoreY = finalScoreY + 1;
+      this.drawCenteredText(`High: ${highScore}`, highScoreY, {
+        color: "light_cyan",
+      });
+    }
+
+    const restartPromptY =
+      highScore !== null
+        ? Math.floor(VIRTUAL_SCREEN_HEIGHT / 2) + 2
+        : Math.floor(VIRTUAL_SCREEN_HEIGHT / 2) + 1;
     this.drawCenteredText("Press R to restart", restartPromptY, {
       color: "white",
     });
@@ -144,13 +181,16 @@ export abstract class BaseGame implements GameCore {
 
   public addScore(value: number): void {
     this.score += value;
+    if (this.score > this.internalHighScore) {
+      this.internalHighScore = this.score; // Update session high score if current game score is higher
+    }
   }
 
   public loseLife(): void {
     this.lives--;
     if (this.lives <= 0) {
       this.lives = 0;
-      this.gameOverState = true;
+      this.triggerGameOver();
     }
   }
 
@@ -160,6 +200,22 @@ export abstract class BaseGame implements GameCore {
 
   public getLives(): number {
     return this.lives;
+  }
+
+  /**
+   * Increases the number of lives by the specified amount.
+   * Does not exceed any maximum life limit if defined by the game itself.
+   * @param count The number of lives to gain, defaults to 1.
+   */
+  public gainLife(count: number = 1): void {
+    if (count <= 0) return;
+    this.lives += count;
+    // Max lives logic should be handled by the specific game if needed,
+    // or BaseGame could have an optional maxLives constructor option.
+    // For now, it just increments.
+    console.log(
+      `BaseGame: Gained ${count} life/lives. Current lives: ${this.lives}`
+    );
   }
 
   public isGameOver(): boolean {
@@ -172,24 +228,10 @@ export abstract class BaseGame implements GameCore {
 
   protected resetGame(): void {
     this.score = 0;
-    this.lives = this.initialLives; // 保存された初期値を使用
+    this.lives = this.initialLives;
     this.gameOverState = false;
-    this.gameSpeed = this.initialGameSpeed; // 初期速度に戻す
-    this.gameSpeedAccumulator = 0.0; // 蓄積値をリセット
     this.virtualScreen = this.initializeVirtualScreen();
-  }
-
-  // gameSpeed制御API
-  public setGameSpeed(speed: number): void {
-    this.gameSpeed = Math.max(0.1, Math.min(3.0, speed)); // 範囲制限
-  }
-
-  public getGameSpeed(): number {
-    return this.gameSpeed;
-  }
-
-  public adjustGameSpeed(delta: number): void {
-    this.setGameSpeed(this.gameSpeed + delta);
+    // internalHighScore is NOT reset here
   }
 
   /**
@@ -244,6 +286,38 @@ export abstract class BaseGame implements GameCore {
    */
   public triggerGameOver(): void {
     this.gameOverState = true;
+    this.commitHighScoreToStorage(); // Commit high score to storage on game over
+  }
+
+  // High score methods
+  protected getHighScoreKey(): string | null {
+    if (this.gameName) {
+      return `abagames-vgct-${this.gameName}`;
+    }
+    return null;
+  }
+
+  public commitHighScoreToStorage(): void {
+    if (!this.enableHighScoreStorage || !this.isBrowserEnvironment) {
+      return;
+    }
+    const key = this.getHighScoreKey();
+    if (key) {
+      try {
+        // internalHighScore already holds the definitive high score for the session
+        localStorage.setItem(key, this.internalHighScore.toString());
+        console.log(
+          `[${this.gameName}] High score committed to storage: ${this.internalHighScore}`
+        );
+      } catch (e) {
+        console.error("Failed to commit high score to localStorage:", e);
+      }
+    }
+  }
+
+  public getHighScore(): number {
+    // No longer nullable, returns session high score
+    return this.internalHighScore;
   }
 
   // Abstract methods that must be implemented by subclasses
@@ -252,25 +326,13 @@ export abstract class BaseGame implements GameCore {
 
   // Template method that clears screen each frame before calling updateGame
   public update(inputState: InputState): void {
-    if (this.gameOverState) {
-      return;
-    }
-
-    // gameSpeed制御: 時間を蓄積し、1.0以上になったらゲームロジック実行
-    this.gameSpeedAccumulator += this.gameSpeed;
-
-    while (this.gameSpeedAccumulator >= 1.0) {
-      this.clearVirtualScreen();
-      this.updateGame(inputState);
-      this.gameSpeedAccumulator -= 1.0;
-    }
-
-    // UI要素は毎フレーム描画（視覚的滑らかさのため）
-    this.renderStandardUI();
-
-    // Render game over screen if game ended this frame
-    if (this.gameOverState) {
+    this.clearVirtualScreen(); // Clear screen only when game is active and updating
+    if (!this.gameOverState) {
+      this.updateGame(inputState); // Call abstract game logic update
+    } else {
+      // Render game over screen if game ended this frame or is ongoing
       this.renderGameOverScreen();
     }
+    this.renderStandardUI();
   }
 }
