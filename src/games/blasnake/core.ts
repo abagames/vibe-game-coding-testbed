@@ -67,7 +67,7 @@ export interface BlasnakeGameOptions {
 }
 
 export class CoreGameLogic {
-  private renderer: BaseGame; // For drawing & core state management
+  private baseGame: BaseGame; // For drawing & core state management
 
   // Enemy system integration
   private enemySystem: EnemySystemManager;
@@ -107,7 +107,7 @@ export class CoreGameLogic {
   private readonly areaExplosionSoundCooldown: number = 60; // Match explosion effect duration
 
   constructor(options: BlasnakeGameOptions = {}, renderer: BaseGame) {
-    this.renderer = renderer;
+    this.baseGame = renderer;
     const {
       movementInterval = SNAKE_MOVEMENT_INTERVAL,
       debugMode = false,
@@ -158,7 +158,7 @@ export class CoreGameLogic {
   }
 
   public initializeGame(): void {
-    this.renderer.playBgm(); // Start BGM
+    this.baseGame.playBgm(); // Start BGM
 
     // Reset level manager
     this.levelManager = new SimpleLevelManager(this.timeAcceleration);
@@ -196,15 +196,15 @@ export class CoreGameLogic {
   }
 
   public getScore(): number {
-    return this.renderer.getScore();
+    return this.baseGame.getScore();
   }
 
   public getLives(): number {
-    return this.renderer.getLives();
+    return this.baseGame.getLives();
   }
 
   public isGameOver(): boolean {
-    return this.renderer.isGameOver();
+    return this.baseGame.isGameOver();
   }
 
   public getSnakeHeadPosition(): Position | null {
@@ -236,7 +236,7 @@ export class CoreGameLogic {
   }
 
   protected loseLife(): void {
-    this.renderer.loseLife();
+    this.baseGame.loseLife();
   }
 
   private drawText(
@@ -245,7 +245,7 @@ export class CoreGameLogic {
     y: number,
     attributes?: CellAttributes
   ): void {
-    this.renderer.drawText(text, x, y, attributes);
+    this.baseGame.drawText(text, x, y, attributes);
   }
 
   private drawCenteredText(
@@ -615,7 +615,7 @@ export class CoreGameLogic {
     this.snake.unshift(head);
 
     if (head.x === this.food.x && head.y === this.food.y) {
-      this.renderer.play("powerUp");
+      this.baseGame.play("powerUp");
       this.addScore(10);
       this.generateFood();
       this.preservedSnakeLength = this.snake.length;
@@ -931,7 +931,7 @@ export class CoreGameLogic {
           const enemyTypeSeed = Object.values(EnemyType).indexOf(
             enemyToBlast.type
           );
-          this.renderer.play(
+          this.baseGame.play(
             "coin",
             enemyTypeSeed >= 0 ? enemyTypeSeed : undefined
           );
@@ -949,7 +949,7 @@ export class CoreGameLogic {
         this.gameFrameCounter >=
         this.lastAreaExplosionSoundTime + this.areaExplosionSoundCooldown
       ) {
-        this.renderer.play("explosion", 100);
+        this.baseGame.play("explosion", 100);
         this.lastAreaExplosionSoundTime = this.gameFrameCounter;
       }
     }
@@ -1000,7 +1000,7 @@ export class CoreGameLogic {
       this.drawExplosions();
       this.updateExplosions();
       this.drawText(`${this.getScore()}`, 1, 0, { color: "white" });
-      const hiScoreText = `HI ${this.renderer.getHighScore()}`;
+      const hiScoreText = `HI ${this.baseGame.getHighScore()}`;
       const hiScoreX = VIRTUAL_SCREEN_WIDTH - hiScoreText.length - 1;
       this.drawText(hiScoreText, hiScoreX, 0, { color: "yellow" });
       const remainingLives = this.getLives() - 1;
@@ -1078,7 +1078,7 @@ export class CoreGameLogic {
     this.drawGameMessages();
 
     this.drawText(`${this.getScore()}`, 1, 0, { color: "white" });
-    const hiScoreText = `HI ${this.renderer.getHighScore()}`;
+    const hiScoreText = `HI ${this.baseGame.getHighScore()}`;
     const hiScoreX = VIRTUAL_SCREEN_WIDTH - hiScoreText.length - 1;
     this.drawText(hiScoreText, hiScoreX, 0, { color: "yellow" });
     const remainingLives = this.getLives() - 1;
@@ -1098,7 +1098,7 @@ export class CoreGameLogic {
     const head = this.playerExplosionPosition || this.snake[0];
     if (!head) return;
 
-    this.renderer.play("explosion", 200);
+    this.baseGame.play("explosion", 200);
     this.addExplosionEffect(head.x, head.y);
     this.playerExplosionPosition = { x: head.x, y: head.y };
     this.enemySystem.clearAllEnemies();
@@ -1138,7 +1138,7 @@ export class CoreGameLogic {
 
   public addScore(points: number): void {
     if (points === 0) return;
-    this.renderer.addScore(points);
+    this.baseGame.addScore(points);
     const newScore = this.getScore();
 
     const oldThresholds = Math.floor(
@@ -1295,7 +1295,7 @@ export class CoreGameLogic {
 
     if (enemyId) {
       const enemyTypeSeed = Object.values(EnemyType).indexOf(enemyType);
-      this.renderer.play(
+      this.baseGame.play(
         "laser",
         enemyTypeSeed >= 0 ? enemyTypeSeed : undefined
       );
@@ -1488,8 +1488,8 @@ export class CoreGameLogic {
 
   private addLifeInternal(): void {
     if (this.getLives() < MAX_LIVES) {
-      this.renderer.gainLife(1);
-      this.renderer.play("powerUp");
+      this.baseGame.gainLife(1);
+      this.baseGame.play("powerUp");
       console.log(`💖 Life added! Current lives: ${this.getLives()}`);
       this.addGameMessage("EXTRA LIFE!", "cyan", 120);
     }
