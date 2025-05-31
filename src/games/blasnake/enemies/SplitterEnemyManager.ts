@@ -32,7 +32,7 @@ export class SplitterEnemyManager extends BaseEnemyManager {
     threatLevel: ThreatLevel.MEDIUM,
     maxSplits: 1, // 子敵は分裂しない
     childBlinkDuration: 60,
-    childScoreMultiplier: 0.5,
+    childScoreMultiplier: 1,
     splitSearchRadius: 2,
     splitWarningDuration: 30, // 分裂予告時間
   };
