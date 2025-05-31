@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "preview": "vite preview",
     "sim:default": "npx tsx src/games/defaultGame/sim.ts",
     "sim:blasnake": "npx tsx src/games/blasnake/sim.ts"
   },
