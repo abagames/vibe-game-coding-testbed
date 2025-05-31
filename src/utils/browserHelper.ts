@@ -41,56 +41,6 @@ export function mapCrispInputToGameInputState(): InputState {
 }
 
 /**
- * Helper to draw text on a grid using a provided drawing function.
- * @deprecated Use BaseGame.drawText() instead
- */
-export function drawTextOnGrid(
-  drawFunction: (
-    text: string,
-    x: number,
-    y: number,
-    attributes?: CellAttributes
-  ) => void,
-  screenHeight: number,
-  message: string,
-  startGridX: number,
-  gridY: number,
-  attributes: CellAttributes
-): void {
-  if (gridY >= 0 && gridY < screenHeight) {
-    drawFunction(message, startGridX, gridY, attributes);
-  }
-}
-
-/**
- * Helper to draw centered text on a grid using a provided drawing function.
- * @deprecated Use BaseGame.drawCenteredText() instead
- */
-export function drawCenteredTextOnGrid(
-  drawFunction: (
-    text: string,
-    x: number,
-    y: number,
-    attributes?: CellAttributes
-  ) => void,
-  screenWidth: number,
-  screenHeight: number,
-  message: string,
-  gridY: number,
-  attributes: CellAttributes
-): void {
-  const startGridX = Math.floor(screenWidth / 2 - message.length / 2);
-  drawTextOnGrid(
-    drawFunction,
-    screenHeight,
-    message,
-    startGridX,
-    gridY,
-    attributes
-  );
-}
-
-/**
  * Renders the entire virtual screen data to the browser canvas using crisp-game-lib.
  */
 export function renderVirtualScreen(
@@ -141,36 +91,6 @@ export function createStandardGameOptions(
     isShowingScore: false,
     theme: "dark",
   };
-}
-
-/**
- * Renders standard UI elements (score, restart instruction, etc.)
- * @deprecated UI rendering is now handled automatically by BaseGame
- */
-export function renderStandardUI(
-  game: GameCore,
-  screenWidth: number = VIRTUAL_SCREEN_WIDTH,
-  screenHeight: number = VIRTUAL_SCREEN_HEIGHT
-): void {
-  // This function is deprecated - BaseGame now handles UI rendering automatically
-  console.warn(
-    "renderStandardUI is deprecated - BaseGame handles this automatically"
-  );
-}
-
-/**
- * Renders game over screen with win/lose message and restart prompt.
- * @deprecated Game over rendering is now handled automatically by BaseGame
- */
-export function renderGameOverScreen(
-  game: GameCore,
-  screenWidth: number = VIRTUAL_SCREEN_WIDTH,
-  screenHeight: number = VIRTUAL_SCREEN_HEIGHT
-): void {
-  // This function is deprecated - BaseGame now handles game over rendering automatically
-  console.warn(
-    "renderGameOverScreen is deprecated - BaseGame handles this automatically"
-  );
 }
 
 /**
