@@ -408,7 +408,7 @@ export class GameManager extends BaseGame {
     // Display Last Score and High Score
     const lastScoreText = `${this.lastScore}`;
     this.drawText(lastScoreText, 1, 0, { color: "white" });
-    const highScoreText = `HI: ${this.getHighScore()}`;
+    const highScoreText = `HI ${this.getHighScore()}`;
     this.drawText(
       highScoreText,
       VIRTUAL_SCREEN_WIDTH - highScoreText.length - 1,
@@ -675,8 +675,14 @@ export class GameManager extends BaseGame {
     this.gameOverTimer--;
     if (this.gameOverTimer <= 0) {
       if (!this.gameOptions.startInPlayingState) {
+        // Call resetGame() to ensure gameOverState is false and other game parameters are reset.
+        // This aims to make the transition to TITLE behave like an initial startup.
+        this.resetGame(); // This calls BaseGame's resetGame(), which sets this.gameOverState = false.
+
         this.currentFlowState = GameFlowState.TITLE;
         this.setIsDemoPlay(false); // Going to title, not a demo
+
+        // Explicitly reset title animation states after ensuring game state is reset.
         this.resetTitleAnimationStates();
       }
       // In simulation mode with startInPlayingState,
