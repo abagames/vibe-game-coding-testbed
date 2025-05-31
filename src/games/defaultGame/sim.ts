@@ -1,5 +1,6 @@
 import { CoreGameLogic } from "./core.js";
 import { ConsoleSimulator } from "../../utils/consoleSimulator.js";
+import { NodeAudioService } from "../../utils/NodeAudioService.js";
 
 const totalTicks = 200; // DefaultGame用に長めに設定
 const tickDurationMs = 100;
@@ -13,7 +14,8 @@ const game = new CoreGameLogic({
   initialLives: 5, // Custom lives
   movementInterval: 2, // Faster movement
   obstacleCount: 15, // Fewer obstacles
-  itemCount: 8, // Fewer items
+  itemCount: 5, // Fewer items
+  audioService: new NodeAudioService(), // Pass NodeAudioService instance
 });
 
 const keyPressPattern: string[] = [];

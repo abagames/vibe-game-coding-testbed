@@ -259,7 +259,8 @@ export function createStandardGameLoop(
  */
 export function initStandardTextGame(
   gameFactory: () => GameCore,
-  customOptions?: Partial<Options>
+  customOptions?: Partial<Options>,
+  audioFiles?: { [key: string]: string }
 ): void {
   const defaultOptions = createStandardGameOptions();
   const cglOptions = { ...defaultOptions, ...customOptions };
@@ -269,6 +270,7 @@ export function initStandardTextGame(
   init({
     update: gameUpdate,
     options: cglOptions,
+    audioFiles,
   });
 }
 
@@ -286,4 +288,19 @@ export function playSoundEffect(sound: SoundEffectType, seed?: number): void {
  */
 export function playMml(mmlStrings: string[]): void {
   sss.playMml(mmlStrings, { isLooping: false });
+}
+
+/**
+ * Plays a background music (BGM) using crisp-game-lib.
+ * The BGM must be defined in the `audioFiles` option during `init`.
+ */
+export function startPlayingBgm(): void {
+  playBgm();
+}
+
+/**
+ * Stops the currently playing background music (BGM) using crisp-game-lib.
+ */
+export function stopPlayingBgm(): void {
+  stopBgm();
 }

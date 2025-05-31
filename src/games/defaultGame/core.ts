@@ -6,6 +6,7 @@ import {
   GridData,
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
+  AudioService,
 } from "../../core/coreTypes.js";
 import { BaseGame } from "../../core/BaseGame.js";
 
@@ -17,6 +18,7 @@ interface DefaultGameOptions {
   movementInterval?: number;
   obstacleCount?: number;
   itemCount?: number;
+  audioService?: AudioService;
 }
 
 export class CoreGameLogic extends BaseGame {
@@ -35,9 +37,10 @@ export class CoreGameLogic extends BaseGame {
       movementInterval = PLAYER_MOVEMENT_INTERVAL,
       obstacleCount = 20,
       itemCount = 10,
+      audioService,
     } = options;
 
-    super({ initialLives });
+    super({ initialLives, audioService });
     this.playerX = Math.floor(VIRTUAL_SCREEN_WIDTH / 2);
     this.playerY = Math.floor(VIRTUAL_SCREEN_HEIGHT / 2);
     this.movementFrameCounter = 0;
@@ -231,7 +234,7 @@ export class CoreGameLogic extends BaseGame {
     if (this.items.length === 0) {
       // Player won by collecting all items
       this.addScore(100); // Bonus for winning
-      this.winGame();
+      this.triggerGameOver();
     }
   }
 

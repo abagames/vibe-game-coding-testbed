@@ -6,6 +6,7 @@ import {
   GridData,
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
+  AudioService,
 } from "../../core/coreTypes.js";
 import { BaseGame } from "../../core/BaseGame.js";
 import { EnemySystemManager } from "./enemies/EnemySystemManager.js";
@@ -21,7 +22,7 @@ import { SimpleLevelManager } from "./LevelManager.js";
 
 const INITIAL_LIVES = 3;
 const SNAKE_MOVEMENT_INTERVAL = 8; // Move once every 8 frames
-const INITIAL_SNAKE_LENGTH = 10; // 初期の蛇の長さ
+const INITIAL_SNAKE_LENGTH = 12; // 初期の蛇の長さ
 const SCORE_GROWTH_THRESHOLD = 1000; // スコア成長の閾値
 const LENGTH_FOR_EXTRA_LIFE = 30; // 機数増加の長さ閾値
 const MAX_LIVES = 5; // 最大機数
@@ -62,6 +63,7 @@ export interface BlasnakeGameOptions {
   timeAcceleration?: number; // 時間進行の倍率（1.0 = 通常、2.0 = 2倍速）
   constrainToBounds?: boolean; // 画面境界での移動制約
   startInPlayingState?: boolean; // Option to start the game directly in the playing state
+  audioService?: AudioService; // Add audioService for BaseGame, though CoreGameLogic itself doesn't use it directly for its own sounds, it's for the renderer (BaseGame)
 }
 
 export class CoreGameLogic {
@@ -105,7 +107,6 @@ export class CoreGameLogic {
   protected score: number;
   protected lives: number;
   protected gameOverState: boolean;
-  protected wonGame: boolean;
   private readonly initialLivesCount: number;
 
   // Cooldown for area explosion sound
@@ -128,7 +129,6 @@ export class CoreGameLogic {
     this.score = 0;
     this.lives = this.initialLivesCount;
     this.gameOverState = false;
-    this.wonGame = false;
 
     // Initialize debug options
     this.debugMode = debugMode;
@@ -172,6 +172,7 @@ export class CoreGameLogic {
 
   public initializeGame(): void {
     this.resetGameInternal();
+    this.renderer.playBgm(); // Start BGM
 
     // Reset level manager
     this.levelManager = new SimpleLevelManager(this.timeAcceleration);
@@ -207,7 +208,6 @@ export class CoreGameLogic {
     this.score = 0;
     this.lives = this.initialLivesCount;
     this.gameOverState = false;
-    this.wonGame = false;
   }
 
   public getScore(): number {
@@ -224,10 +224,6 @@ export class CoreGameLogic {
 
   public isGameOver(): boolean {
     return this.gameOverState;
-  }
-
-  public isGameWon(): boolean {
-    return this.wonGame;
   }
 
   public getSnakeHeadPosition(): Position | null {
@@ -258,16 +254,12 @@ export class CoreGameLogic {
     return true;
   }
 
-  protected winGame(): void {
-    this.wonGame = true;
-    this.gameOverState = true;
-  }
-
   protected loseLife(): void {
     this.lives--;
     if (this.lives <= 0) {
       this.lives = 0;
       this.gameOverState = true;
+      this.renderer.stopBgm(); // Stop BGM on game over (loss)
     }
   }
 
@@ -647,7 +639,7 @@ export class CoreGameLogic {
     this.snake.unshift(head);
 
     if (head.x === this.food.x && head.y === this.food.y) {
-      this.renderer.playSound("powerUp");
+      this.renderer.play("powerUp");
       this.addScore(10);
       this.generateFood();
       this.preservedSnakeLength = this.snake.length;
@@ -963,7 +955,7 @@ export class CoreGameLogic {
           const enemyTypeSeed = Object.values(EnemyType).indexOf(
             enemyToBlast.type
           );
-          this.renderer.playSound(
+          this.renderer.play(
             "coin",
             enemyTypeSeed >= 0 ? enemyTypeSeed : undefined
           );
@@ -981,7 +973,7 @@ export class CoreGameLogic {
         this.gameFrameCounter >=
         this.lastAreaExplosionSoundTime + this.areaExplosionSoundCooldown
       ) {
-        this.renderer.playSound("explosion", 100); // Seed 100 for area explosion (area clear itself)
+        this.renderer.play("explosion", 100); // Seed 100 for area explosion (area clear itself)
         this.lastAreaExplosionSoundTime = this.gameFrameCounter;
       }
     }
@@ -1134,11 +1126,11 @@ export class CoreGameLogic {
     const head = this.playerExplosionPosition || this.snake[0];
     if (!head) return;
 
-    this.renderer.playSound("explosion", 200);
+    this.renderer.play("explosion", 200);
     this.addExplosionEffect(head.x, head.y);
     this.playerExplosionPosition = { x: head.x, y: head.y };
     this.enemySystem.clearAllEnemies();
-    this.loseLife();
+    //this.loseLife();
 
     if (!this.isGameOver()) {
       this.isWaitingForRestart = true;
@@ -1336,7 +1328,7 @@ export class CoreGameLogic {
 
     if (enemyId) {
       const enemyTypeSeed = Object.values(EnemyType).indexOf(enemyType);
-      this.renderer.playSound(
+      this.renderer.play(
         "laser",
         enemyTypeSeed >= 0 ? enemyTypeSeed : undefined
       );
@@ -1484,7 +1476,7 @@ export class CoreGameLogic {
   }
 
   private checkExtraLifeFromLength(): void {
-    if (this.snake.length >= LENGTH_FOR_EXTRA_LIFE && this.lives < MAX_LIVES) {
+    if (this.snake.length >= LENGTH_FOR_EXTRA_LIFE) {
       console.log(
         `🎯 Extra life gained! Snake length: ${this.snake.length}, Lives: ${
           this.lives
@@ -1492,7 +1484,9 @@ export class CoreGameLogic {
       );
 
       this.resetSnakeToInitialLength();
-      this.addLifeInternal();
+      if (this.lives < MAX_LIVES) {
+        this.addLifeInternal();
+      }
     }
   }
 
@@ -1528,7 +1522,7 @@ export class CoreGameLogic {
   private addLifeInternal(): void {
     if (this.lives < MAX_LIVES) {
       this.lives++;
-      this.renderer.playSound("powerUp");
+      this.renderer.play("powerUp");
       console.log(`💖 Life added! Current lives: ${this.lives}`);
       this.addGameMessage("EXTRA LIFE!", "cyan", 120);
     }

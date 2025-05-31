@@ -6,17 +6,16 @@ import {
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
   GameCore,
+  AudioService,
+  SoundEffectType,
 } from "./coreTypes.js";
-import {
-  playSoundEffect,
-  playMml as playMmlFromHelper,
-} from "../utils/browserHelper.js"; // Import playSoundEffect and playMml
 
 // ベースゲーム設定オプション
 interface BaseGameOptions {
   initialLives?: number;
   gameSpeed?: number; // ゲーム速度設定を追加
   isDemoPlay?: boolean; // Demo play mode
+  audioService?: AudioService; // Added audioService option
 }
 
 export abstract class BaseGame implements GameCore {
@@ -24,9 +23,9 @@ export abstract class BaseGame implements GameCore {
   protected score: number;
   protected lives: number;
   protected gameOverState: boolean;
-  protected wonGame: boolean;
   private readonly initialLives: number; // 初期ライフ数を保存
   protected isDemoPlay: boolean; // Demo play mode flag
+  protected audioService?: AudioService; // Added audioService instance variable
 
   // gameSpeed制御機能
   protected gameSpeed: number; // ゲーム速度倍率
@@ -34,14 +33,19 @@ export abstract class BaseGame implements GameCore {
   private readonly initialGameSpeed: number; // 初期速度を保存
 
   constructor(options: BaseGameOptions = {}) {
-    const { initialLives = 3, gameSpeed = 1.0, isDemoPlay = false } = options; // Destructure isDemoPlay
+    const {
+      initialLives = 3,
+      gameSpeed = 1.0,
+      isDemoPlay = false,
+      audioService,
+    } = options; // Destructure isDemoPlay and audioService
     this.initialLives = initialLives; // 初期値を保存
     this.initialGameSpeed = gameSpeed; // 初期速度を保存
     this.isDemoPlay = isDemoPlay; // Set demo play mode
+    this.audioService = audioService; // Set audioService
     this.score = 0;
     this.lives = initialLives;
     this.gameOverState = false;
-    this.wonGame = false;
     this.gameSpeed = gameSpeed;
     this.gameSpeedAccumulator = 0.0;
     this.virtualScreen = this.initializeVirtualScreen();
@@ -112,12 +116,12 @@ export abstract class BaseGame implements GameCore {
     });
   }
 
-  public renderGameOverScreen(wonGame: boolean = false): void {
-    const gameOverMessage = wonGame ? "You Win!" : "Game Over!";
+  public renderGameOverScreen(): void {
+    const gameOverMessage = "Game Over!";
     const gameOverMessageY = Math.floor(VIRTUAL_SCREEN_HEIGHT / 2) - 1;
 
     this.drawCenteredText(gameOverMessage, gameOverMessageY, {
-      color: wonGame ? "green" : "red",
+      color: "red",
     });
 
     const restartPromptY = Math.floor(VIRTUAL_SCREEN_HEIGHT / 2) + 1;
@@ -166,20 +170,10 @@ export abstract class BaseGame implements GameCore {
     return this.virtualScreen;
   }
 
-  public winGame(): void {
-    this.wonGame = true;
-    this.gameOverState = true;
-  }
-
-  public isGameWon(): boolean {
-    return this.wonGame;
-  }
-
   protected resetGame(): void {
     this.score = 0;
     this.lives = this.initialLives; // 保存された初期値を使用
     this.gameOverState = false;
-    this.wonGame = false;
     this.gameSpeed = this.initialGameSpeed; // 初期速度に戻す
     this.gameSpeedAccumulator = 0.0; // 蓄積値をリセット
     this.virtualScreen = this.initializeVirtualScreen();
@@ -211,9 +205,9 @@ export abstract class BaseGame implements GameCore {
    * @param sound The type of sound effect to play (from crisp-game-lib).
    * @param seed An optional seed for sound variation.
    */
-  public playSound(sound: SoundEffectType, seed?: number): void {
-    if (!this.isDemoPlay) {
-      playSoundEffect(sound, seed);
+  public play(sound: SoundEffectType, seed?: number): void {
+    if (!this.isDemoPlay && this.audioService) {
+      this.audioService.playSoundEffect(sound, seed);
     }
   }
 
@@ -222,13 +216,34 @@ export abstract class BaseGame implements GameCore {
    * @param mml The MML string or array of MML strings to play.
    */
   public playMml(mml: string | string[]): void {
-    if (!this.isDemoPlay) {
-      if (typeof mml === "string") {
-        playMmlFromHelper([mml]);
-      } else {
-        playMmlFromHelper(mml);
-      }
+    if (!this.isDemoPlay && this.audioService) {
+      this.audioService.playMml(mml);
     }
+  }
+
+  /**
+   * Plays background music if not in demo play mode.
+   */
+  public playBgm(): void {
+    if (!this.isDemoPlay && this.audioService) {
+      this.audioService.startPlayingBgm();
+    }
+  }
+
+  /**
+   * Stops the currently playing background music if not in demo play mode.
+   */
+  public stopBgm(): void {
+    if (!this.isDemoPlay && this.audioService) {
+      this.audioService.stopPlayingBgm();
+    }
+  }
+
+  /**
+   * Manually triggers the game over state.
+   */
+  public triggerGameOver(): void {
+    this.gameOverState = true;
   }
 
   // Abstract methods that must be implemented by subclasses
@@ -255,7 +270,7 @@ export abstract class BaseGame implements GameCore {
 
     // Render game over screen if game ended this frame
     if (this.gameOverState) {
-      this.renderGameOverScreen(this.wonGame);
+      this.renderGameOverScreen();
     }
   }
 }

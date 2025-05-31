@@ -1,13 +1,18 @@
 import "crisp-game-lib";
-// import { CoreGameLogic } from "./core.js"; // Old import
-import { GameManager } from "./GameManager.js"; // New import
+import { GameManager } from "./GameManager.js";
 import { initStandardTextGame } from "../../utils/browserHelper.js";
+import { BrowserAudioService } from "../../utils/BrowserAudioService.js"; // Import BrowserAudioService
 
 // 標準設定で初期化
 initStandardTextGame(
-  () => new GameManager(), // Instantiate GameManager instead of CoreGameLogic
+  () => new GameManager({ audioService: new BrowserAudioService() }), // Pass BrowserAudioService
   {
     isSoundEnabled: true,
     audioSeed: 1,
+    audioTempo: 156,
+    bgmVolume: 6,
+  },
+  {
+    bgm: "Pixelated_Rush.mp3",
   }
 );

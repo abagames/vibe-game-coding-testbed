@@ -129,7 +129,6 @@ export class GameManager extends BaseGame {
   private gameOptions: BlasnakeGameOptions;
 
   private lastScore: number = 0;
-  private gameWon: boolean = false; // To know if game over was a win
   private highScore: number = 0; // To display high score on game over
 
   private gameOverTimer: number = 0;
@@ -265,7 +264,6 @@ export class GameManager extends BaseGame {
         if (this.actualGame.isGameOver()) {
           // CoreGameLogic needs isGameOver()
           this.lastScore = this.actualGame.getScore(); // CoreGameLogic needs getScore()
-          this.gameWon = this.actualGame.isGameWon(); // CoreGameLogic needs isGameWon()
           if (this.actualGame.getHighScore) {
             // Check if method exists
             this.highScore = Math.max(
@@ -309,9 +307,9 @@ export class GameManager extends BaseGame {
     if (this.titleAnimationPhase === "fullyRevealed") {
       this.titleToDemoTimer++;
       if (this.titleToDemoTimer > GameManager.TITLE_TO_DEMO_DELAY_FRAMES) {
-        this.initializeCoreGame();
         this.currentFlowState = GameFlowState.DEMO;
         this.setIsDemoPlay(true); // Entering demo mode
+        this.initializeCoreGame();
         this.demoPlayTimer = 0;
         this.demoCurrentInput = { right: true }; // Start demo moving right
         this.demoInputCooldown = GameManager.DEMO_AI_INPUT_COOLDOWN_FRAMES;
@@ -620,15 +618,6 @@ export class GameManager extends BaseGame {
       this.actualGame.isGameOver() ||
       this.demoPlayTimer > GameManager.DEMO_PLAY_DURATION_FRAMES
     ) {
-      // Do not update lastScore or highScore from demo play
-      // this.lastScore = this.actualGame.getScore();
-      // this.gameWon = this.actualGame.isGameWon();
-      // if (this.actualGame.getHighScore) {
-      //   this.highScore = Math.max(
-      //     this.highScore,
-      //     this.actualGame.getHighScore()
-      //   );
-      // }
       this.currentFlowState = GameFlowState.TITLE;
       this.setIsDemoPlay(false); // Exiting demo mode
       this.resetTitleAnimationStates();
@@ -711,10 +700,8 @@ export class GameManager extends BaseGame {
   }
 
   private drawGameOverScreen(): void {
-    const gameOverMessage = this.gameWon ? "YOU WIN!" : "GAME OVER";
-    this.drawCenteredText(gameOverMessage, 7, {
-      color: this.gameWon ? "yellow" : "red",
-    });
+    const gameOverMessage = "GAME OVER";
+    this.drawCenteredText(gameOverMessage, 7, { color: "red" });
 
     const scoreText = `Score: ${this.lastScore}`;
     this.drawCenteredText(scoreText, 10, { color: "white" });

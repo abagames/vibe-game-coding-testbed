@@ -1,6 +1,7 @@
 import { GameManager } from "./GameManager.js";
 import { InputState } from "../../core/coreTypes.js";
 import { CoreGameLogic } from "./core.js";
+import { NodeAudioService } from "../../utils/NodeAudioService.js";
 
 // デバッグモード設定 - 通常プレイテスト用
 // Debug Mode Settings - For Normal Gameplay Testing
@@ -31,6 +32,7 @@ const game = new GameManager({
   timeAcceleration: TIME_ACCELERATION,
   constrainToBounds: CONSTRAIN_TO_BOUNDS,
   startInPlayingState: true, // Start directly in playing state for simulation
+  audioService: new NodeAudioService(), // Pass NodeAudioService instance
 });
 
 // Immediately start the game for simulation purposes, bypassing title screen

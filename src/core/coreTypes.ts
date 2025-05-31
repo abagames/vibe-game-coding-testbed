@@ -52,6 +52,27 @@ export type GridData = CellInfo[][];
 export const VIRTUAL_SCREEN_WIDTH = 40;
 export const VIRTUAL_SCREEN_HEIGHT = 25;
 
+export type SoundEffectType =
+  | "coin"
+  | "laser"
+  | "explosion"
+  | "powerUp"
+  | "hit"
+  | "jump"
+  | "select"
+  | "random"
+  | "click"
+  | "synth"
+  | "tone";
+// NOTE: This is a placeholder. Actual values should match crisp-game-lib's SoundEffectType
+
+export interface AudioService {
+  playSoundEffect(sound: SoundEffectType, seed?: number): void;
+  playMml(mml: string | string[]): void;
+  startPlayingBgm(): void;
+  stopPlayingBgm(): void;
+}
+
 export interface GameCore {
   initializeGame(): void;
   update(inputState: InputState): void;
