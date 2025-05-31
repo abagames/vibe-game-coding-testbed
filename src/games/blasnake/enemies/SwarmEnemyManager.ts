@@ -31,7 +31,7 @@ export class SwarmEnemyManager extends BaseEnemyManager {
     followerScore: 0, // 仲間は個別スコアなし
     groupDestroyBonus: 200, // 群れ全体破壊ボーナス
     moveInterval: 48, // リーダー
-    followerMoveInterval: 16, // 仲間の移動間隔を16フレームに変更
+    followerMoveInterval: 20,
     maxSwarmSize: 5, // リーダー + 4体の仲間に変更
     threatLevel: ThreatLevel.HIGH,
   };

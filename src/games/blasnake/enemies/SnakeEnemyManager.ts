@@ -31,7 +31,7 @@ export class SnakeEnemyManager extends BaseEnemyManager {
     bodyColor: "light_yellow",
     baseScore: 330, // 全体スコア（頭部のみで判定）
     bodyScore: 0, // 胴体セグメントスコア（使用しない）
-    moveInterval: 10, // プレイヤーより少し遅い
+    moveInterval: 12, // プレイヤーより少し遅い
     spawnWeight: 8,
     maxCount: 2,
     threatLevel: ThreatLevel.HIGH,

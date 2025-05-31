@@ -20,7 +20,7 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
       enemyType: EnemyType.WANDERER,
       count: 3,
       interval: 600, // 10秒間隔 (600 frames)
-      maxTotal: 6,
+      maxTotal: 5,
     },
   },
 
@@ -33,9 +33,9 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     enemyTypes: [EnemyType.GUARD],
     spawnPattern: {
       enemyType: EnemyType.GUARD,
-      count: 1,
-      interval: 900, // 15秒間隔 (900 frames)
-      maxTotal: 3,
+      count: 2,
+      interval: 600,
+      maxTotal: 5,
     },
   },
 
@@ -63,9 +63,9 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     enemyTypes: [EnemyType.CHASER],
     spawnPattern: {
       enemyType: EnemyType.CHASER,
-      count: 1,
+      count: 2,
       interval: 720, // 12秒間隔 (720 frames)
-      maxTotal: 2,
+      maxTotal: 4,
     },
   },
 
@@ -80,7 +80,7 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
       enemyType: EnemyType.WANDERER,
       count: 2,
       interval: 420, // 7秒間隔 (420 frames)
-      maxTotal: 8,
+      maxTotal: 6,
     },
   },
 
@@ -95,7 +95,7 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
       enemyType: EnemyType.SPLITTER,
       count: 1,
       interval: 900, // 15秒間隔 (900 frames)
-      maxTotal: 3,
+      maxTotal: 6,
     },
   },
 
@@ -109,8 +109,8 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.WANDERER,
       count: 1,
-      interval: 360, // 6秒間隔 (360 frames)
-      maxTotal: 10,
+      interval: 900,
+      maxTotal: 7,
     },
   },
 
@@ -123,9 +123,9 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     enemyTypes: [EnemyType.SPEEDSTER],
     spawnPattern: {
       enemyType: EnemyType.SPEEDSTER,
-      count: 1,
-      interval: 1080, // 18秒間隔 (1080 frames)
-      maxTotal: 2,
+      count: 3,
+      interval: 600,
+      maxTotal: 5,
     },
   },
 
@@ -138,9 +138,9 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     enemyTypes: [EnemyType.MIMIC],
     spawnPattern: {
       enemyType: EnemyType.MIMIC,
-      count: 1,
-      interval: 1200, // 20秒間隔 (1200 frames)
-      maxTotal: 2,
+      count: 2,
+      interval: 480,
+      maxTotal: 6,
     },
   },
 
@@ -154,8 +154,8 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.SNAKE,
       count: 1,
-      interval: 1500, // 25秒間隔 (1500 frames)
-      maxTotal: 2,
+      interval: 1200,
+      maxTotal: 3,
     },
   },
 
@@ -168,9 +168,9 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     enemyTypes: [EnemyType.WALL_CREEPER],
     spawnPattern: {
       enemyType: EnemyType.WALL_CREEPER,
-      count: 1,
-      interval: 900, // 15秒間隔 (900 frames)
-      maxTotal: 4,
+      count: 3,
+      interval: 600,
+      maxTotal: 7,
     },
   },
 
@@ -184,7 +184,7 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.GHOST,
       count: 1,
-      interval: 1800, // 30秒間隔 (1800 frames)
+      interval: 600,
       maxTotal: 3,
     },
   },
@@ -198,9 +198,9 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     enemyTypes: [EnemyType.SWARM],
     spawnPattern: {
       enemyType: EnemyType.SWARM,
-      count: 4, // リーダー1 + 仲間3
-      interval: 1200, // 20秒間隔 (1200 frames)
-      maxTotal: 4,
+      count: 1,
+      interval: 900,
+      maxTotal: 5,
     },
   },
 
@@ -214,8 +214,8 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.CHASER,
       count: 1,
-      interval: 300, // 5秒間隔 (300 frames)
-      maxTotal: 10,
+      interval: 900,
+      maxTotal: 8,
     },
   },
 
@@ -228,8 +228,8 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.WALL_CREEPER,
       count: 1,
-      interval: 360, // 6秒間隔 (360 frames)
-      maxTotal: 11,
+      interval: 900,
+      maxTotal: 8,
     },
   },
 
@@ -242,8 +242,8 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.SPEEDSTER,
       count: 1,
-      interval: 300, // 5秒間隔 (300 frames)
-      maxTotal: 10,
+      interval: 900,
+      maxTotal: 8,
     },
   },
 
@@ -261,8 +261,8 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.WANDERER,
       count: 1,
-      interval: 240, // 4秒間隔 (240 frames)
-      maxTotal: 12,
+      interval: 900,
+      maxTotal: 8,
     },
   },
 
@@ -280,8 +280,8 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.WALL_CREEPER,
       count: 1,
-      interval: 240, // 4秒間隔 (240 frames)
-      maxTotal: 11,
+      interval: 900,
+      maxTotal: 8,
     },
   },
 
@@ -300,8 +300,8 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.CHASER,
       count: 1,
-      interval: 180, // 3秒間隔 (180 frames)
-      maxTotal: 12,
+      interval: 900,
+      maxTotal: 8,
     },
   },
 
@@ -325,8 +325,8 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     spawnPattern: {
       enemyType: EnemyType.WANDERER,
       count: 1,
-      interval: 180, // 3秒間隔 (180 frames)
-      maxTotal: 15,
+      interval: 1200,
+      maxTotal: 10,
     },
   },
 ];
@@ -406,7 +406,7 @@ export class SimpleLevelManager {
       this.currentFrame - this.lastEndlessLevelFrame >=
       endlessLevelDurationFrames
     ) {
-      this.endlessMultiplier += 0.2;
+      this.endlessMultiplier += 0.1;
       this.lastEndlessLevelFrame = this.currentFrame;
       this.selectRandomEndlessLevel();
       console.log(
@@ -461,16 +461,12 @@ export class SimpleLevelManager {
       return { shouldSpawn: false, reason: "not_in_level" };
     }
 
-    const powerfulEnemyLimit = this.getPowerfulEnemyLimit(enemyType);
-    if (powerfulEnemyLimit > 0 && currentCount >= powerfulEnemyLimit) {
-      return { shouldSpawn: false, reason: "powerful_enemy_limit_reached" };
+    if (totalEnemyCount >= level.spawnPattern.maxTotal) {
+      return { shouldSpawn: false, reason: "max_count_reached" };
     }
 
-    const minEnemyCount = Math.max(
-      3,
-      Math.floor(level.spawnPattern.maxTotal * 0.6)
-    );
-    const isEmergencySpawn = totalEnemyCount < minEnemyCount;
+    const minEnemyCount = level.spawnPattern.count;
+    const isEmergencySpawn = currentCount < minEnemyCount;
 
     if (isEmergencySpawn) {
       const emergencyInterval = this.calculateEmergencyInterval();
@@ -482,10 +478,6 @@ export class SimpleLevelManager {
           interval: emergencyInterval,
         };
       }
-    }
-
-    if (currentCount >= level.spawnPattern.maxTotal) {
-      return { shouldSpawn: false, reason: "max_count_reached" };
     }
 
     const adjustedInterval = this.calculateNormalInterval(
@@ -503,33 +495,6 @@ export class SimpleLevelManager {
     };
   }
 
-  private getPowerfulEnemyLimit(enemyType: EnemyType): number {
-    const currentLevelNumber = this.currentLevel;
-
-    switch (enemyType) {
-      case EnemyType.CHASER:
-        if (currentLevelNumber <= 10) return 2;
-        if (currentLevelNumber <= 15) return 3;
-        return 4;
-
-      case EnemyType.SPEEDSTER:
-        if (currentLevelNumber <= 12) return 2;
-        if (currentLevelNumber <= 17) return 3;
-        return 4;
-
-      case EnemyType.SNAKE:
-        if (currentLevelNumber <= 15) return 2;
-        return 3;
-
-      case EnemyType.SWARM:
-        if (currentLevelNumber <= 15) return 3;
-        return 5;
-
-      default:
-        return 0;
-    }
-  }
-
   private calculateEmergencyInterval(): number {
     const baseEmergencyInterval = 180;
 
@@ -540,11 +505,7 @@ export class SimpleLevelManager {
       );
       return adjustedInterval;
     } else {
-      const levelDifficultyMultiplier = this.getLevelDifficultyMultiplier();
-      const adjustedInterval = Math.max(
-        Math.floor(baseEmergencyInterval / levelDifficultyMultiplier),
-        90
-      );
+      const adjustedInterval = Math.max(baseEmergencyInterval, 90);
       return adjustedInterval;
     }
   }
@@ -557,24 +518,8 @@ export class SimpleLevelManager {
       );
       return adjustedInterval;
     } else {
-      const levelDifficultyMultiplier = this.getLevelDifficultyMultiplier();
-      const adjustedInterval = Math.max(
-        Math.floor(baseInterval / levelDifficultyMultiplier),
-        180
-      );
+      const adjustedInterval = Math.max(baseInterval, 180);
       return adjustedInterval;
-    }
-  }
-
-  private getLevelDifficultyMultiplier(): number {
-    if (this.currentLevel <= 5) {
-      return 1.0;
-    } else if (this.currentLevel <= 10) {
-      return 1.1;
-    } else if (this.currentLevel <= 15) {
-      return 1.2;
-    } else {
-      return 1.3;
     }
   }
 
@@ -613,7 +558,6 @@ export class SimpleLevelManager {
         currentLevelNumber: this.currentLevel,
         isEndlessMode: this.isEndlessMode,
         endlessMultiplier: this.endlessMultiplier,
-        levelDifficultyMultiplier: this.getLevelDifficultyMultiplier(),
         currentFrame: this.currentFrame,
         levelName: fallbackLevelName,
         levelEnemyTypes: [],
@@ -632,7 +576,6 @@ export class SimpleLevelManager {
       currentLevelNumber: this.currentLevel,
       isEndlessMode: this.isEndlessMode,
       endlessMultiplier: this.endlessMultiplier,
-      levelDifficultyMultiplier: this.getLevelDifficultyMultiplier(),
       currentFrame: this.currentFrame,
       levelName: level.name,
       levelEnemyTypes: level.enemyTypes,
