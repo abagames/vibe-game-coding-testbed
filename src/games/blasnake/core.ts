@@ -1130,7 +1130,7 @@ export class CoreGameLogic {
     this.addExplosionEffect(head.x, head.y);
     this.playerExplosionPosition = { x: head.x, y: head.y };
     this.enemySystem.clearAllEnemies();
-    //this.loseLife();
+    this.loseLife();
 
     if (!this.isGameOver()) {
       this.isWaitingForRestart = true;

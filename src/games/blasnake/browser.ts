@@ -5,7 +5,8 @@ import { BrowserAudioService } from "../../utils/BrowserAudioService.js"; // Imp
 
 // 標準設定で初期化
 initStandardTextGame(
-  () => new GameManager({ audioService: new BrowserAudioService() }), // Pass BrowserAudioService
+  () => new GameManager({ audioService: new BrowserAudioService() }),
+  { enableGlobalReset: false },
   {
     isSoundEnabled: true,
     audioSeed: 1,

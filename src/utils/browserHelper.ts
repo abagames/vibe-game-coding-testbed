@@ -5,7 +5,6 @@ import {
   GridData,
   CellInfo,
   GameCore,
-  cglColor,
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
 } from "../core/coreTypes.js";
@@ -182,7 +181,8 @@ export function createStandardGameLoop(
   screenWidth: number = VIRTUAL_SCREEN_WIDTH,
   screenHeight: number = VIRTUAL_SCREEN_HEIGHT,
   charWidth: number = 4,
-  charHeight: number = 6
+  charHeight: number = 6,
+  enableGlobalReset: boolean = true
 ) {
   let game: GameCore;
 
@@ -210,7 +210,11 @@ export function createStandardGameLoop(
 
     // Handle global R for reset if no specific game state handles it
     // This is closer to how BaseGame handled it.
-    if (gameInputState.r && keyboard.code.KeyR.isJustPressed) {
+    if (
+      enableGlobalReset &&
+      gameInputState.r &&
+      keyboard.code.KeyR.isJustPressed
+    ) {
       // Check isJustPressed here to avoid continuous reset
       // Check if game manager is in a state that handles R itself (e.g. GameOver)
       // This is a bit of a hack. Ideally, GameCore would have a reset method that GameManager calls.
@@ -255,21 +259,36 @@ export function createStandardGameLoop(
 }
 
 /**
+ * Options for the standard text game helper.
+ */
+export interface StandardGameHelperOptions {
+  enableGlobalReset?: boolean;
+}
+
+/**
  * Initializes a standard text-based game with crisp-game-lib.
  */
 export function initStandardTextGame(
   gameFactory: () => GameCore,
-  customOptions?: Partial<Options>,
+  helperOptions: StandardGameHelperOptions = {},
+  cglOptions?: Partial<Options>,
   audioFiles?: { [key: string]: string }
 ): void {
   const defaultOptions = createStandardGameOptions();
-  const cglOptions = { ...defaultOptions, ...customOptions };
+  const _cglOptions = { ...defaultOptions, ...cglOptions };
 
-  const { gameUpdate } = createStandardGameLoop(gameFactory);
+  const { gameUpdate } = createStandardGameLoop(
+    gameFactory,
+    VIRTUAL_SCREEN_WIDTH, // Assuming default screenWidth
+    VIRTUAL_SCREEN_HEIGHT, // Assuming default screenHeight
+    4, // Assuming default charWidth
+    6, // Assuming default charHeight
+    helperOptions.enableGlobalReset !== false // Pass the option, default to true if not specified
+  );
 
   init({
     update: gameUpdate,
-    options: cglOptions,
+    options: _cglOptions,
     audioFiles,
   });
 }
