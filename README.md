@@ -22,6 +22,8 @@ Blasnake is an action-packed snake game built with VGCT. Control your snake to e
 
 Play Blasnake in your PC web browser: [Play Blasnake](https://abagames.github.io/vibe-game-coding-testbed/blasnake/)
 
+https://github.com/user-attachments/assets/0737d99b-65cc-47e4-819c-e803a222bdb2
+
 ## Quick Start
 
 ### Prerequisites
