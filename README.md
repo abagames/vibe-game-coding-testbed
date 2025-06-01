@@ -322,11 +322,9 @@ This phase involves short cycles of: Element Definition -> LLM Implementation ->
     In `package.json`, add a script to run your game's simulator:
 
     ```json
-    // package.json
     "scripts": {
-      // ... other scripts
       "sim:myNewGame": "npx tsx src/games/myNewGame/sim.ts",
-      "dev:myNewGame": "vite --config vite.config.myNewGame.ts" // Example for Vite
+      "dev:myNewGame": "vite --config vite.config.myNewGame.ts"
     },
     ```
 
