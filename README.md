@@ -308,14 +308,17 @@ This phase involves short cycles of: Element Definition -> LLM Implementation ->
 
     ```html
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
       <head>
+        <meta charset="UTF-8" />
+        <meta
+          name="viewport"
+          content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+        />
         <title>My New Game</title>
-        <script src="../../node_modules/crisp-game-lib/bundle.js"></script>
-        <meta charset="utf-8" />
       </head>
       <body>
-        <script type="module" src="./browser.js"></script>
+        <script type="module" src="./browser.ts"></script>
       </body>
     </html>
     ```
