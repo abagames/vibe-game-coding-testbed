@@ -28,8 +28,8 @@ https://github.com/user-attachments/assets/0737d99b-65cc-47e4-819c-e803a222bdb2
 
 ### Prerequisites
 
-- Node.js (LTS version recommended)
-- npm (comes with Node.js)
+- AI Coding Agent (Cursor is recommended). This repository is primarily designed for use with Cursor, and specific rules for the agent are located in [./.cursor/rules](./.cursor/rules).
+- Node.js, npm
 
 ### Installation
 
