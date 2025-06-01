@@ -86,7 +86,7 @@ vibe-game-coding-testbed/
 │       └── consoleSimulator.ts # Framework for creating console-based game simulations
 ├── package.json
 ├── tsconfig.json
-├── vite.config.json
+├── vite.config.ts
 └── README.md
 ```
 
