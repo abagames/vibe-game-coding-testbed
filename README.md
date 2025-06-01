@@ -6,12 +6,21 @@ VGCT is built to turn abstract game ideas into playable prototypes quickly, fost
 
 ## Key Features
 
-- **Rapid Prototyping with LLMs/AI:** Designed to get from a game idea to a playable prototype quickly, leveraging LLMs for various development tasks.
-- **Creativity through Constraints:** The 40x25 text-based terminal and ASCII-only display encourage innovative game mechanics and unique visual expressions.
+- **Rapid Prototyping & Idea Validation:** Designed to get from a game idea to a playable prototype quickly, leveraging LLMs for various development tasks, allowing for rapid validation of game concepts.
+- **Creativity and Minimalist Charm from Constraints:** The 40x25 text-based terminal and ASCII-only display encourage innovative game mechanics, unique visual expressions, focus on core gameplay, and stimulate player imagination.
 - **Deterministic & Reproducible Development:** Core game logic is separated, ensuring identical game behavior in both simulation and browser environments for easier testing and debugging.
 - **LLM-Friendly Game State Representation:** The console simulator outputs the game screen as text, making it easily parsable and understandable for LLMs, facilitating AI-driven testing, analysis, and even gameplay.
-- **Focused Learning & Experimentation:** Provides a sandbox to try out diverse ideas, rules, and LLM prompting techniques, facilitating a cycle of evaluation and learning to discover better game development methodologies.
+- **Focused Learning, Experimentation & Educational Value:** Provides a sandbox to try out diverse ideas, rules, and LLM prompting techniques. The clear separation of concerns and iterative process make it suitable for learning programming and game design fundamentals.
 - **Independent Game Modules:** Each game is self-contained with its own logic, browser entry point, and simulator, allowing for parallel development and testing.
+- **LLM-First Game Development Exploration:** Actively investigates how to best use LLMs' strengths and mitigate their weaknesses in a game development context.
+
+## Sample Games
+
+### Blasnake
+
+Blasnake is an action-packed snake game built with VGCT. Control your snake to eat food ($) and grow longer. Enclose areas with your snake to destroy enemies within and score big points! Various enemy types will appear, challenging your survival. Collect enough points or grow long enough to earn extra lives. Use Arrow keys or W/A/S/D to control the snake.
+
+Play Blasnake in your PC web browser: [Play Blasnake](https://abagames.github.io/vibe-game-coding-testbed/blasnake/)
 
 ## Quick Start
 
@@ -37,13 +46,10 @@ VGCT is built to turn abstract game ideas into playable prototypes quickly, fost
 To run a game in the browser with live reloading (useful for testing with `crisp-game-lib`):
 
 ```bash
-# Example for 'defaultGame'
-npm run dev:defaultGame
+npm run dev
 ```
 
 (Note: You'll need to configure `vite.config.ts` for each new game to use the dev server.)
-
-A more general way to serve the `index.html` of any game is to use a simple HTTP server from the root directory. `index.html` files are typically found in `src/games/[gameName]/index.html`.
 
 ### Running Game Simulations
 
@@ -80,6 +86,7 @@ vibe-game-coding-testbed/
 │       └── consoleSimulator.ts # Framework for creating console-based game simulations
 ├── package.json
 ├── tsconfig.json
+├── vite.config.json
 └── README.md
 ```
 
@@ -169,33 +176,71 @@ This phase involves short cycles of: Element Definition -> LLM Implementation ->
     import { BaseGame } from "../../core/BaseGame.js";
     import {
       InputState,
-      CellAttributes,
-      VIRTUAL_SCREEN_WIDTH,
-      VIRTUAL_SCREEN_HEIGHT,
+      // Add other necessary types from coreTypes.ts like:
+      // CellAttributes, VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT, BaseGameOptions, etc.
     } from "../../core/coreTypes.js";
 
+    // Define an interface for your game's specific options, extending BaseGameOptions
+    export interface MyNewGameOptions /* extends BaseGameOptions */ {
+      // Extending BaseGameOptions is optional
+      // Add game-specific options here
+      // exampleOption?: number;
+    }
+
     export class CoreGameLogic extends BaseGame {
-      constructor(options = {}) {
-        // Add any game-specific options
-        super(options);
-        // Initialize game-specific properties here
+      // Define game-specific properties here
+      // private exampleProperty: number;
+
+      constructor(options: MyNewGameOptions = {}) {
+        super(options); // Pass options to BaseGame constructor
+
+        // Initialize game-specific properties using options
+        // this.exampleProperty = options.exampleOption ?? defaultValue;
+
+        // It's good practice to call initializeGame at the end of the constructor
+        // if BaseGame's constructor doesn't call it or if you need to ensure
+        // all derived class properties are set before initialization.
+        // BaseGame's constructor *does not* call initializeGame(), so we call it here.
+        this.initializeGame();
       }
 
       initializeGame(): void {
-        super.initializeGame(); // Important to call super
-        // Your game's initial setup: draw initial screen, place player, etc.
+        super.initializeGame(); // Important to call super to reset score, lives etc.
+
+        // Your game's initial setup:
+        // - Place player, enemies, items
+        // - Draw initial static elements (like borders, if not part of a reusable method)
         this.drawText("My New Game!", 10, 5, { color: "white" });
       }
 
       updateGame(input: InputState): void {
-        // Your game's update logic based on input
+        // Your game's main update logic:
+        // 1. Draw static elements (if not handled by a separate method called first)
+        // 2. Process player input and movement
+        // 3. Update AI, enemies, game objects
+        // 4. Check for collisions
+        // 5. Update score, lives
+        // 6. Draw dynamic elements (player, enemies) - BaseGame clears screen before this.
+
         if (input.action1) {
-          // Handle action
+          // Handle action1 (e.g., jump, shoot)
+          this.addScore(1); // Example action
         }
-        // Move player, update enemies, check collisions, etc.
+
+        // Example: Basic player movement logic (would be more complex in a real game)
+        // let playerX = VIRTUAL_SCREEN_WIDTH / 2; // In reality, manage as class member variables
+        // let playerY = VIRTUAL_SCREEN_HEIGHT / 2;
+        // if (input.left) playerX--;
+        // if (input.right) playerX++;
+        // this.drawText("@", playerX, playerY, { color: "yellow" });
+
+        // Remember to call methods like this.renderStandardUI() if needed,
+        // or BaseGame might handle it.
       }
 
-      // Add any other game-specific methods
+      // Add any other game-specific methods, e.g., for drawing, collision detection, etc.
+      // private drawPlayer(): void { /* ... */ }
+      // private checkCollisions(): void { /* ... */ }
     }
     ```
 
@@ -204,19 +249,13 @@ This phase involves short cycles of: Element Definition -> LLM Implementation ->
 
     ```typescript
     // src/games/myNewGame/browser.ts
-    import "crisp-game-lib"; // Imports crisp-game-lib globally
+    import "crisp-game-lib";
     import { CoreGameLogic } from "./core.js";
     import { initStandardTextGame } from "../../utils/browserHelper.js";
-
-    // Optional: Define a win condition function for your game
-    const winCondition = (game: CoreGameLogic): boolean => {
-      // Example: return game.getScore() >= 100;
-      return false; // Replace with actual win condition
-    };
+    import { BaseGameOptions } from "../../core/coreTypes.js";
 
     initStandardTextGame(
-      () => new CoreGameLogic(), // Factory function to create a new game instance
-      winCondition // Pass your win condition, or undefined if not used by helper
+      (options?: Partial<BaseGameOptions>) => new CoreGameLogic(options)
     );
     ```
 
@@ -226,19 +265,37 @@ This phase involves short cycles of: Element Definition -> LLM Implementation ->
     ```typescript
     // src/games/myNewGame/sim.ts
     import { CoreGameLogic } from "./core.js";
+    import { MyNewGameOptions } from "./core.js"; // Assuming you defined this in core.ts
     import { ConsoleSimulator } from "../../utils/consoleSimulator.js";
+    import { NodeAudioService } from "../../utils/NodeAudioService.js"; // For simulation audio
 
     console.log("MyNewGame Simulator");
 
-    const game = new CoreGameLogic();
+    // Example: Define options for your game simulation
+    const gameOptions: MyNewGameOptions = {
+      // initialLives: 5, // Example from BaseGameOptions
+      // exampleOption: 10, // Example from MyNewGameOptions
+      audioService: new NodeAudioService(), // Use NodeAudioService for console
+    };
+
+    const game = new CoreGameLogic(gameOptions);
 
     // Define a key press pattern for the simulation
-    const keyPressPattern: string[] = "r.r.d.d.l.l.u.u.".split(""); // Example: right, wait, right, wait ...
+    // 'u' = up, 'd' = down, 'l' = left, 'r' = right, '.' = wait/no action
+    // '1' = action1 (X, Space, /), '2' = action2 (Z, Enter, .)
+    const keyPressPattern: string[] = "r.r.d.d.l.l.u.u.1.2.".split(""); // Example pattern
+
+    // More complex patterns can be generated programmatically:
+    // const keyPressPattern: string[] = [];
+    // for(let i=0; i<10; i++) keyPressPattern.push("r"); // Move right 10 times
+    // for(let i=0; i<5; i++) keyPressPattern.push(".");   // Wait 5 times
 
     const simulator = new ConsoleSimulator(game, "predefined", {
-      totalTicks: 50,
-      tickDurationMs: 200,
-      predefinedMoves: keyPressPattern,
+      // Or "random", "fixed"
+      totalTicks: 50, // Total number of simulation steps
+      tickDurationMs: 200, // Duration of each tick in milliseconds
+      predefinedMoves: keyPressPattern, // The pattern to use if mode is "predefined"
+      // fixedMove: "r",      // The move to use if mode is "fixed"
     });
 
     simulator.run();
@@ -260,9 +317,6 @@ This phase involves short cycles of: Element Definition -> LLM Implementation ->
       </body>
     </html>
     ```
-
-    _Important:_ Update the path to `crisp-game-lib/bundle.js` if your project structure differs or if it's installed globally/differently. The path shown `../../node_modules/crisp-game-lib/bundle.js` assumes `crisp-game-lib` is in `node_modules` at the project root. A simpler way if serving from root is `<script src="/node_modules/crisp-game-lib/bundle.js"></script>`. Adjust as necessary for your setup. For VGCT, `crisp-game-lib` is often imported directly in `browser.ts` if using a bundler like Vite. The example above assumes direct script inclusion.
-    A typical setup with Vite might not need the script tag for `crisp-game-lib` in `index.html` as it's handled by the import in `browser.ts`.
 
 6.  **Add npm Script:**
     In `package.json`, add a script to run your game's simulator:
@@ -291,7 +345,7 @@ This phase involves short cycles of: Element Definition -> LLM Implementation ->
       },
       root: "src/games/myNewGame", // Serve from the game's directory
       build: {
-        outDir: "../../../../dist/myNewGame", // Adjust output directory as needed
+        outDir: "../../../dist/myNewGame", // Adjust output directory as needed
       },
     });
     ```
@@ -301,30 +355,12 @@ This phase involves short cycles of: Element Definition -> LLM Implementation ->
 - **Programming Language:** TypeScript
 - **Core Game Logic:** Plain TypeScript, no external game engine dependencies for the logic itself.
 - **Browser Environment:**
-  - Rendering/Input: `crisp-game-lib` (a minimalistic library for text-based/pixel games).
-  - Game Loop: Handled by `crisp-game-lib` or `requestAnimationFrame` via helpers.
+  - Rendering/Input, Game Loop: `crisp-game-lib` (a minimalistic library for text-based/pixel games).
 - **Simulation Environment:**
   - Runtime: Node.js.
   - Input Simulation: Custom scripts within `sim.ts` files.
 - **LLM/AI Coding Agents:**
-  - APIs: OpenAI API (GPT-4, GPT-3.5-turbo, etc.), Anthropic Claude, or others.
-  - IDE Integrations: GitHub Copilot, Cursor, or other AI-assisted coding tools.
+  - LLMs: Anthropic Claude, Google Gemini, OpenAI GPT, or others.
+  - IDE Integrations: Cursor, GitHub Copilot, or other AI-assisted coding tools.
 - **Version Control:** Git, GitHub/GitLab.
 - **Documentation:** Markdown.
-
-## Contributing
-
-Contributions are welcome! Whether it's improving the core framework, adding new example games, enhancing documentation, or reporting bugs, your input is valuable.
-
-1.  **Reporting Bugs:** Please open an issue on the GitHub repository, providing as much detail as possible.
-2.  **Suggesting Enhancements:** Open an issue to discuss new features or improvements.
-3.  **Pull Requests:** Fork the repository, create a new branch for your feature or bug fix, and submit a pull request. Please ensure your code adheres to the existing style and that simulations/tests pass if applicable.
-
-## Unique Value of VGCT
-
-- **LLM-First Game Development Exploration:** Actively investigates how to best use LLMs' strengths and mitigate their weaknesses in a game development context.
-- **Minimalist Charm from Constraints:** The text-based limitation encourages focus on core game mechanics and stimulates player imagination.
-- **Educational Aspect:** The clear separation of concerns (state, input, logic, rendering) and the iterative building process make it suitable for learning programming and game design fundamentals.
-- **Rapid Idea Validation:** Quickly answer the question: "Does this 'Vibe' make for a viable game?" often within hours or a few days.
-
-VGCT aims to be more than just a toolset; it's a living laboratory for discovering, sharing, and evolving game development methodologies in the age of AI.
