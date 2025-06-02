@@ -1,6 +1,6 @@
 ---
 description: 
-globs: ./**/*.ts
+globs: *.ts
 alwaysApply: false
 ---
 # VGCT Coding Standards
@@ -36,6 +36,10 @@ See [defaultGame core.ts](mdc:src/games/defaultGame/core.ts) for examples of:
 
 ## Commenting
 - Focus on *Why* not *What* in comments. Explain the reasoning behind code choices, not just what the code does.
+- Comments must be written in English.
+
+## AI Assistant Communication Standards
+- The AI assistant must not use comments like 'Add this code' or 'Update that variable' when describing the edits it performs.
 
 ## Architectural Style
 - Prefer functions over classes. Aim for a more functional programming style where appropriate, using classes sparingly and only when their benefits (e.g., clear state encapsulation, inheritance) are significant.
@@ -164,9 +168,3 @@ These methods are called automatically by BaseGame:
 
 ### Rendering
 - `renderVirtualScreen(virtualScreenData, width, height, charWidth, charHeight)`: Draws the 40×25 grid to canvas
-
-
-
-
-
-
