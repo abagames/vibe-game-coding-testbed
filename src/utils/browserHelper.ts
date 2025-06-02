@@ -1,7 +1,6 @@
 import "crisp-game-lib";
 import {
   InputState,
-  CellAttributes,
   GridData,
   CellInfo,
   GameCore,
@@ -119,15 +118,6 @@ export function createStandardGameLoop(
   }
 
   function gameUpdate() {
-    // Standard reset on 'R' key press, but only if it's *just* pressed to avoid multiple resets.
-    // GameManager will handle its own 'r' input for restart in GAME_OVER state.
-    // BaseGame used to handle a global R for reset. If that's still desired outside of specific states,
-    // it might need to be passed to the game's update method or handled here.
-    // For now, the crisp-game-lib specific KeyR.isJustPressed is commented out from here,
-    // as game.update(inputState) will receive { r: true } and can decide.
-    // if (!game || keyboard.code.KeyR.isJustPressed) {
-    //   resetGame();
-    // }
     if (!game) {
       // Initialize game on first update if not already
       resetGame();
@@ -142,10 +132,6 @@ export function createStandardGameLoop(
       gameInputState.r &&
       keyboard.code.KeyR.isJustPressed
     ) {
-      // Check isJustPressed here to avoid continuous reset
-      // Check if game manager is in a state that handles R itself (e.g. GameOver)
-      // This is a bit of a hack. Ideally, GameCore would have a reset method that GameManager calls.
-      // Or, InputState could include isJustPressed flags.
       if (
         game instanceof BaseGame &&
         (game as any).currentFlowState !== undefined

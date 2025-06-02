@@ -16,29 +16,29 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
     color: "cyan" as cglColor,
     blinkingColor: "light_cyan" as cglColor,
     baseScore: 300,
-    moveInterval: 6, // プレイヤーの約3倍速
+    moveInterval: 6, // Roughly 3x player speed
     speedMultiplier: 3.0,
-    directionChangeInterval: 10, // Default: 10 (0.33秒)
+    directionChangeInterval: 10, // Default: 10 (0.33 seconds)
     directionChangeChance: 0.3,
     wallReflectionEnabled: true,
     predictabilityThreshold: 5,
     blinkDuration: 120,
     threatLevel: ThreatLevel.MEDIUM,
-    spawnWeight: 50, // テスト用に出現頻度を大幅に上げる
-    maxCount: 4, // テスト用に最大数を増やす
-    minMovementDistance: 8, // 最小移動距離
-    maxMovementDistance: 12, // 最大移動距離
-    pauseDuration: 60, // 停止時間（1秒）
-    learningObjective: "反応速度と動的判断力を向上させる",
+    spawnWeight: 50, // Significantly increased spawn rate for testing
+    maxCount: 4, // Increased max count for testing
+    minMovementDistance: 8, // Minimum movement distance
+    maxMovementDistance: 12, // Maximum movement distance
+    pauseDuration: 60, // Pause duration (1 second)
+    learningObjective: "Improve reaction time and dynamic decision-making",
     counterStrategies: [
-      "スピードスターの回転パターンを観察して予測",
-      "停止中を狙って囲い込み",
-      "回転方向を利用して先回り",
-      "角での方向転換を利用した囲い込み",
+      "Observe and predict Speedster's rotation pattern",
+      "Enclose while paused",
+      "Anticipate movement based on rotation direction",
+      "Utilize corner turns for enclosure",
     ],
   };
 
-  // 右回り・左回りの方向順序
+  // Clockwise and counter-clockwise direction order
   private readonly CLOCKWISE_DIRECTIONS = [
     Direction.RIGHT,
     Direction.DOWN,
@@ -65,11 +65,11 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
       ? this.SPEEDSTER_CONFIG.blinkDuration
       : 0;
 
-    // 回転パターンをランダムに決定
+    // Determine rotation pattern randomly
     const rotationPattern =
       Math.random() < 0.5 ? "clockwise" : "counterclockwise";
 
-    // 初期方向をランダムに決定
+    // Determine initial direction randomly
     const directions =
       rotationPattern === "clockwise"
         ? this.CLOCKWISE_DIRECTIONS
@@ -78,7 +78,7 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
     const initialDirection = directions[randomDirectionIndex];
     const currentDirectionIndex = randomDirectionIndex;
 
-    // 移動距離をランダムに決定（8-12マス）
+    // Determine movement distance randomly (8-12 cells)
     const movementDistance =
       Math.floor(
         Math.random() *
@@ -128,11 +128,11 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
 
     const speedster = enemy as SpeedsterEnemy;
 
-    // 停止状態の処理
+    // Handle paused state
     if (speedster.movementState === "paused") {
       speedster.pauseDuration--;
       if (speedster.pauseDuration <= 0) {
-        // 停止終了、新しい方向を選択して移動開始
+        // End pause, select new direction and start moving
         this.changeDirection(speedster);
         speedster.movementState = "moving";
         speedster.movementDistance = 0;
@@ -141,11 +141,11 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
       return;
     }
 
-    // 移動状態の処理
+    // Handle moving state
     speedster.directionChangeTimer++;
     speedster.predictabilityCounter++;
 
-    // ブーストクールダウンの更新
+    // Update boost cooldown
     if (speedster.boostCooldown > 0) {
       speedster.boostCooldown--;
     }
@@ -158,28 +158,28 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
 
     const speedster = enemy as SpeedsterEnemy;
 
-    // 停止中は移動しない
+    // Don't move while paused
     if (speedster.movementState === "paused") {
       return;
     }
 
-    // 新しい位置を計算
+    // Calculate new position
     const newPos = this.calculateNewPosition(speedster);
 
-    // 移動可能かチェック
+    // Check if position is valid
     if (this.isValidPosition(newPos, gameState)) {
       speedster.x = newPos.x;
       speedster.y = newPos.y;
       speedster.movementDistance++;
 
-      // 最大移動距離に達したら停止
+      // Pause if max movement distance reached
       if (speedster.movementDistance >= speedster.maxMovementDistance) {
         speedster.movementState = "paused";
         speedster.pauseDuration = speedster.maxPauseDuration;
         speedster.movementDistance = 0;
       }
     } else {
-      // 何かにぶつかったら即座に停止
+      // Pause immediately if something is hit
       speedster.movementState = "paused";
       speedster.pauseDuration = speedster.maxPauseDuration;
       speedster.movementDistance = 0;
@@ -188,18 +188,18 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
   }
 
   private changeDirection(speedster: SpeedsterEnemy): void {
-    // 回転パターンに従って次の方向を決定
+    // Determine next direction based on rotation pattern
     const directions =
       speedster.rotationPattern === "clockwise"
         ? this.CLOCKWISE_DIRECTIONS
         : this.COUNTERCLOCKWISE_DIRECTIONS;
 
-    // 次の方向インデックスに進む
+    // Advance to the next direction index
     speedster.currentDirectionIndex =
       (speedster.currentDirectionIndex + 1) % directions.length;
     speedster.direction = directions[speedster.currentDirectionIndex];
 
-    // 新しい移動距離をランダムに設定（8-12マス）
+    // Set new random movement distance (8-12 cells)
     speedster.maxMovementDistance =
       Math.floor(
         Math.random() *
@@ -216,13 +216,13 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
     speedster: SpeedsterEnemy,
     blockedPos: Position
   ): void {
-    // 壁にぶつかった場合は即座に停止して次の方向に変更
+    // Immediately pause and change to next direction if wall is hit
     speedster.movementState = "paused";
     speedster.pauseDuration = speedster.maxPauseDuration;
     speedster.movementDistance = 0;
     speedster.predictabilityCounter = 0;
 
-    // 回転パターンに従って次の方向を決定（壁反射ではなく規則的な回転）
+    // Determine next direction based on rotation pattern (regular rotation, not wall reflection)
     this.changeDirection(speedster);
   }
 
@@ -237,7 +237,7 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
     const speedster = enemy as SpeedsterEnemy;
 
     if (speedster.isBlinking) {
-      // 点滅中の表示（高速点滅で動きの速さを表現）
+      // Display during blinking (fast blink to represent speed)
       const blinkPhase =
         Math.floor((speedster.maxBlinkDuration - speedster.blinkDuration) / 3) %
         2;
@@ -252,7 +252,7 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
           },
         };
       } else {
-        // 非表示フェーズ
+        // Hidden phase
         return {
           char: " ",
           attributes: {
@@ -262,7 +262,7 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
         };
       }
     } else {
-      // 通常表示（停止中は異なる文字で表示）
+      // Normal display (different char when paused)
       const displayChar =
         speedster.movementState === "paused"
           ? "P"
@@ -283,7 +283,7 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
     }
   }
 
-  // スピードスター固有のメソッド
+  // Speedster-specific methods
   public spawnSpeedster(
     position: Position,
     isBlinking: boolean = true
@@ -306,27 +306,27 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
     return this.getEnemiesByType(EnemyType.SPEEDSTER) as SpeedsterEnemy[];
   }
 
-  // 動的難易度調整用メソッド
+  // Method for dynamic difficulty adjustment
   public adjustSpeedsterDifficulty(difficultyMultiplier: number): void {
     const speedsters = this.getAllSpeedsters();
 
     for (const speedster of speedsters) {
-      // 移動間隔を調整（最小値制限あり）
+      // Adjust movement interval (with minimum limit)
       speedster.moveInterval = Math.max(
         Math.floor(this.SPEEDSTER_CONFIG.moveInterval / difficultyMultiplier),
-        3 // 最小3フレーム間隔
+        3 // Minimum 3-frame interval
       );
 
-      // 方向変更頻度を調整
+      // Adjust direction change frequency
       const baseInterval = this.SPEEDSTER_CONFIG.directionChangeInterval;
       speedster.directionChangeTimer = Math.max(
         Math.floor(baseInterval / difficultyMultiplier),
-        5 // 最小5フレーム間隔
+        5 // Minimum 5-frame interval
       );
     }
   }
 
-  // パフォーマンス分析用メソッド
+  // Method for performance analysis
   public getSpeedsterMetrics(): {
     averageSpeed: number;
     directionChangesPerSecond: number;
@@ -357,14 +357,14 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
 
     return {
       averageSpeed: totalSpeed / speedsters.length,
-      directionChangesPerSecond: 0, // 実装時に計算
-      wallReflections: 0, // 実装時に計算
+      directionChangesPerSecond: 0, // Calculate during implementation
+      wallReflections: 0, // Calculate during implementation
       predictabilityScore:
         averagePredictability / this.SPEEDSTER_CONFIG.predictabilityThreshold,
     };
   }
 
-  // デバッグ用
+  // For debugging
   public getSpeedsterDebugInfo(): any {
     const speedsters = this.getAllSpeedsters();
     return {
@@ -392,7 +392,7 @@ export class SpeedsterEnemyManager extends BaseEnemyManager {
     };
   }
 
-  // 設定取得メソッド
+  // Method to get config
   public getConfig() {
     return { ...this.SPEEDSTER_CONFIG };
   }

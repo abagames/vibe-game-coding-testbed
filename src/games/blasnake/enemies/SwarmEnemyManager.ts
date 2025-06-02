@@ -27,12 +27,12 @@ export class SwarmEnemyManager extends BaseEnemyManager {
     followerChar: "s",
     leaderColor: "green",
     followerColor: "light_green",
-    baseScore: 360, // リーダーのみ
-    followerScore: 0, // 仲間は個別スコアなし
-    groupDestroyBonus: 200, // 群れ全体破壊ボーナス
-    moveInterval: 48, // リーダー
+    baseScore: 360, // Leader only
+    followerScore: 0, // Followers have no individual score
+    groupDestroyBonus: 200, // Bonus for destroying the entire swarm
+    moveInterval: 48, // Leader
     followerMoveInterval: 20,
-    maxSwarmSize: 5, // リーダー + 4体の仲間に変更
+    maxSwarmSize: 5, // Changed to leader + 4 followers
     threatLevel: ThreatLevel.HIGH,
   };
 
@@ -47,7 +47,7 @@ export class SwarmEnemyManager extends BaseEnemyManager {
   }
 
   public updateEnemyLogic(enemy: SwarmEnemy, gameState: GameState): void {
-    // 点滅エフェクトの更新
+    // Update blinking effect
     this.updateBlinking(enemy);
 
     if (enemy.isLeader) {
@@ -68,7 +68,7 @@ export class SwarmEnemyManager extends BaseEnemyManager {
       ? this.SWARM_CONFIG.leaderColor
       : this.SWARM_CONFIG.followerColor;
 
-    // 点滅中の表示（出現時エフェクト）
+    // Blinking display (spawn effect)
     if (enemy.isBlinking) {
       const blinkPhase =
         Math.floor((enemy.maxBlinkDuration - enemy.blinkDuration) / 5) % 2;
@@ -83,7 +83,7 @@ export class SwarmEnemyManager extends BaseEnemyManager {
           },
         };
       } else {
-        // 非表示フェーズ
+        // Hidden phase
         return {
           char: " ",
           attributes: {
@@ -94,7 +94,7 @@ export class SwarmEnemyManager extends BaseEnemyManager {
       }
     }
 
-    // 通常表示
+    // Normal display
     return {
       char: baseChar,
       attributes: {
@@ -107,9 +107,8 @@ export class SwarmEnemyManager extends BaseEnemyManager {
 
   public spawnSwarmGroup(leaderPosition: Position): SwarmEnemy | null {
     const swarmId = this.generateSwarmId();
-    const swarmSize = 5; // リーダー + 4体の仲間に固定
+    const swarmSize = 5; // Fixed to leader + 4 followers
 
-    // リーダーを作成
     const leader = this.createSwarmLeader(leaderPosition, swarmId, swarmSize);
     if (!leader) {
       console.warn(
@@ -118,10 +117,10 @@ export class SwarmEnemyManager extends BaseEnemyManager {
       return null;
     }
 
-    // 仲間を4体作成
+    // Create 4 followers
     const followers = this.createSwarmFollowers(leader, 4);
 
-    // 最低1体の仲間が必要
+    // At least 1 follower is required
     if (followers.length === 0) {
       console.warn(
         `Failed to create any followers for swarm at (${leaderPosition.x}, ${leaderPosition.y})`
@@ -129,11 +128,11 @@ export class SwarmEnemyManager extends BaseEnemyManager {
       return null;
     }
 
-    // 群れグループに登録
+    // Register swarm group
     const swarmGroup = [leader, ...followers];
     this.swarmGroups.set(swarmId, swarmGroup);
 
-    // 全メンバーを敵リストに追加
+    // Add all members to enemy list
     for (const member of swarmGroup) {
       this.addEnemy(member);
     }
@@ -167,11 +166,11 @@ export class SwarmEnemyManager extends BaseEnemyManager {
       spawnTime: Date.now(),
       threatLevel: this.SWARM_CONFIG.threatLevel,
       playerLearningHints: [
-        "リーダーを撃破すると群れ全体が破壊される",
-        "群れ全体を囲い込むと高得点",
+        "Defeating the leader destroys the entire swarm",
+        "Surrounding the entire swarm yields high score",
       ],
 
-      // スワーム固有プロパティ
+      // Swarm-specific properties
       swarmSize,
       isLeader: true,
       leaderPosition: null,
@@ -199,9 +198,9 @@ export class SwarmEnemyManager extends BaseEnemyManager {
   ): SwarmEnemy[] {
     const followers: SwarmEnemy[] = [];
     const offsets = [
-      { x: -1, y: 0 }, // 左
-      { x: 1, y: 0 }, // 右
-      { x: 0, y: -1 }, // 上
+      { x: -1, y: 0 }, // Left
+      { x: 1, y: 0 }, // Right
+      { x: 0, y: -1 }, // Up
     ];
 
     for (let i = 0; i < followerCount && i < offsets.length; i++) {
@@ -211,7 +210,7 @@ export class SwarmEnemyManager extends BaseEnemyManager {
         y: leader.y + offset.y,
       };
 
-      // 境界チェック
+      // Boundary check
       if (
         followerPosition.x >= 1 &&
         followerPosition.x < 39 &&
@@ -252,11 +251,11 @@ export class SwarmEnemyManager extends BaseEnemyManager {
       spawnTime: Date.now(),
       threatLevel: this.SWARM_CONFIG.threatLevel,
       playerLearningHints: [
-        "仲間は囲んでも破壊できない",
-        "リーダーを破壊すると仲間も一緒に破壊される",
+        "Surrounding the swarm does not destroy it",
+        "Destroying the leader destroys the entire swarm",
       ],
 
-      // スワーム固有プロパティ
+      // Swarm-specific properties
       swarmSize: leader.swarmSize,
       isLeader: false,
       leaderPosition: { x: leader.x, y: leader.y },
@@ -279,16 +278,16 @@ export class SwarmEnemyManager extends BaseEnemyManager {
   }
 
   private updateLeader(leader: SwarmEnemy, gameState: GameState): void {
-    // 点滅中は移動しない
+    // Blinking effect, do not move
     if (leader.isBlinking) {
       return;
     }
 
-    // 仲間の状態をチェック
+    // Check followers' state
     const followers = this.getSwarmFollowers(leader.swarmId);
     const separatedFollowers = followers.filter((f) => f.isSeparated);
 
-    // 仲間がプレイヤーを追跡中かチェック
+    // Check if followers are chasing the player
     const chasingFollowers = followers.filter((f) => {
       const distanceToPlayer = this.calculateDistance(
         f,
@@ -297,65 +296,65 @@ export class SwarmEnemyManager extends BaseEnemyManager {
       return distanceToPlayer <= 30;
     });
 
-    // 分離した仲間がいる場合は待機
+    // If separated followers exist, wait
     if (separatedFollowers.length > 0) {
-      // 移動速度を下げて仲間を待つ
+      // Slow down movement and wait for followers
       if (Math.random() < 0.05) {
-        // 通常の1/3の確率で移動
+        // 1/3 probability to move
         leader.direction = Math.floor(Math.random() * 4);
       }
       return;
     }
 
-    // プレイヤーとの距離をチェック
+    // Check distance to player
     const playerDistance = this.calculateDistance(
       leader,
       gameState.playerPosition
     );
 
-    // 仲間がプレイヤーを追跡中の場合、リーダーは支援行動
+    // If followers are chasing the player, leader supports
     if (chasingFollowers.length > 0) {
-      // プレイヤーを挟み撃ちするような位置取り
+      // Position to trap the player
       this.supportFollowers(leader, gameState.playerPosition, chasingFollowers);
       return;
     }
 
-    // プレイヤーが近い場合は回避行動
+    // If player is close, avoid
     if (playerDistance <= 5) {
       this.avoidPlayer(leader, gameState.playerPosition);
       return;
     }
 
-    // 通常のランダム移動（方向転換確率15%）
+    // Normal random movement (15% chance to change direction)
     if (Math.random() < 0.15) {
       leader.direction = Math.floor(Math.random() * 4);
     }
   }
 
   private avoidPlayer(leader: SwarmEnemy, playerPosition: Position): void {
-    // プレイヤーから離れる方向を選択
+    // Choose direction to move away from player
     const deltaX = leader.x - playerPosition.x;
     const deltaY = leader.y - playerPosition.y;
 
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      // X軸方向に逃げる
+      // Move away from player in X-axis
       leader.direction = deltaX > 0 ? Direction.RIGHT : Direction.LEFT;
     } else {
-      // Y軸方向に逃げる
+      // Move away from player in Y-axis
       leader.direction = deltaY > 0 ? Direction.DOWN : Direction.UP;
     }
   }
 
   private chasePlayer(follower: SwarmEnemy, playerPosition: Position): void {
-    // プレイヤーに向かって移動
+    // Move towards player
     const deltaX = playerPosition.x - follower.x;
     const deltaY = playerPosition.y - follower.y;
 
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      // X軸方向に追跡
+      // Move towards player in X-axis
       follower.direction = deltaX > 0 ? Direction.RIGHT : Direction.LEFT;
     } else {
-      // Y軸方向に追跡
+      // Move towards player in Y-axis
       follower.direction = deltaY > 0 ? Direction.DOWN : Direction.UP;
     }
   }
@@ -365,27 +364,27 @@ export class SwarmEnemyManager extends BaseEnemyManager {
     playerPosition: Position,
     chasingFollowers: SwarmEnemy[]
   ): void {
-    // 仲間がプレイヤーを追跡中の場合、リーダーは戦略的な位置取りを行う
+    // If followers are chasing the player, leader takes a strategic position
     if (chasingFollowers.length === 0) return;
 
-    // 最も近い追跡中の仲間を取得
+    // Get the closest chasing follower
     const closestChaser = chasingFollowers.reduce((closest, current) => {
       const closestDist = this.calculateDistance(closest, playerPosition);
       const currentDist = this.calculateDistance(current, playerPosition);
       return currentDist < closestDist ? current : closest;
     });
 
-    // プレイヤーと仲間の位置関係から、挟み撃ち位置を計算
+    // Calculate the position to trap the player
     const chaserToPlayer = {
       x: playerPosition.x - closestChaser.x,
       y: playerPosition.y - closestChaser.y,
     };
 
-    // リーダーはプレイヤーの反対側に回り込む
+    // Leader circles around the player
     const targetX = playerPosition.x - chaserToPlayer.x;
     const targetY = playerPosition.y - chaserToPlayer.y;
 
-    // 目標位置への移動
+    // Move towards the target position
     if (leader.x < targetX) {
       leader.direction = Direction.RIGHT;
     } else if (leader.x > targetX) {
@@ -395,7 +394,7 @@ export class SwarmEnemyManager extends BaseEnemyManager {
     } else if (leader.y > targetY) {
       leader.direction = Direction.UP;
     } else {
-      // 既に良い位置にいる場合は待機
+      // If already in a good position, wait
       if (Math.random() < 0.1) {
         leader.direction = Math.floor(Math.random() * 4);
       }
@@ -403,40 +402,40 @@ export class SwarmEnemyManager extends BaseEnemyManager {
   }
 
   private updateFollower(follower: SwarmEnemy, gameState: GameState): void {
-    // 点滅中は移動しない
+    // Blinking effect, do not move
     if (follower.isBlinking) {
       return;
     }
 
-    // リーダーを探す
+    // Find leader
     const leader = this.findLeaderById(follower.leaderId);
     if (!leader) {
-      // リーダーが見つからない場合は独立行動
+      // If leader not found, independent behavior
       this.convertToIndependentBehavior(follower);
       return;
     }
 
-    // プレイヤーとの距離をチェック
+    // Check distance to player
     const distanceToPlayer = this.calculateDistance(
       follower,
       gameState.playerPosition
     );
     const distanceToLeader = this.calculateDistance(follower, leader);
 
-    // プレイヤーが近い場合（30マス以内）は追跡行動
+    // If player is close (within 30 cells), pursue
     if (distanceToPlayer <= 30) {
       this.chasePlayer(follower, gameState.playerPosition);
-      // 追跡中は分離タイマーをリセット（プレイヤー追跡を優先）
+      // During pursuit, reset separation timer (player pursuit priority)
       follower.separationTimer = 0;
       return;
     }
 
-    // プレイヤーが離れている場合はリーダーの元に戻る
-    // 分離状態の管理
+    // If player is far away, move back to leader
+    // Manage separation state
     if (distanceToLeader > follower.maxDistanceFromLeader) {
       follower.separationTimer++;
       if (follower.separationTimer > 180) {
-        // 3秒で分離状態
+        // 3 seconds to separated state
         follower.isSeparated = true;
       }
     } else {
@@ -444,19 +443,19 @@ export class SwarmEnemyManager extends BaseEnemyManager {
       follower.isSeparated = false;
     }
 
-    // 分離状態の場合は再結合を試行
+    // If separated, try to reunite
     if (follower.isSeparated) {
       this.handleSeparatedFollower(follower, leader);
       return;
     }
 
-    // 通常の追従ロジック（リーダーの元に戻る）
+    // Normal following logic (move back to leader)
     const targetPosition = {
       x: leader.x + follower.formationOffset.x,
       y: leader.y + follower.formationOffset.y,
     };
 
-    // 目標位置への移動
+    // Move towards the target position
     if (follower.x < targetPosition.x) {
       follower.direction = Direction.RIGHT;
     } else if (follower.x > targetPosition.x) {
@@ -484,10 +483,10 @@ export class SwarmEnemyManager extends BaseEnemyManager {
     if (!enemy) return;
 
     if (enemy.isLeader) {
-      // リーダーが削除される場合、群れ全体を処理
+      // If leader is deleted, process the entire swarm
       this.handleLeaderDestruction(enemy);
     } else {
-      // 仲間が削除される場合
+      // If follower is deleted
       this.handleFollowerDestruction(enemy);
     }
 
@@ -497,12 +496,12 @@ export class SwarmEnemyManager extends BaseEnemyManager {
   private handleLeaderDestruction(leader: SwarmEnemy): void {
     const followers = this.getSwarmFollowers(leader.swarmId);
 
-    // 全仲間を同時破壊
+    // Destroy all followers at once
     for (const follower of followers) {
       super.removeEnemy(follower.id);
     }
 
-    // 群れグループを削除
+    // Delete swarm group
     this.swarmGroups.delete(leader.swarmId);
 
     console.log(
@@ -511,7 +510,7 @@ export class SwarmEnemyManager extends BaseEnemyManager {
   }
 
   private handleFollowerDestruction(follower: SwarmEnemy): void {
-    // 群れグループから除外
+    // Remove from swarm group
     const swarmGroup = this.swarmGroups.get(follower.swarmId);
     if (swarmGroup) {
       const index = swarmGroup.findIndex((member) => member.id === follower.id);
@@ -537,15 +536,15 @@ export class SwarmEnemyManager extends BaseEnemyManager {
   }
 
   private convertToIndependentBehavior(follower: SwarmEnemy): void {
-    // 仲間を独立した敵として行動させる（ランダム移動）
+    // Make follower behave independently (random movement)
     if (Math.random() < 0.3) {
       follower.direction = Math.floor(Math.random() * 4);
     }
 
-    // 長時間分離している場合は群れから除外
+    // If separated for a long time, remove from swarm
     follower.reunionTimer++;
     if (follower.reunionTimer > 600) {
-      // 10秒
+      // 10 seconds
       this.handleFollowerDestruction(follower);
     }
   }
@@ -556,11 +555,11 @@ export class SwarmEnemyManager extends BaseEnemyManager {
   ): void {
     follower.reunionTimer++;
 
-    // 再結合試行（1秒ごと）
+    // Try to reunite (every 1 second)
     if (follower.reunionTimer % 60 === 0) {
       const distanceToLeader = this.calculateDistance(follower, leader);
       if (distanceToLeader <= 8) {
-        // 再結合範囲
+        // Reunion range
         follower.isSeparated = false;
         follower.isReuniting = true;
         follower.reunionTimer = 0;
@@ -568,12 +567,12 @@ export class SwarmEnemyManager extends BaseEnemyManager {
       }
     }
 
-    // 独立行動
+    // Independent behavior
     if (follower.reunionTimer > 300) {
-      // 5秒経過で完全独立
+      // 5 seconds passed, fully independent
       this.convertToIndependentBehavior(follower);
     } else {
-      // リーダーに向かって移動
+      // Move towards leader
       if (follower.x < leader.x) {
         follower.direction = Direction.RIGHT;
       } else if (follower.x > leader.x) {

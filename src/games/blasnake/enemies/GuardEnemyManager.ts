@@ -28,15 +28,15 @@ export class GuardEnemyManager extends BaseEnemyManager {
     displayChar: "G",
     color: "yellow",
     alertColor: "light_red",
-    moveInterval: 144, // 通常の2倍遅い (24フレーム間隔 * 6 = 144)
+    moveInterval: 144,
     blinkDuration: 120,
     baseScore: 120,
     threatLevel: ThreatLevel.LOW,
-    patrolRadius: 2, // 巡回半径を4から2に縮小（より密接な守護）
-    maxDistanceFromFood: 3, // 最大距離を4から3に縮小（より厳格な守護）
-    returnTimeout: 120, // 2秒（180から短縮、より早く反応）
-    searchRadius: 8, // 食べ物検索範囲
-    alertRadius: 3, // プレイヤー警戒範囲（表示用のみ）
+    patrolRadius: 2,
+    maxDistanceFromFood: 3,
+    returnTimeout: 120,
+    searchRadius: 8,
+    alertRadius: 3, // Alert radius for player (display only)
   };
 
   public createEnemy(
@@ -72,13 +72,13 @@ export class GuardEnemyManager extends BaseEnemyManager {
       spawnTime: Date.now(),
       threatLevel: this.GUARD_CONFIG.threatLevel,
       playerLearningHints: [
-        "ガード敵は食べ物を守っている",
-        "食べ物から離れた隙を狙おう",
-        "ガードを囲んで撃破後に食べ物を安全に取る",
+        "Guard enemies protect food",
+        "Aim for when they are away from the food",
+        "Defeat the guard then safely take the food",
       ],
       guardTarget: options.foodPosition || null,
       patrolRadius: this.GUARD_CONFIG.patrolRadius,
-      patrolAngle: Math.random() * Math.PI * 2, // ランダムな開始角度
+      patrolAngle: Math.random() * Math.PI * 2, // Random starting angle
       returnToFoodTimer: 0,
       alertLevel: 0,
     };
@@ -93,17 +93,17 @@ export class GuardEnemyManager extends BaseEnemyManager {
 
     const guard = enemy as GuardEnemy;
 
-    // 食べ物の位置を更新（GameStateから取得）
+    // Update food position (obtained from GameState)
     if ((gameState as any).foodPosition) {
       guard.guardTarget = (gameState as any).foodPosition;
     }
 
-    // 食べ物が存在しない場合は新しい食べ物を探索
+    // If food doesn't exist, search for new food
     if (!guard.guardTarget) {
       guard.guardTarget = this.findNearestFood(guard, gameState);
     }
 
-    // プレイヤーとの距離を計算して警戒レベルを設定（表示用のみ、速度には影響しない）
+    // Calculate distance to player and set alert level (for display only, does not affect speed)
     const playerDistance = this.calculateDistance(
       guard,
       gameState.playerPosition
@@ -115,38 +115,38 @@ export class GuardEnemyManager extends BaseEnemyManager {
       guard.alertLevel = Math.max(0, guard.alertLevel - 1);
     }
 
-    // 食べ物からの距離をチェックして移動速度を調整
+    // Check distance from food and adjust movement speed
     if (guard.guardTarget) {
       const foodDistance = this.calculateDistance(guard, guard.guardTarget);
 
       if (foodDistance > this.GUARD_CONFIG.maxDistanceFromFood) {
-        // 食べ物から離れすぎている場合は急いで戻る（500%速度アップ + 警戒表示）
+        // If too far from food, hurry back (500% speed up + alert display)
         guard.moveInterval = Math.max(
-          this.GUARD_CONFIG.moveInterval * 0.167, // 500%速度アップ（1/6の時間間隔 = 6倍速）
+          this.GUARD_CONFIG.moveInterval * 0.167, // 500% speed up (1/6 time interval = 6x speed)
           24
         );
-        guard.alertLevel = Math.max(2, guard.alertLevel); // 食べ物に戻る時は強制的に警戒レベル2
+        guard.alertLevel = Math.max(2, guard.alertLevel); // Force alert level 2 when returning to food
         guard.returnToFoodTimer++;
         if (guard.returnToFoodTimer >= this.GUARD_CONFIG.returnTimeout) {
-          // 食べ物に戻る行動を開始
+          // Start returning to food behavior
           guard.returnToFoodTimer = 0;
         }
       } else {
-        // 食べ物の近くにいる場合は通常速度
+        // Normal speed if near food
         guard.moveInterval = this.GUARD_CONFIG.moveInterval;
         guard.returnToFoodTimer = 0;
-        // プレイヤーが近くにいない場合は警戒レベルを下げる
+        // Lower alert level if player is not nearby
         if (playerDistance > this.GUARD_CONFIG.alertRadius) {
           guard.alertLevel = Math.max(0, guard.alertLevel - 1);
         }
       }
     } else {
-      // 食べ物がない場合は通常速度
+      // Normal speed if no food
       guard.moveInterval = this.GUARD_CONFIG.moveInterval;
     }
 
-    // 巡回角度を更新
-    guard.patrolAngle += 0.15; // 0.05から0.15に増加（より速い巡回）
+    // Update patrol angle
+    guard.patrolAngle += 0.15; // Increased from 0.05 to 0.15 (faster patrol)
     if (guard.patrolAngle > Math.PI * 2) {
       guard.patrolAngle -= Math.PI * 2;
     }
@@ -160,7 +160,7 @@ export class GuardEnemyManager extends BaseEnemyManager {
     const guard = enemy as GuardEnemy;
 
     if (!guard.guardTarget) {
-      // 食べ物がない場合はランダム移動
+      // Random movement if no food
       this.moveRandomly(guard, gameState);
       return;
     }
@@ -171,10 +171,10 @@ export class GuardEnemyManager extends BaseEnemyManager {
       foodDistance > this.GUARD_CONFIG.maxDistanceFromFood ||
       guard.returnToFoodTimer > 0
     ) {
-      // 食べ物に戻る
+      // Return to food
       this.moveTowardsTarget(guard, guard.guardTarget, gameState);
     } else {
-      // 食べ物の周りを巡回
+      // Patrol around food
       this.patrolAroundFood(guard, gameState);
     }
   }
@@ -201,7 +201,6 @@ export class GuardEnemyManager extends BaseEnemyManager {
     const dx = target.x - guard.x;
     const dy = target.y - guard.y;
 
-    // 最も近い方向を選択
     let newDirection = guard.direction;
 
     if (Math.abs(dx) > Math.abs(dy)) {
@@ -217,7 +216,7 @@ export class GuardEnemyManager extends BaseEnemyManager {
       guard.x = newPos.x;
       guard.y = newPos.y;
     } else {
-      // 直進できない場合は別の方向を試す
+      // If unable to move straight, try another direction
       const alternativeDirections = [
         Direction.UP,
         Direction.DOWN,
@@ -240,27 +239,27 @@ export class GuardEnemyManager extends BaseEnemyManager {
   private patrolAroundFood(guard: GuardEnemy, gameState: GameState): void {
     if (!guard.guardTarget) return;
 
-    // 巡回位置を計算（より小さな半径で密接に守護）
+    // Calculate patrol position (guarding more closely with a smaller radius)
     const targetX =
       guard.guardTarget.x + Math.cos(guard.patrolAngle) * guard.patrolRadius;
     const targetY =
       guard.guardTarget.y + Math.sin(guard.patrolAngle) * guard.patrolRadius;
 
-    // 整数位置に丸める
+    // Round to integer position
     const patrolTarget: Position = {
       x: Math.round(targetX),
       y: Math.round(targetY),
     };
 
-    // 現在位置と目標位置の距離を計算
+    // Calculate distance from current position to target
     const currentDistance = this.calculateDistance(guard, guard.guardTarget);
 
-    // 食べ物に非常に近い場合（距離1以下）は、より積極的に巡回位置に移動
+    // If very close to food (distance 1 or less), move towards patrol target
     if (currentDistance <= 1.5) {
-      // 巡回位置に向かって移動
+      // Move towards patrol target
       this.moveTowardsTarget(guard, patrolTarget, gameState);
     } else {
-      // 食べ物から離れすぎている場合は、まず食べ物に近づく
+      // If too far from food, first move towards food
       this.moveTowardsTarget(guard, guard.guardTarget, gameState);
     }
   }
@@ -299,8 +298,8 @@ export class GuardEnemyManager extends BaseEnemyManager {
     guard: GuardEnemy,
     gameState: GameState
   ): Position | null {
-    // 現在の実装では単一の食べ物のみサポート
-    // 将来的には複数の食べ物から最も近いものを選択
+    // Current implementation supports only one food
+    // Future implementation will select the closest food from multiple foods
     return (gameState as any).foodPosition || null;
   }
 
@@ -315,7 +314,7 @@ export class GuardEnemyManager extends BaseEnemyManager {
     const guard = enemy as GuardEnemy;
 
     if (guard.isBlinking) {
-      // 点滅中の表示（5フレームごとに表示/非表示切り替え）
+      // Blinking display (switch every 5 frames)
       const blinkPhase =
         Math.floor((guard.maxBlinkDuration - guard.blinkDuration) / 5) % 2;
 
@@ -329,7 +328,7 @@ export class GuardEnemyManager extends BaseEnemyManager {
           },
         };
       } else {
-        // 非表示フェーズ
+        // Non-display phase
         return {
           char: " ",
           attributes: {
@@ -339,7 +338,7 @@ export class GuardEnemyManager extends BaseEnemyManager {
         };
       }
     } else {
-      // 警戒レベルに応じて色を変更
+      // Change color based on alert level
       const color =
         guard.alertLevel > 0 ? "light_red" : this.GUARD_CONFIG.color;
 
@@ -354,7 +353,7 @@ export class GuardEnemyManager extends BaseEnemyManager {
     }
   }
 
-  // ガード固有のメソッド
+  // Guard-specific method
   public spawnGuard(
     position: Position,
     foodPosition: Position,
@@ -371,12 +370,12 @@ export class GuardEnemyManager extends BaseEnemyManager {
     return null;
   }
 
-  // 食べ物の近くに自動的にGuardをスポーンする
+  // Automatically spawn Guard near food
   public spawnGuardNearFood(
     foodPosition: Position,
     isBlinking: boolean = true
   ): string | null {
-    // 食べ物の周りの適切な位置を探す
+    // Find a suitable position around food
     const spawnPosition = this.findGoodGuardPosition(foodPosition);
     if (spawnPosition) {
       return this.spawnGuard(spawnPosition, foodPosition, isBlinking);
@@ -384,17 +383,17 @@ export class GuardEnemyManager extends BaseEnemyManager {
     return null;
   }
 
-  // 食べ物の周りの良い守護位置を見つける
+  // Find a good guard position around food
   private findGoodGuardPosition(foodPosition: Position): Position | null {
     const maxAttempts = 20;
-    const preferredDistance = 3; // 食べ物から3ユニット離れた位置を優先
+    const preferredDistance = 3; // Prefer positions 3 units away from food
 
-    // まず、食べ物の周りの4方向（上下左右）を試す
+    // First, try 4 directions (up, down, left, right)
     const cardinalDirections = [
-      { x: 0, y: -preferredDistance }, // 上
-      { x: 0, y: preferredDistance }, // 下
-      { x: -preferredDistance, y: 0 }, // 左
-      { x: preferredDistance, y: 0 }, // 右
+      { x: 0, y: -preferredDistance }, // Up
+      { x: 0, y: preferredDistance }, // Down
+      { x: -preferredDistance, y: 0 }, // Left
+      { x: preferredDistance, y: 0 }, // Right
     ];
 
     for (const offset of cardinalDirections) {
@@ -408,10 +407,10 @@ export class GuardEnemyManager extends BaseEnemyManager {
       }
     }
 
-    // 4方向がダメな場合は、円形範囲内でランダムに探す
+    // If 4 directions are bad, search randomly within circular range
     for (let attempts = 0; attempts < maxAttempts; attempts++) {
       const angle = Math.random() * Math.PI * 2;
-      const distance = Math.random() * 2 + 2; // 2-4ユニットの範囲
+      const distance = Math.random() * 2 + 2; // Range of 2-4 units
 
       const position: Position = {
         x: Math.round(foodPosition.x + Math.cos(angle) * distance),
@@ -426,9 +425,9 @@ export class GuardEnemyManager extends BaseEnemyManager {
     return null;
   }
 
-  // Guard用の位置が有効かチェック
+  // Check if a Guard position is valid
   private isValidGuardPosition(position: Position): boolean {
-    // 画面境界内かチェック
+    // Check if within screen boundaries
     if (
       position.x < 1 ||
       position.x > 38 ||
@@ -438,7 +437,7 @@ export class GuardEnemyManager extends BaseEnemyManager {
       return false;
     }
 
-    // 他の敵との重複チェック（簡易版）
+    // Check for overlap with other enemies (simplified version)
     const existingGuards = this.getAllGuards();
     for (const guard of existingGuards) {
       if (guard.x === position.x && guard.y === position.y) {
@@ -461,11 +460,11 @@ export class GuardEnemyManager extends BaseEnemyManager {
     const guards = this.getAllGuards();
     for (const guard of guards) {
       guard.guardTarget = foodPosition;
-      guard.returnToFoodTimer = 0; // リセット
+      guard.returnToFoodTimer = 0; // Reset
     }
   }
 
-  // デバッグ用
+  // Debug
   public getGuardDebugInfo(): any {
     const guards = this.getAllGuards();
     return {
@@ -488,13 +487,13 @@ export class GuardEnemyManager extends BaseEnemyManager {
           guardTarget: g.guardTarget,
           patrolAngle: g.patrolAngle,
           foodDistance: foodDistance ? foodDistance.toFixed(1) : "N/A",
-          isRushing: isRushing, // 食べ物に急いで戻っているかどうか
+          isRushing: isRushing, // Is rushing back to food
           currentSpeed: g.moveInterval,
           alertReason: isRushing
             ? "RUSHING_TO_FOOD"
             : g.alertLevel > 0
             ? "PLAYER_NEARBY"
-            : "NORMAL", // 警戒理由
+            : "NORMAL", // Alert reason
         };
       }),
     };

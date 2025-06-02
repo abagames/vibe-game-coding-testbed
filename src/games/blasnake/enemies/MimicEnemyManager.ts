@@ -19,23 +19,24 @@ export class MimicEnemyManager extends BaseEnemyManager {
     spawnWeight: 12,
     maxCount: 1,
     threatLevel: ThreatLevel.HIGH,
-    learningObjective: "自己の行動パターンを客観視し、戦略的思考を深める",
+    learningObjective:
+      "Objectively view one's own action patterns and deepen strategic thinking",
     counterStrategies: [
-      "意図的に複雑な軌跡を描いてミミックを混乱させる",
-      "急激な方向転換でミミックとの距離を作る",
-      "ミミックの遅延を利用して罠に誘導",
-      "直線的な動きを避け、予測困難な動きを心がける",
+      "Confuse the mimic by intentionally drawing complex trajectories",
+      "Create distance from the mimic with sharp direction changes",
+      "Utilize the mimic's delay to lure it into traps",
+      "Avoid linear movements and strive for unpredictable actions",
     ],
   };
 
   private readonly MIMIC_BEHAVIOR_CONFIG = {
-    mimicDelay: 45, // 1.5秒の遅延
-    mimicAccuracy: 0.85, // 85%の精度
-    maxRecordLength: 120, // 4秒分の軌跡
-    accuracyDecayRate: 0.02, // 時間経過による精度低下
+    mimicDelay: 45, // 1.5 second delay
+    mimicAccuracy: 0.85, // 85% accuracy
+    maxRecordLength: 120, // Trajectory for 4 seconds
+    accuracyDecayRate: 0.02, // Accuracy decrease over time
   };
 
-  // プレイヤーの軌跡を記録するバッファ
+  // Buffer for recording player trajectory
   private playerTrajectoryBuffer: Position[] = [];
 
   public createEnemy(
@@ -54,7 +55,7 @@ export class MimicEnemyManager extends BaseEnemyManager {
       direction: Direction.UP,
       moveCounter: 0,
       isBlinking: true,
-      blinkDuration: 120, // 2秒間点滅
+      blinkDuration: 120, // Blink for 2 seconds
       maxBlinkDuration: 120,
       type: EnemyType.MIMIC,
       baseScore: this.MIMIC_CONFIG.baseScore,
@@ -65,11 +66,11 @@ export class MimicEnemyManager extends BaseEnemyManager {
       threatLevel: this.MIMIC_CONFIG.threatLevel,
       playerLearningHints: this.MIMIC_CONFIG.counterStrategies,
 
-      // ミミック固有のプロパティ
+      // Mimic specific properties
       mimicTarget: [],
       mimicDelay: this.MIMIC_BEHAVIOR_CONFIG.mimicDelay,
       mimicAccuracy: this.MIMIC_BEHAVIOR_CONFIG.mimicAccuracy,
-      recordingBuffer: [...this.playerTrajectoryBuffer], // 現在の軌跡をコピー
+      recordingBuffer: [...this.playerTrajectoryBuffer], // Copy current trajectory
       maxRecordLength: this.MIMIC_BEHAVIOR_CONFIG.maxRecordLength,
     };
 
@@ -81,18 +82,14 @@ export class MimicEnemyManager extends BaseEnemyManager {
 
     const mimicEnemy = enemy as MimicEnemy;
 
-    // プレイヤーの軌跡を記録
     this.recordPlayerTrajectory(gameState.playerPosition);
 
-    // ミミック敵の行動を更新
     this.updateMimicBehavior(mimicEnemy, gameState);
   }
 
   private recordPlayerTrajectory(playerPosition: Position): void {
-    // プレイヤーの現在位置を記録
     this.playerTrajectoryBuffer.push({ ...playerPosition });
 
-    // バッファサイズを制限
     if (
       this.playerTrajectoryBuffer.length >
       this.MIMIC_BEHAVIOR_CONFIG.maxRecordLength
@@ -102,31 +99,29 @@ export class MimicEnemyManager extends BaseEnemyManager {
   }
 
   private updateMimicBehavior(enemy: MimicEnemy, gameState: GameState): void {
-    // 点滅中は何もしない
+    // Do nothing while blinking
     if (enemy.isBlinking) {
       return;
     }
 
-    // 模倣精度の時間経過による低下を無効化（テスト用）
+    // Disable accuracy decrease over time for testing
     // enemy.mimicAccuracy = Math.max(
-    //   0.3, // 最低30%の精度は保持
+    //   0.3, // Maintain at least 30% accuracy
     //   enemy.mimicAccuracy - this.MIMIC_BEHAVIOR_CONFIG.accuracyDecayRate
     // );
 
-    // 模倣対象の位置を決定
     const targetPosition = this.getMimicTargetPosition(enemy);
 
     if (targetPosition) {
-      // 模倣対象に向かって移動する方向を計算
       const direction = this.calculateDirectionToTarget(enemy, targetPosition);
 
-      // 常に100%の精度でミミック動作（ランダム移動を無効化）
+      // Always mimic with 100% accuracy (disable random movement)
       enemy.direction = direction;
     }
   }
 
   private getMimicTargetPosition(enemy: MimicEnemy): Position | null {
-    // 遅延分だけ過去のプレイヤー位置を取得
+    // Get player position from the past by the delay amount
     const delayIndex = this.playerTrajectoryBuffer.length - enemy.mimicDelay;
 
     if (delayIndex >= 0 && delayIndex < this.playerTrajectoryBuffer.length) {
@@ -144,7 +139,7 @@ export class MimicEnemyManager extends BaseEnemyManager {
     const dx = target.x - enemy.x;
     const dy = target.y - enemy.y;
 
-    // より大きな差分の方向を優先
+    // Prioritize direction with larger difference
     let direction: Direction;
     if (Math.abs(dx) > Math.abs(dy)) {
       direction = dx > 0 ? Direction.RIGHT : Direction.LEFT;
@@ -163,7 +158,7 @@ export class MimicEnemyManager extends BaseEnemyManager {
 
     const newPos = this.calculateNewPosition(enemy);
 
-    // 移動可能かチェック
+    // Check if the new position is valid
     if (this.isValidPosition(newPos, gameState)) {
       enemy.x = newPos.x;
       enemy.y = newPos.y;
@@ -180,7 +175,7 @@ export class MimicEnemyManager extends BaseEnemyManager {
 
     const mimicEnemy = enemy as MimicEnemy;
 
-    // 点滅中の表示
+    // Blinking display
     if (enemy.isBlinking) {
       const blinkPhase = Math.floor(enemy.blinkDuration / 10) % 2;
       return {
@@ -191,7 +186,7 @@ export class MimicEnemyManager extends BaseEnemyManager {
       };
     }
 
-    // 通常時の表示
+    // Normal display
     return {
       char: this.MIMIC_CONFIG.displayChar,
       attributes: {
@@ -200,7 +195,7 @@ export class MimicEnemyManager extends BaseEnemyManager {
     };
   }
 
-  // スポーンメソッド
+  // Spawn method
   public spawnMimic(
     position: Position,
     shouldBlink: boolean = true
@@ -219,7 +214,7 @@ export class MimicEnemyManager extends BaseEnemyManager {
     return enemy.id;
   }
 
-  // ミミック固有のメソッド
+  // Mimic specific methods
   public getMimicAccuracy(enemyId: string): number {
     const enemy = this.getEnemy(enemyId) as MimicEnemy;
     return enemy ? enemy.mimicAccuracy : 0;
@@ -233,7 +228,7 @@ export class MimicEnemyManager extends BaseEnemyManager {
     this.playerTrajectoryBuffer = [];
   }
 
-  // デバッグ情報
+  // Debug information
   public getDebugInfo(): any {
     const baseInfo = super.getDebugInfo();
     const mimicEnemies = this.getEnemiesByType(EnemyType.MIMIC) as MimicEnemy[];

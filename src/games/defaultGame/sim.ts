@@ -2,12 +2,12 @@ import { CoreGameLogic } from "./core.js";
 import { ConsoleSimulator } from "../../utils/consoleSimulator.js";
 import { NodeAudioService } from "../../utils/NodeAudioService.js";
 
-const totalTicks = 200; // DefaultGame用に長めに設定
+const totalTicks = 200; // Set longer for DefaultGame
 const tickDurationMs = 100;
 
 console.log("DefaultGame Simulator");
 console.log(
-  "Test Pattern: 初期10tick待機 -> 30tick右移動 -> 30tick左移動 -> 30tick上移動 -> 30tick下移動 -> 残りランダム"
+  "Test Pattern: Wait 10 ticks -> Right 30 ticks -> Left 30 ticks -> Up 30 ticks -> Down 30 ticks -> Random for remaining"
 );
 
 const game = new CoreGameLogic({

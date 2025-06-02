@@ -15,10 +15,10 @@ export class ChaserEnemyManager extends BaseEnemyManager {
     displayChar: "C",
     color: "light_cyan" as cglColor,
     baseScore: 220,
-    moveInterval: 10, // 8から10フレーム間隔に変更
+    moveInterval: 10,
     blinkDuration: 120,
     threatLevel: ThreatLevel.MEDIUM,
-    stunDuration: 60, // 30から60フレームに変更
+    stunDuration: 60,
     pathfindingInterval: 12,
     maxStuckFrames: 36,
     chaseRange: 15,
@@ -55,12 +55,12 @@ export class ChaserEnemyManager extends BaseEnemyManager {
       spawnTime: Date.now(),
       threatLevel: this.CHASER_CONFIG.threatLevel,
       playerLearningHints: [
-        "チェイサーは壁や障害物を利用して行き詰まらせよう",
-        "他の敵を盾として利用する",
-        "長い直線を避け、複雑な経路を選ぶ",
-        "チェイサーを囲い込みエリアに誘導する",
+        "Use walls and obstacles to trap the Chaser",
+        "Use other enemies as shields",
+        "Avoid long straight lines, choose complex paths",
+        "Lure the Chaser into enclosed areas",
       ],
-      chaseTarget: { x: 20, y: 12 }, // 初期ターゲットをプレイヤーの初期位置に設定
+      chaseTarget: { x: 20, y: 12 },
       stunDuration: 0,
       lastValidDirection: Direction.UP,
       pathfindingCooldown: 0,
@@ -78,45 +78,35 @@ export class ChaserEnemyManager extends BaseEnemyManager {
 
     const chaser = enemy as ChaserEnemy;
 
-    // スタン状態の処理
     if (chaser.stunDuration > 0) {
       chaser.stunDuration--;
-      // スタン中は完全に動かない（移動間隔の設定も不要）
       if (chaser.stunDuration === 0) {
-        // スタン終了時に追跡を再開
         this.updateChaseTarget(chaser, gameState);
       }
       return;
     }
 
-    // 移動間隔の設定（スタン中でない場合のみ）
     chaser.moveInterval = this.CHASER_CONFIG.moveInterval;
 
-    // 経路探索クールダウンの更新
     if (chaser.pathfindingCooldown > 0) {
       chaser.pathfindingCooldown--;
     }
 
-    // 追跡対象の更新
     this.updateChaseTarget(chaser, gameState);
 
-    // 追跡強度の減衰
     chaser.chaseIntensity *= this.CHASER_CONFIG.intensityDecayRate;
     if (chaser.chaseIntensity < 0.1) {
       chaser.chaseIntensity = 0.1;
     }
 
-    // 行き詰まり検出
     this.updateStuckCounter(chaser);
   }
 
   private updateChaseTarget(chaser: ChaserEnemy, gameState: GameState): void {
-    // プレイヤーの頭部を追跡対象に設定
     if (gameState.snakeSegments && gameState.snakeSegments.length > 0) {
       const playerHead = gameState.snakeSegments[0];
       const distance = this.calculateDistance(chaser, playerHead);
 
-      // 追跡範囲内の場合のみ追跡
       if (distance <= this.CHASER_CONFIG.chaseRange) {
         chaser.chaseTarget = { x: playerHead.x, y: playerHead.y };
         chaser.chaseIntensity = Math.min(chaser.chaseIntensity + 0.1, 2.0);
@@ -125,10 +115,7 @@ export class ChaserEnemyManager extends BaseEnemyManager {
   }
 
   private updateStuckCounter(chaser: ChaserEnemy): void {
-    // 前回の位置と比較して移動していない場合はカウンターを増加
-    // 実装簡略化のため、ここでは基本的な行き詰まり検出のみ
     if (chaser.stuckCounter > this.CHASER_CONFIG.maxStuckFrames) {
-      // 行き詰まり状態をリセット
       chaser.stuckCounter = 0;
       chaser.direction = Math.floor(Math.random() * 4);
     }
@@ -141,12 +128,10 @@ export class ChaserEnemyManager extends BaseEnemyManager {
 
     const chaser = enemy as ChaserEnemy;
 
-    // スタン中は完全に動かない
     if (chaser.stunDuration > 0) {
       return;
     }
 
-    // 追跡移動
     this.performChaseMovement(chaser, gameState);
   }
 
@@ -154,7 +139,6 @@ export class ChaserEnemyManager extends BaseEnemyManager {
     chaser: ChaserEnemy,
     gameState: GameState
   ): void {
-    // 経路探索クールダウン中でない場合、最適な方向を計算
     if (chaser.pathfindingCooldown === 0) {
       const bestDirection = this.calculateBestDirection(chaser, gameState);
       if (bestDirection !== null) {
@@ -170,7 +154,6 @@ export class ChaserEnemyManager extends BaseEnemyManager {
       chaser.y = newPos.y;
       chaser.stuckCounter = 0;
     } else {
-      // 壁や障害物にぶつかった場合は必ずスタン状態に
       this.applyStunToChaser(chaser);
     }
   }
@@ -183,15 +166,12 @@ export class ChaserEnemyManager extends BaseEnemyManager {
     const deltaX = target.x - chaser.x;
     const deltaY = target.y - chaser.y;
 
-    // 距離が0の場合は移動不要
     if (deltaX === 0 && deltaY === 0) {
       return null;
     }
 
-    // 優先順位付きの方向リスト
     const directions: { direction: Direction; priority: number }[] = [];
 
-    // X軸方向の移動
     if (deltaX > 0) {
       directions.push({
         direction: Direction.RIGHT,
@@ -204,7 +184,6 @@ export class ChaserEnemyManager extends BaseEnemyManager {
       });
     }
 
-    // Y軸方向の移動
     if (deltaY > 0) {
       directions.push({
         direction: Direction.DOWN,
@@ -214,10 +193,8 @@ export class ChaserEnemyManager extends BaseEnemyManager {
       directions.push({ direction: Direction.UP, priority: Math.abs(deltaY) });
     }
 
-    // 優先順位でソート
     directions.sort((a, b) => b.priority - a.priority);
 
-    // 移動可能な方向を探す
     for (const { direction } of directions) {
       const testPos = this.calculateNewPositionForDirection(chaser, direction);
       if (this.isValidPosition(testPos, gameState)) {
@@ -225,7 +202,6 @@ export class ChaserEnemyManager extends BaseEnemyManager {
       }
     }
 
-    // 全ての優先方向が無効な場合、他の方向を試す
     const allDirections = [
       Direction.UP,
       Direction.DOWN,
@@ -271,11 +247,9 @@ export class ChaserEnemyManager extends BaseEnemyManager {
   }
 
   private applyStunToChaser(chaser: ChaserEnemy): void {
-    // スタン状態を適用
     chaser.stunDuration = this.CHASER_CONFIG.stunDuration;
     chaser.stuckCounter++;
 
-    // ランダムな方向に変更
     chaser.direction = Math.floor(Math.random() * 4);
 
     console.log(
@@ -294,7 +268,6 @@ export class ChaserEnemyManager extends BaseEnemyManager {
     const chaser = enemy as ChaserEnemy;
 
     if (chaser.isBlinking) {
-      // 点滅中の表示（5フレームごとに表示/非表示切り替え）
       const blinkPhase =
         Math.floor((chaser.maxBlinkDuration - chaser.blinkDuration) / 5) % 2;
 
@@ -304,11 +277,10 @@ export class ChaserEnemyManager extends BaseEnemyManager {
           attributes: {
             entityType: "enemy_blinking",
             isPassable: true,
-            color: "blue" as cglColor, // 出現時（点滅時）はblueに変更
+            color: "blue" as cglColor,
           },
         };
       } else {
-        // 非表示フェーズ
         return {
           char: " ",
           attributes: {
@@ -318,8 +290,6 @@ export class ChaserEnemyManager extends BaseEnemyManager {
         };
       }
     } else {
-      // 通常表示
-      // スタン中は色を変更
       const color =
         chaser.stunDuration > 0
           ? ("yellow" as cglColor)
@@ -336,7 +306,6 @@ export class ChaserEnemyManager extends BaseEnemyManager {
     }
   }
 
-  // チェイサー固有のメソッド
   public spawnChaser(
     position: Position,
     isBlinking: boolean = true
@@ -359,7 +328,6 @@ export class ChaserEnemyManager extends BaseEnemyManager {
     return this.getEnemiesByType(EnemyType.CHASER) as ChaserEnemy[];
   }
 
-  // チェイサーの追跡状態を強制リセット
   public resetChaserTarget(chaserId: string, newTarget?: Position): void {
     const chaser = this.getEnemy(chaserId) as ChaserEnemy;
     if (chaser && chaser.type === EnemyType.CHASER) {
@@ -372,7 +340,6 @@ export class ChaserEnemyManager extends BaseEnemyManager {
     }
   }
 
-  // デバッグ用
   public getChaserDebugInfo(): any {
     const chasers = this.getAllChasers();
     return {

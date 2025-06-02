@@ -25,35 +25,36 @@ export class SnakeEnemyManager extends BaseEnemyManager {
     learningObjective: string;
     counterStrategies: string[];
   } = {
-    displayChar: "S", // 頭部
-    bodyChar: "s", // 胴体
+    displayChar: "S", // Head
+    bodyChar: "s", // Body
     color: "yellow",
     bodyColor: "light_yellow",
-    baseScore: 330, // 全体スコア（頭部のみで判定）
-    bodyScore: 0, // 胴体セグメントスコア（使用しない）
-    moveInterval: 12, // プレイヤーより少し遅い
+    baseScore: 330, // Overall score (judged by head only)
+    bodyScore: 0, // Body segment score (not used)
+    moveInterval: 12, // Slightly slower than player
     spawnWeight: 8,
     maxCount: 2,
     threatLevel: ThreatLevel.HIGH,
-    learningObjective: "複雑な移動パターンを理解し、空間制御を習得する",
+    learningObjective:
+      "Understand complex movement patterns and master spatial control",
     counterStrategies: [
-      "スネーク敵の頭部を狙って撃破する",
-      "スネーク敵を自分の尻尾に衝突させる",
-      "スネーク敵の移動パターンを読んで先回りする",
-      "スネーク敵の縄張りを避けて安全な領域を確保する",
+      "Aim for the snake enemy's head to defeat it",
+      "Make the snake enemy collide with its own tail",
+      "Read the snake enemy's movement pattern and anticipate its moves",
+      "Avoid the snake enemy's territory and secure a safe area",
     ],
   };
 
   private readonly SNAKE_BEHAVIOR_CONFIG = {
-    initialLength: 3, // 初期長さ（頭部 + 胴体2つ）
-    maxLength: 3, // 最大長さ（固定）
-    growthInterval: 0, // 成長しない
-    territoryRadius: 6, // 縄張り半径
-    pathHistoryLength: 20, // 移動履歴保持数
-    selfCollisionEnabled: true, // 自己衝突有効
-    chaseActivationDistance: 8, // 追跡開始距離
-    territorialReturnDistance: 10, // 縄張り復帰距離
-    directionChangeChance: 0.2, // 方向転換確率
+    initialLength: 3, // Initial length (head + 2 body parts)
+    maxLength: 3, // Maximum length (fixed)
+    growthInterval: 0, // Does not grow
+    territoryRadius: 6, // Territory radius
+    pathHistoryLength: 20, // Number of movement history records to keep
+    selfCollisionEnabled: true, // Self-collision enabled
+    chaseActivationDistance: 8, // Chase activation distance
+    territorialReturnDistance: 10, // Territory return distance
+    directionChangeChance: 0.2, // Direction change probability
   };
 
   public createEnemy(
@@ -67,7 +68,7 @@ export class SnakeEnemyManager extends BaseEnemyManager {
 
     const config = this.SNAKE_BEHAVIOR_CONFIG;
     const isBlinking = options?.isBlinking || false;
-    const blinkDuration = isBlinking ? 120 : 0; // 2秒間点滅
+    const blinkDuration = isBlinking ? 120 : 0; // Blink for 2 seconds
 
     const enemy: SnakeEnemy = {
       id: this.generateEnemyId("snake"),
@@ -87,8 +88,8 @@ export class SnakeEnemyManager extends BaseEnemyManager {
       threatLevel: this.SNAKE_CONFIG.threatLevel,
       playerLearningHints: this.SNAKE_CONFIG.counterStrategies,
 
-      // スネーク固有のプロパティ
-      body: [{ x: position.x, y: position.y }], // 初期は頭部のみ
+      // Snake-specific properties
+      body: [{ x: position.x, y: position.y }], // Initially, head only
       maxLength: config.maxLength,
       currentLength: 1,
       growthRate: config.growthInterval,
@@ -100,7 +101,6 @@ export class SnakeEnemyManager extends BaseEnemyManager {
       selfCollisionCheck: config.selfCollisionEnabled,
     };
 
-    // 初期胴体セグメントを追加
     this.initializeBody(enemy);
 
     return enemy;
@@ -109,7 +109,7 @@ export class SnakeEnemyManager extends BaseEnemyManager {
   private initializeBody(enemy: SnakeEnemy): void {
     const config = this.SNAKE_BEHAVIOR_CONFIG;
 
-    // 初期長さまで胴体を追加
+    // Add body parts up to initial length
     for (let i = 1; i < config.initialLength; i++) {
       const prevSegment = enemy.body[i - 1];
       const newSegment = this.calculateSafeBodyPosition(
@@ -127,7 +127,7 @@ export class SnakeEnemyManager extends BaseEnemyManager {
     headPos: Position,
     direction: Direction
   ): Position | null {
-    // 頭部の反対方向に胴体を配置
+    // Place body in the opposite direction of the head
     const oppositeDirection = this.getOppositeDirection(direction);
     const bodyPos = { ...headPos };
 
@@ -146,7 +146,7 @@ export class SnakeEnemyManager extends BaseEnemyManager {
         break;
     }
 
-    // 境界チェック
+    // Boundary check
     if (bodyPos.x < 1 || bodyPos.x >= 39 || bodyPos.y < 2 || bodyPos.y >= 24) {
       return null;
     }
@@ -174,32 +174,28 @@ export class SnakeEnemyManager extends BaseEnemyManager {
 
     const snakeEnemy = enemy as SnakeEnemy;
 
-    // 成長処理（無効化済み）
+    // Growth processing (disabled)
     this.updateGrowth(snakeEnemy);
 
-    // 移動パターンの決定
     this.updateMovementPattern(snakeEnemy, gameState);
 
-    // 自己衝突チェック
     if (this.checkSelfCollision(snakeEnemy)) {
       snakeEnemy.isDestroyed = true;
       return;
     }
 
-    // 移動履歴の更新
     this.updatePathHistory(snakeEnemy);
   }
 
   private updateGrowth(enemy: SnakeEnemy): void {
-    // 成長システムを無効化 - 胴体は2つで固定
-    // 何もしない
+    // Growth system disabled - body fixed at 2 parts
   }
 
   private growSnake(enemy: SnakeEnemy): void {
     if (enemy.body.length === 0) return;
 
     const tail = enemy.body[enemy.body.length - 1];
-    const newSegment = { ...tail }; // 尻尾の位置に新しいセグメントを追加
+    const newSegment = { ...tail }; // Add new segment at tail position
 
     enemy.body.push(newSegment);
     enemy.currentLength++;
@@ -218,7 +214,7 @@ export class SnakeEnemyManager extends BaseEnemyManager {
 
     const config = this.SNAKE_BEHAVIOR_CONFIG;
 
-    // 移動パターンの決定
+    // Movement pattern determination
     if (distanceToTerritory > config.territorialReturnDistance) {
       enemy.movementPattern = "territorial";
     } else if (distanceToPlayer <= config.chaseActivationDistance) {
@@ -239,7 +235,7 @@ export class SnakeEnemyManager extends BaseEnemyManager {
 
     const head = enemy.body[0];
 
-    // 頭部が胴体の他の部分と衝突しているかチェック
+    // Check if head collides with other body parts
     for (let i = 1; i < enemy.body.length; i++) {
       const segment = enemy.body[i];
       if (head.x === segment.x && head.y === segment.y) {
@@ -265,39 +261,39 @@ export class SnakeEnemyManager extends BaseEnemyManager {
 
     const snakeEnemy = enemy as SnakeEnemy;
 
-    // 点滅中は移動しない
+    // Move if not blinking
     if (snakeEnemy.isBlinking) {
       return;
     }
 
-    // 移動カウンターをチェック
+    // Move counter check
     snakeEnemy.moveCounter++;
     if (snakeEnemy.moveCounter < snakeEnemy.moveInterval) {
-      return; // まだ移動時間ではない
+      return; // Not yet move time
     }
 
-    // 移動カウンターをリセット
+    // Reset move counter
     snakeEnemy.moveCounter = 0;
 
     this.moveSnakeEnemy(snakeEnemy, gameState);
   }
 
   private moveSnakeEnemy(snakeEnemy: SnakeEnemy, gameState: GameState): void {
-    // 移動方向の決定
+    // Movement direction determination
     this.determineMovementDirection(snakeEnemy, gameState);
 
-    // 新しい頭部位置の計算
+    // Calculate new head position
     const newHeadPos = this.calculateNewPosition(snakeEnemy);
 
-    // 移動可能性チェック（スネーク専用）
+    // Movement possibility check (snake-specific)
     if (this.isValidSnakePosition(newHeadPos, snakeEnemy, gameState)) {
-      // 胴体の移動（頭部から尻尾へ）
+      // Move body (from head to tail)
       this.moveSnakeBody(snakeEnemy, newHeadPos);
     } else {
-      // 移動できない場合は方向転換を試行
+      // If movement fails, try direction change
       this.changeDirection(snakeEnemy);
 
-      // 方向転換後に再度移動を試行
+      // After direction change, try movement again
       const retryHeadPos = this.calculateNewPosition(snakeEnemy);
       if (this.isValidSnakePosition(retryHeadPos, snakeEnemy, gameState)) {
         this.moveSnakeBody(snakeEnemy, retryHeadPos);
@@ -350,14 +346,14 @@ export class SnakeEnemyManager extends BaseEnemyManager {
   private setPatrolDirection(enemy: SnakeEnemy): void {
     const config = this.SNAKE_BEHAVIOR_CONFIG;
 
-    // ランダムに方向転換
+    // Random direction change
     if (Math.random() < config.directionChangeChance) {
       enemy.direction = Math.floor(Math.random() * 4);
     }
   }
 
   private changeDirection(enemy: SnakeEnemy): void {
-    // 利用可能な方向を探す
+    // Find available directions
     const directions = [
       Direction.UP,
       Direction.DOWN,
@@ -408,25 +404,25 @@ export class SnakeEnemyManager extends BaseEnemyManager {
     snakeEnemy: SnakeEnemy,
     gameState: GameState | null
   ): boolean {
-    // 壁チェック（画面境界）
+    // Boundary check (screen boundary)
     if (pos.x < 1 || pos.x >= 39 || pos.y < 2 || pos.y >= 24) {
       return false;
     }
 
-    // 自分の胴体との衝突チェック
+    // Self-collision check with own body
     const hasOwnBody = snakeEnemy.body.some(
       (segment) => segment.x === pos.x && segment.y === pos.y
     );
     if (hasOwnBody) return false;
 
     if (gameState) {
-      // プレイヤーのスネークとの衝突チェック
+      // Player's snake collision check
       const hasPlayerSnake = gameState.snakeSegments.some(
         (segment) => segment.x === pos.x && segment.y === pos.y
       );
       if (hasPlayerSnake) return false;
 
-      // 他の敵との衝突チェック（点滅中でない敵のみ）
+      // Other enemy collision check (only for non-blinking enemies)
       const hasOtherEnemy = this.getAllEnemies().some(
         (enemy) =>
           enemy.id !== snakeEnemy.id &&
@@ -441,14 +437,14 @@ export class SnakeEnemyManager extends BaseEnemyManager {
   }
 
   private moveSnakeBody(enemy: SnakeEnemy, newHeadPos: Position): void {
-    // 新しい頭部位置を先頭に追加
+    // Add new head position to the front
     enemy.body.unshift(newHeadPos);
 
-    // 敵の位置を頭部位置に更新
+    // Update enemy position to head position
     enemy.x = newHeadPos.x;
     enemy.y = newHeadPos.y;
 
-    // 胴体の長さを維持（尻尾を削除）
+    // Maintain body length (remove tail)
     if (enemy.body.length > enemy.currentLength) {
       enemy.body.pop();
     }
@@ -465,7 +461,7 @@ export class SnakeEnemyManager extends BaseEnemyManager {
     const snakeEnemy = enemy as SnakeEnemy;
     const config = this.SNAKE_CONFIG;
 
-    // 点滅状態の処理
+    // Blink state processing
     if (enemy.isBlinking) {
       const blinkPhase = Math.floor(enemy.blinkDuration / 10) % 2;
       return {
@@ -476,7 +472,7 @@ export class SnakeEnemyManager extends BaseEnemyManager {
       };
     }
 
-    // 通常状態（頭部）
+    // Normal state (head)
     return {
       char: config.displayChar,
       attributes: {
@@ -497,7 +493,7 @@ export class SnakeEnemyManager extends BaseEnemyManager {
       attributes: CellAttributes;
     }> = [];
 
-    // 胴体セグメント（頭部以外）を表示
+    // Body segment (excluding head) display
     for (let i = 1; i < enemy.body.length; i++) {
       const segment = enemy.body[i];
 
@@ -513,12 +509,12 @@ export class SnakeEnemyManager extends BaseEnemyManager {
     return bodyDisplay;
   }
 
-  // スネーク敵の胴体位置を取得（衝突判定用）
+  // Get snake body positions for collision check
   public getSnakeBodyPositions(enemy: SnakeEnemy): Position[] {
-    return enemy.body.slice(1); // 頭部以外の胴体セグメント
+    return enemy.body.slice(1); // Body segments excluding head
   }
 
-  // スネーク敵の頭部が囲まれているかチェック
+  // Check if snake head is enclosed
   public isSnakeHeadEnclosed(
     enemy: SnakeEnemy,
     enclosedArea: Position[]
@@ -527,16 +523,16 @@ export class SnakeEnemyManager extends BaseEnemyManager {
     return enclosedArea.some((pos) => pos.x === head.x && pos.y === head.y);
   }
 
-  // スネーク敵の破壊時のスコア計算
+  // Snake destruction score calculation
   public calculateDestroyScore(enemy: SnakeEnemy): number {
     const config = this.SNAKE_CONFIG;
     const headScore = config.baseScore;
-    const bodyScore = (enemy.body.length - 1) * config.bodyScore; // 頭部以外の胴体
+    const bodyScore = (enemy.body.length - 1) * config.bodyScore; // Body excluding head
 
     return headScore + bodyScore;
   }
 
-  // スネーク固有のメソッド
+  // Snake-specific method
   public spawnSnake(
     position: Position,
     isBlinking: boolean = true
@@ -559,7 +555,7 @@ export class SnakeEnemyManager extends BaseEnemyManager {
     return this.getEnemiesByType(EnemyType.SNAKE) as SnakeEnemy[];
   }
 
-  // デバッグ情報を取得
+  // Get debug information
   public getDebugInfo(): any {
     const snakeEnemies = Array.from(this.enemies.values()) as SnakeEnemy[];
     return {

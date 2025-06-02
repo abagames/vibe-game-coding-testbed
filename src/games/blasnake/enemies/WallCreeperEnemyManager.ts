@@ -18,9 +18,9 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
     moveInterval: 12,
     blinkDuration: 120,
     threatLevel: ThreatLevel.MEDIUM,
-    minTimeInWall: 120, // 壁内を移動する最小フレーム数 (約2秒)
-    maxTimeInWall: 300, // 壁内を移動する最大フレーム数 (約5秒)
-    crossingSpeedMultiplier: 1.0, // オープンスペース横断時の速度倍率
+    minTimeInWall: 120, // Minimum frames to move inside wall (approx. 2 seconds)
+    maxTimeInWall: 300, // Maximum frames to move inside wall (approx. 5 seconds)
+    crossingSpeedMultiplier: 1.0, // Speed multiplier when crossing open space
   };
 
   public createEnemy(
@@ -32,7 +32,7 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
       return null;
     }
 
-    // 壁位置に調整（画面端に配置）
+    // Adjust to wall position (place on screen edge)
     const wallPosition = this.adjustToWallPosition(position);
 
     const blinkDuration = options.isBlinking ? 120 : 0;
@@ -54,9 +54,9 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
       spawnTime: Date.now(),
       threatLevel: this.WALL_CREEPER_CONFIG.threatLevel,
       playerLearningHints: [
-        "ウォールクリーパーは壁内を移動する",
-        "オープンスペース横断時が攻撃チャンス",
-        "反対側の壁への進入地点を予測しよう",
+        "WallCreepers move inside walls",
+        "Opportunity to attack when crossing open space",
+        "Predict their entry point to the opposite wall",
       ],
       currentBehaviorState: "in_wall",
       wallFollowCardinalDirection: this.getInitialWallDirection(wallPosition),
@@ -80,7 +80,7 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
 
     const wallCreeper = enemy as WallCreeperEnemy;
 
-    // 行動タイマーの更新
+    // Update behavior timer
     wallCreeper.behaviorTimer--;
 
     if (wallCreeper.currentBehaviorState === "in_wall") {
@@ -94,7 +94,7 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
     wallCreeper: WallCreeperEnemy,
     gameState: GameState
   ): void {
-    // 壁から離脱するタイミングをチェック
+    // Check timing to exit wall
     if (wallCreeper.behaviorTimer <= 0) {
       this.initiateWallCrossing(wallCreeper);
     }
@@ -104,7 +104,7 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
     wallCreeper: WallCreeperEnemy,
     gameState: GameState
   ): void {
-    // 目標位置に到達したかチェック
+    // Check if target position is reached
     if (
       wallCreeper.targetCrossPosition &&
       wallCreeper.x === wallCreeper.targetCrossPosition.x &&
@@ -115,14 +115,14 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
   }
 
   private initiateWallCrossing(wallCreeper: WallCreeperEnemy): void {
-    // 現在位置から反対側の壁の対応位置を計算
+    // Calculate corresponding position on the opposite wall from current position
     const targetPosition = this.calculateOppositeWallPosition(wallCreeper);
 
     if (targetPosition) {
       wallCreeper.currentBehaviorState = "crossing_open_space";
       wallCreeper.targetCrossPosition = targetPosition;
 
-      // 横断方向を設定
+      // Set crossing direction
       if (targetPosition.x > wallCreeper.x) {
         wallCreeper.direction = Direction.RIGHT;
       } else if (targetPosition.x < wallCreeper.x) {
@@ -133,7 +133,7 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
         wallCreeper.direction = Direction.UP;
       }
 
-      // 横断時の移動間隔を調整
+      // Adjust movement interval for crossing
       wallCreeper.moveInterval = Math.floor(
         this.WALL_CREEPER_CONFIG.moveInterval /
           this.WALL_CREEPER_CONFIG.crossingSpeedMultiplier
@@ -145,12 +145,12 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
     wallCreeper.currentBehaviorState = "in_wall";
     wallCreeper.targetCrossPosition = null;
 
-    // 新しい壁での移動方向を設定
+    // Set movement direction in the new wall
     wallCreeper.wallFollowCardinalDirection =
       this.getWallFollowDirection(wallCreeper);
     wallCreeper.direction = wallCreeper.wallFollowCardinalDirection;
 
-    // 新しい壁内滞在時間を設定
+    // Set new duration for staying in wall
     wallCreeper.behaviorTimer = Math.floor(
       Math.random() *
         (this.WALL_CREEPER_CONFIG.maxTimeInWall -
@@ -158,7 +158,7 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
         this.WALL_CREEPER_CONFIG.minTimeInWall
     );
 
-    // 移動間隔を元に戻す
+    // Restore movement interval
     wallCreeper.moveInterval = this.WALL_CREEPER_CONFIG.moveInterval;
   }
 
@@ -179,24 +179,24 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
   private moveAlongWall(wallCreeper: WallCreeperEnemy): void {
     const newPos = this.calculateNewPosition(wallCreeper);
 
-    // 壁の角に到達したかチェック
+    // Check if wall corner is reached
     if (this.isWallCorner(newPos)) {
-      // 角で方向転換
+      // Change direction at corner
       wallCreeper.wallFollowCardinalDirection = this.getNextWallDirection(
         wallCreeper.wallFollowCardinalDirection,
         newPos
       );
       wallCreeper.direction = wallCreeper.wallFollowCardinalDirection;
 
-      // 角の位置に移動
+      // Move to corner position
       wallCreeper.x = newPos.x;
       wallCreeper.y = newPos.y;
     } else if (this.isWallPosition(newPos)) {
-      // 通常の壁沿い移動
+      // Normal movement along wall
       wallCreeper.x = newPos.x;
       wallCreeper.y = newPos.y;
     } else {
-      // 壁から外れそうな場合は方向転換
+      // Change direction if about to move off wall
       wallCreeper.wallFollowCardinalDirection = this.getNextWallDirection(
         wallCreeper.wallFollowCardinalDirection,
         { x: wallCreeper.x, y: wallCreeper.y }
@@ -213,7 +213,7 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
 
     const newPos = this.calculateNewPosition(wallCreeper);
 
-    // 移動可能かチェック（オープンスペース横断中は通常の衝突判定）
+    // Check if movement is possible (normal collision detection during open space crossing)
     if (this.isValidPositionForCrossing(newPos, gameState)) {
       wallCreeper.x = newPos.x;
       wallCreeper.y = newPos.y;
@@ -221,34 +221,34 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
   }
 
   private adjustToWallPosition(position: Position): Position {
-    // 最も近い壁位置に調整
+    // Adjust to the nearest wall position
     const wallPos = { ...position };
 
     if (position.x <= 20) {
-      wallPos.x = 0; // 左壁
+      wallPos.x = 0; // Left wall
     } else {
-      wallPos.x = 39; // 右壁
+      wallPos.x = 39; // Right wall
     }
 
-    // Y座標は有効範囲内に制限
+    // Constrain Y coordinate to valid range
     wallPos.y = Math.max(2, Math.min(23, position.y));
 
     return wallPos;
   }
 
   private getInitialWallDirection(position: Position): Direction {
-    // 壁位置に基づいて初期移動方向を決定
+    // Determine initial movement direction based on wall position
     if (position.x === 0) {
-      // 左壁 - 上または下
+      // Left wall - Up or Down
       return Math.random() < 0.5 ? Direction.UP : Direction.DOWN;
     } else if (position.x === 39) {
-      // 右壁 - 上または下
+      // Right wall - Up or Down
       return Math.random() < 0.5 ? Direction.UP : Direction.DOWN;
     } else if (position.y === 2) {
-      // 上壁 - 左または右
+      // Top wall - Left or Right
       return Math.random() < 0.5 ? Direction.LEFT : Direction.RIGHT;
     } else {
-      // 下壁 - 左または右
+      // Bottom wall - Left or Right
       return Math.random() < 0.5 ? Direction.LEFT : Direction.RIGHT;
     }
   }
@@ -259,16 +259,16 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
     const currentPos = { x: wallCreeper.x, y: wallCreeper.y };
 
     if (currentPos.x === 0) {
-      // 左壁から右壁へ
+      // From left wall to right wall
       return { x: 39, y: currentPos.y };
     } else if (currentPos.x === 39) {
-      // 右壁から左壁へ
+      // From right wall to left wall
       return { x: 0, y: currentPos.y };
     } else if (currentPos.y === 2) {
-      // 上壁から下壁へ
+      // From top wall to bottom wall
       return { x: currentPos.x, y: 23 };
     } else if (currentPos.y === 23) {
-      // 下壁から上壁へ
+      // From bottom wall to top wall
       return { x: currentPos.x, y: 2 };
     }
 
@@ -287,16 +287,16 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
     const pos = { x: wallCreeper.x, y: wallCreeper.y };
 
     if (pos.x === 0) {
-      // 左壁
+      // Left wall
       return Math.random() < 0.5 ? Direction.UP : Direction.DOWN;
     } else if (pos.x === 39) {
-      // 右壁
+      // Right wall
       return Math.random() < 0.5 ? Direction.UP : Direction.DOWN;
     } else if (pos.y === 2) {
-      // 上壁
+      // Top wall
       return Math.random() < 0.5 ? Direction.LEFT : Direction.RIGHT;
     } else {
-      // 下壁
+      // Bottom wall
       return Math.random() < 0.5 ? Direction.LEFT : Direction.RIGHT;
     }
   }
@@ -305,25 +305,25 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
     currentDirection: Direction,
     position: Position
   ): Direction {
-    // 角での方向転換ロジック
+    // Corner turning logic
     if (this.isWallCorner(position)) {
       if (position.x === 0 && position.y === 2) {
-        // 左上角
+        // Top-left corner
         return currentDirection === Direction.UP
           ? Direction.RIGHT
           : Direction.DOWN;
       } else if (position.x === 39 && position.y === 2) {
-        // 右上角
+        // Top-right corner
         return currentDirection === Direction.UP
           ? Direction.LEFT
           : Direction.DOWN;
       } else if (position.x === 0 && position.y === 23) {
-        // 左下角
+        // Bottom-left corner
         return currentDirection === Direction.DOWN
           ? Direction.RIGHT
           : Direction.UP;
       } else if (position.x === 39 && position.y === 23) {
-        // 右下角
+        // Bottom-right corner
         return currentDirection === Direction.DOWN
           ? Direction.LEFT
           : Direction.UP;
@@ -337,19 +337,19 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
     pos: Position,
     gameState: GameState
   ): boolean {
-    // オープンスペース横断中の移動可能性チェック
-    // 画面境界チェック
+    // Movement possibility check during open space crossing
+    // Screen boundary check
     if (pos.x < 0 || pos.x >= 40 || pos.y < 2 || pos.y >= 24) {
       return false;
     }
 
-    // スネークとの衝突チェック
+    // Snake collision check
     const hasSnake = gameState.snakeSegments.some(
       (segment) => segment.x === pos.x && segment.y === pos.y
     );
     if (hasSnake) return false;
 
-    // 他の敵との衝突チェック（点滅中でない敵のみ）
+    // Other enemy collision check (only non-blinking enemies)
     const hasOtherEnemy = this.getAllEnemies().some(
       (enemy) => !enemy.isBlinking && enemy.x === pos.x && enemy.y === pos.y
     );
@@ -369,7 +369,7 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
     const wallCreeper = enemy as WallCreeperEnemy;
 
     if (wallCreeper.isBlinking) {
-      // 点滅中の表示
+      // Display during blinking
       const blinkPhase =
         Math.floor(
           (wallCreeper.maxBlinkDuration - wallCreeper.blinkDuration) / 5
@@ -394,7 +394,7 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
         };
       }
     } else {
-      // 通常表示
+      // Normal display
       const isPassable =
         wallCreeper.currentBehaviorState === "crossing_open_space";
 
@@ -410,7 +410,7 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
     }
   }
 
-  // ウォールクリーパー固有のメソッド
+  // WallCreeper-specific methods
   public spawnWallCreeper(
     position: Position,
     isBlinking: boolean = true
@@ -433,7 +433,7 @@ export class WallCreeperEnemyManager extends BaseEnemyManager {
     return this.getEnemiesByType(EnemyType.WALL_CREEPER) as WallCreeperEnemy[];
   }
 
-  // デバッグ用
+  // For debugging
   public getWallCreeperDebugInfo(): any {
     const wallCreepers = this.getAllWallCreepers();
     return {

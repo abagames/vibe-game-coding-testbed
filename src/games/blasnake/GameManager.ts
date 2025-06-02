@@ -189,8 +189,7 @@ export class GameManager extends BaseGame {
 
   public initializeGame(): void {
     // This method is called by BaseGame's constructor and resetGame.
-    // We'll use it to reset to the title screen or current game state.
-    // Only reset to title if not already in playing from constructor
+    // Reset to title screen if not already in playing state from constructor options.
     if (this.currentFlowState !== GameFlowState.PLAYING) {
       this.currentFlowState = GameFlowState.TITLE;
       this.resetTitleAnimationStates();
@@ -215,7 +214,7 @@ export class GameManager extends BaseGame {
     if (this.currentFlowState !== GameFlowState.GAME_OVER) {
       super.clearVirtualScreen();
     }
-    // If currentFlowState is GAME_OVER, do nothing, preserving the screen.
+    // If currentFlowState is GAME_OVER, do nothing, preserving the screen for the game over message.
   }
 
   private initializeCoreGame(): void {
@@ -234,12 +233,12 @@ export class GameManager extends BaseGame {
     return this.actualGame;
   }
 
-  // BaseGameのupdateをオーバーライド
+  // Override BaseGame's update
   public override update(inputState: InputState): void {
-    // 1. 画面クリア制御 (GameManagerでオーバーライドされたclearVirtualScreenが呼ばれる)
+    // 1. Control screen clearing (calls GameManager's overridden clearVirtualScreen)
     this.clearVirtualScreen();
 
-    // 2. 現在のフロー状態に基づいて、固有の更新ロジックと描画ロジックを実行
+    // 2. Execute update and draw logic based on the current flow state
     switch (this.currentFlowState) {
       case GameFlowState.TITLE:
         this.updateTitleScreen(inputState);
@@ -253,12 +252,12 @@ export class GameManager extends BaseGame {
         if (!this.actualGame) {
           this.initializeCoreGame();
         }
-        this.actualGame.update(inputState); // CoreGameLogic が自身の描画を行う
+        this.actualGame.update(inputState); // CoreGameLogic will handle its own drawing
         if (this.actualGame.isGameOver()) {
           this.lastScore = this.actualGame.getScore();
           this.currentFlowState = GameFlowState.GAME_OVER;
           this.gameOverTimer = GAME_OVER_SCREEN_DURATION;
-          this.stopBgm(); // ゲームオーバーになったらBGMを停止
+          this.stopBgm(); // Stop BGM on game over
         }
         break;
       case GameFlowState.GAME_OVER:
@@ -291,12 +290,11 @@ export class GameManager extends BaseGame {
       this.titleToDemoTimer++;
       if (this.titleToDemoTimer > GameManager.TITLE_TO_DEMO_DELAY_FRAMES) {
         this.currentFlowState = GameFlowState.DEMO;
-        this.setIsDemoPlay(true); // Entering demo mode
+        this.setIsDemoPlay(true);
         this.initializeCoreGame();
         this.demoPlayTimer = 0;
         this.demoCurrentInput = { right: true }; // Start demo moving right
         this.demoInputCooldown = GameManager.DEMO_AI_INPUT_COOLDOWN_FRAMES;
-        // titleToDemoTimer will be reset by resetTitleAnimationStates when returning to TITLE
         return;
       }
     } else {
@@ -503,22 +501,20 @@ export class GameManager extends BaseGame {
 
     if (inputState.escape) {
       this.currentFlowState = GameFlowState.TITLE;
-      this.setIsDemoPlay(false); // Exiting demo mode
+      this.setIsDemoPlay(false);
       this.resetTitleAnimationStates();
       return;
     }
 
     if (!this.actualGame) {
       this.initializeCoreGame();
-      // Ensure actualGame is ready for demo
-      // this.actualGame.initializeGame(); // Explicitly ensure it's reset if needed - initializeCoreGame already does this.
       this.demoCurrentInput = { right: true };
       this.demoInputCooldown = GameManager.DEMO_AI_INPUT_COOLDOWN_FRAMES;
     }
 
     this.demoPlayTimer++;
 
-    // Simple AI: Change direction randomly at intervals, try to avoid immediate obstacles
+    // Simple AI: Change direction randomly, try to avoid immediate obstacles
     this.demoInputCooldown--;
     if (this.demoInputCooldown <= 0) {
       this.demoInputCooldown = GameManager.DEMO_AI_INPUT_COOLDOWN_FRAMES;
@@ -602,22 +598,13 @@ export class GameManager extends BaseGame {
       this.demoPlayTimer > GameManager.DEMO_PLAY_DURATION_FRAMES
     ) {
       this.currentFlowState = GameFlowState.TITLE;
-      this.setIsDemoPlay(false); // Exiting demo mode
+      this.setIsDemoPlay(false);
       this.resetTitleAnimationStates();
     }
   }
 
   private drawDemoScreen(): void {
     // actualGame.update() handles its own drawing.
-    // We just draw overlays for demo mode.
-    if (this.actualGame) {
-      // CoreGameLogic's update would have handled its drawing.
-      // BaseGame's clearVirtualScreen behavior depends on the current state.
-      // Ensure screen is clear for demo, or that actualGame redraws everything.
-      // The main loop calls clearVirtualScreen, then this.updateGame (which calls updateDemoScreen),
-      // then actualGame.update() (which draws game elements), then drawDemoScreen (for overlays).
-    }
-
     // Display Last Score and High Score
     const lastScoreText = `${this.lastScore}`;
     this.drawText(lastScoreText, 1, 0, { color: "white" });
@@ -655,8 +642,8 @@ export class GameManager extends BaseGame {
     ];
     this.playMml(gameStartMml);
 
-    this.resetGame(); // Call BaseGame's resetGame to clear gameOverState, reset score/lives for the GameManager instance
-    this.initializeCoreGame(); // This will set up actualGame for a new session
+    this.resetGame();
+    this.initializeCoreGame();
 
     this.currentFlowState = GameFlowState.PLAYING;
     this.resetTitleAnimationStates();
@@ -665,29 +652,21 @@ export class GameManager extends BaseGame {
   // --- GAME OVER SCREEN ---
   private updateGameOverScreen(inputState: InputState): void {
     if (inputState.action1 || inputState.action2) {
-      this.startGameFromTitleOrDemo(); // Call the centralized game start method
-      // this.initializeCoreGame(); // Now handled by startGameFromTitleOrDemo
-      // this.currentFlowState = GameFlowState.PLAYING; // Now handled by startGameFromTitleOrDemo
-      // this.setIsDemoPlay(false); // Now handled by startGameFromTitleOrDemo
+      this.startGameFromTitleOrDemo();
       return;
     }
 
     this.gameOverTimer--;
     if (this.gameOverTimer <= 0) {
       if (!this.gameOptions.startInPlayingState) {
-        // Call resetGame() to ensure gameOverState is false and other game parameters are reset.
-        // This aims to make the transition to TITLE behave like an initial startup.
-        this.resetGame(); // This calls BaseGame's resetGame(), which sets this.gameOverState = false.
+        this.resetGame();
 
         this.currentFlowState = GameFlowState.TITLE;
-        this.setIsDemoPlay(false); // Going to title, not a demo
-
-        // Explicitly reset title animation states after ensuring game state is reset.
+        this.setIsDemoPlay(false);
         this.resetTitleAnimationStates();
       }
       // In simulation mode with startInPlayingState,
       // do not transition back to TITLE from GAME_OVER automatically.
-      // The simulation will either end by maxTicks or handle restart via input if programmed.
     }
   }
 

@@ -2,7 +2,6 @@ import { BaseGame } from "../core/BaseGame.js";
 import { smallTextPatterns } from "./textPatternSmall.js";
 import { CellAttributes } from "../core/coreTypes.js";
 
-const CHARACTER_PATTERN_WIDTH = 3; // Nominal width of the patterns in smallTextPatterns
 const CHARACTER_CELL_WIDTH = 4; // Total width for one large character (pattern + 1 space)
 const CHARACTER_HEIGHT = 5; // Height of the patterns
 

@@ -16,7 +16,7 @@ export abstract class BaseGame implements GameCore {
   protected score: number;
   protected lives: number;
   protected gameOverState: boolean;
-  private readonly initialLives: number; // 初期ライフ数を保存
+  private readonly initialLives: number;
   protected isDemoPlay: boolean; // Demo play mode flag
   protected audioService?: AudioService; // Added audioService instance variable
 
@@ -31,9 +31,9 @@ export abstract class BaseGame implements GameCore {
       initialLives = 3,
       isDemoPlay = false,
       audioService,
-      gameName, // Added
-      enableHighScoreStorage = false, // Added
-      isBrowserEnvironment = false, // Added
+      gameName,
+      enableHighScoreStorage = false,
+      isBrowserEnvironment = false,
     } = options;
     this.initialLives = initialLives;
     this.isDemoPlay = isDemoPlay;
@@ -211,8 +211,6 @@ export abstract class BaseGame implements GameCore {
     if (count <= 0) return;
     this.lives += count;
     // Max lives logic should be handled by the specific game if needed,
-    // or BaseGame could have an optional maxLives constructor option.
-    // For now, it just increments.
     console.log(
       `BaseGame: Gained ${count} life/lives. Current lives: ${this.lives}`
     );

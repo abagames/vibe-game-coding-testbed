@@ -1,4 +1,4 @@
-// 基本型定義
+// Basic type definitions
 export interface Position {
   x: number;
   y: number;
@@ -11,7 +11,7 @@ export enum Direction {
   RIGHT,
 }
 
-// 基本敵インターフェース
+// Base enemy interface
 export interface BaseEnemy {
   id: string;
   x: number;
@@ -31,7 +31,7 @@ export interface BaseEnemy {
   playerLearningHints: string[];
 }
 
-// 敵タイプ列挙
+// Enemy type enumeration
 export enum EnemyType {
   WANDERER = "wanderer",
   GUARD = "guard",
@@ -45,7 +45,7 @@ export enum EnemyType {
   SWARM = "swarm",
 }
 
-// 脅威レベル
+// Threat level
 export enum ThreatLevel {
   LOW = 1,
   MEDIUM = 2,
@@ -53,7 +53,7 @@ export enum ThreatLevel {
   EXTREME = 4,
 }
 
-// 判別可能な共用体型による敵タイプ定義
+// Enemy type definitions using discriminated unions
 export interface WandererEnemy extends BaseEnemy {
   type: EnemyType.WANDERER;
   directionChangeChance: number;
@@ -100,7 +100,7 @@ export interface SpeedsterEnemy extends BaseEnemy {
   movementDistance: number;
   maxMovementDistance: number;
   rotationPattern: "clockwise" | "counterclockwise";
-  currentDirectionIndex: number; // 現在の方向のインデックス
+  currentDirectionIndex: number; // Index of the current direction
 }
 
 export interface MimicEnemy extends BaseEnemy {
@@ -146,25 +146,25 @@ export interface GhostEnemy extends BaseEnemy {
 
 export interface SwarmEnemy extends BaseEnemy {
   type: EnemyType.SWARM;
-  swarmSize: number; // 群れ全体のサイズ
-  isLeader: boolean; // 群れのリーダーかどうか
-  leaderPosition: Position | null; // リーダーの位置（仲間用）
-  leaderId: string | null; // リーダーのID（仲間用）
-  formationOffset: Position; // 編隊内の相対位置
-  swarmId: string; // 群れID（同じ群れの識別用）
-  leadershipScore: number; // リーダーシップスコア（未使用、将来拡張用）
-  cohesionStrength: number; // 結束力（0.0-1.0）
-  formationType: "diamond" | "line" | "circle" | "v_formation"; // 編隊タイプ
-  maxDistanceFromLeader: number; // リーダーからの最大距離
-  followDelay: number; // 追従遅延フレーム数
-  lastLeaderPosition: Position | null; // リーダーの前回位置
-  separationTimer: number; // 分離タイマー
-  reunionTimer: number; // 再結合タイマー
-  isSeparated: boolean; // 分離状態フラグ
-  isReuniting: boolean; // 再結合中フラグ
+  swarmSize: number; // Overall size of the swarm
+  isLeader: boolean; // Whether it is the leader of the swarm
+  leaderPosition: Position | null; // Leader's position (for companions)
+  leaderId: string | null; // Leader's ID (for companions)
+  formationOffset: Position; // Relative position within the formation
+  swarmId: string; // Swarm ID (for identifying the same swarm)
+  leadershipScore: number; // Leadership score (unused, for future expansion)
+  cohesionStrength: number; // Cohesion strength (0.0-1.0)
+  formationType: "diamond" | "line" | "circle" | "v_formation"; // Formation type
+  maxDistanceFromLeader: number; // Maximum distance from leader
+  followDelay: number; // Follow delay frame count
+  lastLeaderPosition: Position | null; // Leader's previous position
+  separationTimer: number; // Separation timer
+  reunionTimer: number; // Reunion timer
+  isSeparated: boolean; // Separation state flag
+  isReuniting: boolean; // Reuniting flag
 }
 
-// 判別可能な共用体型
+// Discriminated union type
 export type Enemy =
   | WandererEnemy
   | GuardEnemy
@@ -177,7 +177,7 @@ export type Enemy =
   | GhostEnemy
   | SwarmEnemy;
 
-// 敵設定インターフェース
+// Enemy configuration interface
 export interface EnemyConfig {
   readonly displayChar: string;
   readonly color: string;
@@ -190,7 +190,7 @@ export interface EnemyConfig {
   readonly counterStrategies: string[];
 }
 
-// エフェクト関連
+// Effect-related types
 export interface EnemyDestroyEffect {
   x: number;
   y: number;
@@ -200,43 +200,43 @@ export interface EnemyDestroyEffect {
   multiplier: number;
 }
 
-// スコア表示エフェクト（破壊エフェクト終了後に表示）
+// Score display effect (shown after destruction effect ends)
 export interface ScoreDisplayEffect {
   x: number;
   y: number;
   duration: number;
   maxDuration: number;
-  score: number; // 最終スコア（基本点数 × 倍率）
-  baseScore: number; // 基本点数
+  score: number; // Final score (basic points x multiplier)
+  baseScore: number; // Basic points
   multiplier: number;
 }
 
-// レベルシステム関連の型定義
+// Level system related type definitions
 export interface SimpleLevel {
   id: number;
   name: string;
-  timeThreshold: number; // ゲーム開始からの秒数
-  duration: number; // レベル持続時間（秒）
-  enemyTypes: EnemyType[]; // 出現する敵タイプ
+  timeThreshold: number; // Seconds from game start
+  duration: number; // Level duration (seconds)
+  enemyTypes: EnemyType[]; // Enemy types that appear
   spawnPattern: SimpleSpawnPattern;
 }
 
 export interface SimpleSpawnPattern {
   enemyType: EnemyType;
-  count: number; // 同時出現数
-  interval: number; // スポーン間隔（フレーム数）
-  maxTotal: number; // 最大総数
+  count: number; // Number of simultaneous appearances
+  interval: number; // Spawn interval (number of frames)
+  maxTotal: number; // Maximum total number
 }
 
-// スポーン判定結果の型定義
+// Spawn decision result type definition
 export interface SpawnDecision {
   shouldSpawn: boolean;
   reason: string;
   isEmergency?: boolean;
-  interval?: number; // 使用された間隔（デバッグ用）
+  interval?: number; // Interval used (for debugging)
 }
 
-// ゲーム状態インターフェース
+// Game state interface
 export interface GameState {
   gameTime: number;
   score: number;
@@ -246,6 +246,6 @@ export interface GameState {
   playerPosition: Position;
   snakeSegments: Position[];
   enemies: Enemy[];
-  foodPosition?: Position; // 食べ物の位置を追加
+  foodPosition?: Position; // Add food position
   lastPlayerAction?: string;
 }

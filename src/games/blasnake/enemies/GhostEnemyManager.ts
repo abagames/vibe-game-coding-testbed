@@ -18,21 +18,21 @@ export class GhostEnemyManager extends BaseEnemyManager {
     warningColor: "yellow" as cglColor,
     baseScore: 270,
     moveInterval: 12,
-    phaseChance: 0.2, // 20%の確率で無形化
-    phaseDuration: 30, // 無形化持続時間（0.5秒）
-    phaseCooldown: 60, // 無形化クールダウン（1秒）
-    phaseWarningDuration: 15, // 無形化予告時間（0.25秒）
+    phaseChance: 0.2, // 20% chance to phase
+    phaseDuration: 30, // Phase duration (0.5 seconds)
+    phaseCooldown: 60, // Phase cooldown (1 second)
+    phaseWarningDuration: 15, // Phase warning time (0.25 seconds)
     blinkDuration: 120,
     threatLevel: ThreatLevel.EXTREME,
     spawnWeight: 8,
     maxCount: 2,
-    overlapResolutionAttempts: 5, // 重複解決試行回数
-    learningObjective: "不確実性に対応し、適応的戦略を身につける",
+    overlapResolutionAttempts: 5, // Overlap resolution attempts
+    learningObjective: "Respond to uncertainty and acquire adaptive strategies",
     counterStrategies: [
-      "無形化のタイミングを観察してパターンを見つける",
-      "無形化中は他の敵に集中する",
-      "ゴーストを最後に残して確実に対処",
-      "無形化終了のタイミングを狙って囲い込み",
+      "Observe phasing timing to find patterns",
+      "Focus on other enemies during phasing",
+      "Deal with ghosts last for a sure approach",
+      "Aim to surround ghosts as phasing ends",
     ],
   };
 
@@ -83,17 +83,16 @@ export class GhostEnemyManager extends BaseEnemyManager {
 
     const ghost = enemy as GhostEnemy;
 
-    // 無形化予告タイマーの更新
+    // Update phase warning timer
     if (ghost.phaseWarningTimer > 0) {
       ghost.phaseWarningTimer--;
       if (ghost.phaseWarningTimer === 0) {
-        // 予告終了、無形化開始
+        // Warning ended, start phasing
         this.startPhasing(ghost);
       }
       return;
     }
 
-    // 無形化状態の処理
     if (ghost.isPhasing) {
       ghost.phaseTimer--;
       if (ghost.phaseTimer <= 0) {
@@ -102,12 +101,10 @@ export class GhostEnemyManager extends BaseEnemyManager {
       return;
     }
 
-    // 無形化クールダウンの更新
     if (ghost.phaseCooldown > 0) {
       ghost.phaseCooldown--;
     }
 
-    // 無形化判定
     if (
       ghost.phaseCooldown === 0 &&
       Math.random() < ghost.phaseChance &&
@@ -116,7 +113,6 @@ export class GhostEnemyManager extends BaseEnemyManager {
       this.triggerPhaseWarning(ghost);
     }
 
-    // 通常の移動方向変更判定
     if (Math.random() < 0.3) {
       ghost.direction = Math.floor(Math.random() * 4);
     }
@@ -136,20 +132,19 @@ export class GhostEnemyManager extends BaseEnemyManager {
     ghost.isPhasing = false;
     ghost.phaseTimer = 0;
 
-    // 無形化終了時に他のオブジェクトと重複している場合の処理
+    // Processing if overlapping with other objects at the end of phasing
     if (this.isPositionOccupied(ghost, gameState)) {
       this.resolveOverlap(ghost, gameState);
     }
   }
 
   private isPositionOccupied(ghost: GhostEnemy, gameState: GameState): boolean {
-    // スネークとの重複チェック
     const hasSnake = gameState.snakeSegments.some(
       (segment) => segment.x === ghost.x && segment.y === ghost.y
     );
     if (hasSnake) return true;
 
-    // 他の敵との重複チェック（自分以外の非点滅敵）
+    // Overlap check with other enemies (non-blinking enemies other than self)
     const hasOtherEnemy = this.getAllEnemies().some(
       (enemy) =>
         enemy.id !== ghost.id &&
@@ -166,9 +161,9 @@ export class GhostEnemyManager extends BaseEnemyManager {
     const attempts = this.GHOST_CONFIG.overlapResolutionAttempts;
 
     for (let i = 0; i < attempts; i++) {
-      // 周囲8方向 + 現在位置をチェック
+      // Check surrounding 8 directions + current position
       const offsets = [
-        { x: 0, y: 0 }, // 現在位置
+        { x: 0, y: 0 }, // Current position
         { x: -1, y: -1 },
         { x: 0, y: -1 },
         { x: 1, y: -1 },
@@ -192,7 +187,6 @@ export class GhostEnemyManager extends BaseEnemyManager {
         }
       }
 
-      // より広い範囲で検索
       const randomPos = this.findRandomValidPosition(gameState, ghost);
       if (randomPos) {
         ghost.x = randomPos.x;
@@ -201,7 +195,7 @@ export class GhostEnemyManager extends BaseEnemyManager {
       }
     }
 
-    // 解決できない場合は強制的に安全な位置に移動
+    // If unresolvable, forcibly move to a safe position
     console.warn(
       `Ghost ${ghost.id} overlap resolution failed, moving to safe position`
     );
@@ -217,18 +211,16 @@ export class GhostEnemyManager extends BaseEnemyManager {
     gameState: GameState,
     ghost: GhostEnemy
   ): boolean {
-    // 壁チェック
     if (pos.x < 1 || pos.x >= 39 || pos.y < 2 || pos.y >= 24) {
       return false;
     }
 
-    // スネークとの重複チェック
     const hasSnake = gameState.snakeSegments.some(
       (segment) => segment.x === pos.x && segment.y === pos.y
     );
     if (hasSnake) return false;
 
-    // 他の敵との重複チェック（自分以外）
+    // Overlap check with other enemies (other than self)
     const hasOtherEnemy = this.getAllEnemies().some(
       (enemy) =>
         enemy.id !== ghost.id &&
@@ -259,7 +251,7 @@ export class GhostEnemyManager extends BaseEnemyManager {
   }
 
   private findSafePosition(gameState: GameState): Position | null {
-    // 画面の四隅から安全な位置を探す
+    // Search for a safe position from the corners of the screen
     const corners = [
       { x: 1, y: 2 },
       { x: 38, y: 2 },
@@ -273,7 +265,7 @@ export class GhostEnemyManager extends BaseEnemyManager {
       }
     }
 
-    return { x: 20, y: 12 }; // 最後の手段として中央付近
+    return { x: 20, y: 12 }; // As a last resort, the center
   }
 
   protected moveEnemy(enemy: Enemy, gameState: GameState): void {
@@ -283,25 +275,25 @@ export class GhostEnemyManager extends BaseEnemyManager {
 
     const ghost = enemy as GhostEnemy;
 
-    // 無形化予告中は移動しない
+    // If in phase warning, don't move
     if (ghost.phaseWarningTimer > 0) {
       return;
     }
 
-    // 通常の移動処理
+    // Normal movement processing
     const newPos = this.calculateNewPosition(ghost);
 
     if (ghost.isPhasing) {
-      // 無形化中は壁以外すり抜け可能
+      // When phasing, pass through walls
       if (this.isValidPositionForPhasing(newPos)) {
         ghost.x = newPos.x;
         ghost.y = newPos.y;
       } else {
-        // 壁にぶつかった場合は方向転換
+        // If hitting a wall, turn around
         ghost.direction = Math.floor(Math.random() * 4);
       }
     } else {
-      // 通常状態では通常の衝突判定
+      // In normal state, use normal collision detection
       if (this.isValidPosition(newPos, gameState)) {
         ghost.x = newPos.x;
         ghost.y = newPos.y;
@@ -312,7 +304,7 @@ export class GhostEnemyManager extends BaseEnemyManager {
   }
 
   private isValidPositionForPhasing(pos: Position): boolean {
-    // 無形化中は壁のみチェック
+    // When phasing, only check walls
     return pos.x >= 1 && pos.x < 39 && pos.y >= 2 && pos.y < 24;
   }
 
@@ -328,20 +320,20 @@ export class GhostEnemyManager extends BaseEnemyManager {
     let char = this.GHOST_CONFIG.displayChar;
     let color = this.GHOST_CONFIG.color;
 
-    // 無形化予告中
+    // Phase warning
     if (ghost.phaseWarningTimer > 0) {
       color = this.GHOST_CONFIG.warningColor;
-      // 点滅効果
+      // Flashing effect
       if (Math.floor(ghost.phaseWarningTimer / 3) % 2 === 0) {
         char = "!";
       }
     }
-    // 無形化中
+    // Phasing
     else if (ghost.isPhasing) {
       color = this.GHOST_CONFIG.phaseColor;
       char = "?"; // 無形化状態の表示
     }
-    // 点滅中（出現時）
+    // Blinking (when appearing)
     else if (ghost.isBlinking) {
       color = this.GHOST_CONFIG.phaseColor;
       char = "o";
@@ -356,9 +348,7 @@ export class GhostEnemyManager extends BaseEnemyManager {
     };
   }
 
-  // 爆発耐性なし（削除）
-
-  // スポーン関連メソッド
+  // Spawn related methods
   public spawnGhost(
     position: Position,
     isBlinking: boolean = true
@@ -379,27 +369,25 @@ export class GhostEnemyManager extends BaseEnemyManager {
     return this.getEnemiesByType(EnemyType.GHOST) as GhostEnemy[];
   }
 
-  // 難易度調整
+  // Adjust difficulty
   public adjustGhostDifficulty(difficultyMultiplier: number): void {
     const ghosts = this.getAllGhosts();
     for (const ghost of ghosts) {
-      // 無形化確率の調整
+      // Adjust phase chance
       ghost.phaseChance = Math.min(
         this.GHOST_CONFIG.phaseChance * difficultyMultiplier,
-        0.4 // 最大40%
+        0.4 // Maximum 40%
       );
 
-      // 移動速度の調整
+      // Adjust movement speed
       ghost.moveInterval = Math.max(
         Math.floor(this.GHOST_CONFIG.moveInterval / difficultyMultiplier),
-        6 // 最小6フレーム間隔
+        6 // Minimum 6 frame interval
       );
-
-      // 爆発耐性なし（削除）
     }
   }
 
-  // メトリクス取得
+  // Get metrics
   public getGhostMetrics(): {
     averagePhaseFrequency: number;
     phaseSuccessRate: number;
@@ -424,13 +412,13 @@ export class GhostEnemyManager extends BaseEnemyManager {
 
     return {
       averagePhaseFrequency,
-      phaseSuccessRate: 0.85, // 実装時に実際の値を計算
-      explosionSurvivalRate: 0, // 爆発耐性なし
-      overlapResolutions: 0, // 実装時に実際の値を計算
+      phaseSuccessRate: 0.85,
+      explosionSurvivalRate: 0,
+      overlapResolutions: 0,
     };
   }
 
-  // デバッグ情報
+  // Debug information
   public getGhostDebugInfo(): any {
     const ghosts = this.getAllGhosts();
     return {

@@ -33,7 +33,7 @@ export class WandererEnemyManager extends BaseEnemyManager {
     threatLevel: ThreatLevel.LOW,
   };
 
-  // 型ガード関数
+  // Type guard function
   private isWandererEnemy(enemy: Enemy): enemy is WandererEnemy {
     return enemy.type === EnemyType.WANDERER;
   }
@@ -68,9 +68,9 @@ export class WandererEnemyManager extends BaseEnemyManager {
       spawnTime: Date.now(),
       threatLevel: this.WANDERER_CONFIG.threatLevel,
       playerLearningHints: [
-        "ワンダラー敵を囲んで破壊しよう",
-        "点滅中は通過可能",
-        "ランダムに移動するので予測は困難",
+        "Enclose and destroy Wanderer enemies",
+        "Passable while blinking",
+        "Difficult to predict due to random movement",
       ],
       directionChangeChance: this.WANDERER_CONFIG.directionChangeChance,
     };
@@ -83,10 +83,9 @@ export class WandererEnemyManager extends BaseEnemyManager {
       return;
     }
 
-    // 型ガード後、enemyはWandererEnemyとして扱われる
-    // ワンダラー固有のロジック
-    // 特別な処理は現在なし（基本的なランダム移動のみ）
-    // 将来的には群れ行動や学習機能を追加可能
+    // Wanderer specific logic
+    // No special processing currently (only basic random movement).
+    // Swarm behavior and learning functions can be added in the future.
   }
 
   protected moveEnemy(enemy: Enemy, gameState: GameState): void {
@@ -94,21 +93,16 @@ export class WandererEnemyManager extends BaseEnemyManager {
       return;
     }
 
-    // 型ガード後、enemyはWandererEnemyとして扱われる
-    // 方向変更の判定
     if (Math.random() < enemy.directionChangeChance) {
       enemy.direction = Math.floor(Math.random() * 4);
     }
 
-    // 新しい位置を計算
     const newPos = this.calculateNewPosition(enemy);
 
-    // 移動可能かチェック
     if (this.isValidPosition(newPos, gameState)) {
       enemy.x = newPos.x;
       enemy.y = newPos.y;
     } else {
-      // 移動できない場合は方向を変更
       enemy.direction = Math.floor(Math.random() * 4);
     }
   }
@@ -122,7 +116,7 @@ export class WandererEnemyManager extends BaseEnemyManager {
     }
 
     if (enemy.isBlinking) {
-      // 点滅中の表示（5フレームごとに表示/非表示切り替え）
+      // Display during blinking (toggle display every 5 frames)
       const blinkPhase =
         Math.floor((enemy.maxBlinkDuration - enemy.blinkDuration) / 5) % 2;
 
@@ -136,7 +130,7 @@ export class WandererEnemyManager extends BaseEnemyManager {
           },
         };
       } else {
-        // 非表示フェーズ
+        // Hidden phase
         return {
           char: " ",
           attributes: {
@@ -146,7 +140,7 @@ export class WandererEnemyManager extends BaseEnemyManager {
         };
       }
     } else {
-      // 通常表示
+      // Normal display
       return {
         char: this.WANDERER_CONFIG.displayChar,
         attributes: {
@@ -158,7 +152,7 @@ export class WandererEnemyManager extends BaseEnemyManager {
     }
   }
 
-  // ワンダラー固有のメソッド
+  // Wanderer specific methods
   public spawnWanderer(
     position: Position,
     isBlinking: boolean = true
@@ -183,7 +177,7 @@ export class WandererEnemyManager extends BaseEnemyManager {
     );
   }
 
-  // デバッグ用
+  // Debugging purpose
   public getWandererDebugInfo(): any {
     const wanderers = this.getAllWanderers();
     return {

@@ -37,12 +37,12 @@ export class EnemySystemManager {
   private wallCreeperManager: WallCreeperEnemyManager;
   private ghostManager: GhostEnemyManager;
   private swarmManager: SwarmEnemyManager;
-  // 将来的に他の敵マネージャーを追加
+  // Add other enemy managers in the future
   // etc...
 
   private spawnTimer: number = 0;
-  private spawnInterval: number = 600; // 10秒間隔
-  private fastSpawnInterval: number = 60; // 1秒間隔
+  private spawnInterval: number = 600; // 10-second interval
+  private fastSpawnInterval: number = 60; // 1-second interval
   private minEnemyCount: number = 5;
 
   constructor() {
@@ -58,7 +58,6 @@ export class EnemySystemManager {
     this.swarmManager = new SwarmEnemyManager();
   }
 
-  // 敵の更新処理
   public updateAllEnemies(gameState: GameState): EnemyUpdateResult {
     const result: EnemyUpdateResult = {
       enemiesToRemove: [],
@@ -66,7 +65,7 @@ export class EnemySystemManager {
       scoreToAdd: 0,
     };
 
-    // 各敵マネージャーの更新
+    // Update each enemy manager
     const wandererResult = this.wandererManager.updateAllEnemies(gameState);
     this.mergeResults(result, wandererResult);
 
@@ -98,7 +97,7 @@ export class EnemySystemManager {
     const swarmResult = this.swarmManager.updateAllEnemies(gameState);
     this.mergeResults(result, swarmResult);
 
-    // エフェクトの更新
+    // Update effects
     this.wandererManager.updateDestroyEffects();
     this.guardManager.updateDestroyEffects();
     this.chaserManager.updateDestroyEffects();
@@ -113,19 +112,19 @@ export class EnemySystemManager {
     return result;
   }
 
-  // スポーン処理
+  // Spawn processing
   public updateSpawning(gameState: GameState): void {
     this.spawnTimer++;
 
     const currentEnemyCount = this.getTotalEnemyCount();
     const needsMoreEnemies = currentEnemyCount < this.minEnemyCount;
 
-    // 敵数が最小値以下の場合は短時間で出現、そうでなければ通常間隔
+    // If the number of enemies is less than or equal to the minimum value, they appear in a short time, otherwise at normal intervals
     const spawnInterval = needsMoreEnemies
       ? this.fastSpawnInterval
       : this.spawnInterval;
 
-    // 最初の敵は即座に出現
+    // The first enemy appears immediately
     const shouldSpawnImmediately =
       currentEnemyCount === 0 && this.spawnTimer >= 1;
 
@@ -135,26 +134,26 @@ export class EnemySystemManager {
     }
   }
 
-  // 新しい敵をスポーン
+  // Spawn a new enemy
   private spawnNewEnemy(gameState: GameState): void {
-    // 敵のタイプを決定（Swarmテスト用）
+    // Determine enemy type (for Swarm test)
     const rand = Math.random();
     let enemyType: EnemyType;
     if (rand < 0.5) {
-      enemyType = EnemyType.SWARM; // 群れ敵 50% (テスト用)
+      enemyType = EnemyType.SWARM; // Swarm enemy 50% (for test)
     } else if (rand < 0.7) {
-      enemyType = EnemyType.WANDERER; // 基本敵 20%
+      enemyType = EnemyType.WANDERER; // Basic enemy 20%
     } else if (rand < 0.85) {
-      enemyType = EnemyType.CHASER; // 追跡敵 15%
+      enemyType = EnemyType.CHASER; // Chaser enemy 15%
     } else if (rand < 0.95) {
-      enemyType = EnemyType.GUARD; // 戦術敵 10%
+      enemyType = EnemyType.GUARD; // Tactical enemy 10%
     } else {
-      enemyType = EnemyType.SPEEDSTER; // 高速敵 5%
+      enemyType = EnemyType.SPEEDSTER; // High-speed enemy 5%
     }
 
     let position: Position | null = null;
 
-    // Guard の場合は食べ物の近くにスポーン
+    // In the case of Guard, spawn near food
     if (enemyType === EnemyType.GUARD) {
       const foodPosition = (gameState as any).foodPosition;
       if (foodPosition) {
@@ -162,7 +161,7 @@ export class EnemySystemManager {
       }
     }
 
-    // Guard用の位置が見つからない場合、または Wanderer の場合は通常のランダム位置
+    // If a position for Guard is not found, or in the case of Wanderer, normal random position
     if (!position) {
       position = this.findValidSpawnPosition(gameState);
     }
@@ -198,7 +197,7 @@ export class EnemySystemManager {
           );
         }
       } else {
-        // 食べ物がない場合はワンダラーを代わりにスポーン
+        // If there is no food, spawn Wanderer instead
         enemyId = this.wandererManager.spawnWanderer(position, true);
         if (enemyId) {
           console.log(
@@ -238,25 +237,24 @@ export class EnemySystemManager {
     }
   }
 
-  // 食べ物の近くの有効なスポーン位置を探す
+  // Find a valid spawn position near food
   private findValidSpawnPositionNearFood(
     foodPosition: Position,
     gameState: GameState
   ): Position | null {
     const maxAttempts = 30;
-    const spawnRadius = 5; // 食べ物から5ユニット以内
+    const spawnRadius = 5; // Within 5 units from food
 
     for (let attempts = 0; attempts < maxAttempts; attempts++) {
-      // 食べ物の周りの円形範囲内でランダム位置を生成
       const angle = Math.random() * Math.PI * 2;
-      const distance = Math.random() * spawnRadius + 2; // 最低2ユニット離れる
+      const distance = Math.random() * spawnRadius + 2;
 
       const position: Position = {
         x: Math.round(foodPosition.x + Math.cos(angle) * distance),
         y: Math.round(foodPosition.y + Math.sin(angle) * distance),
       };
 
-      // 画面境界内かチェック
+      // Check if the position is within the screen boundaries
       if (
         position.x < 1 ||
         position.x > 38 ||
@@ -274,7 +272,7 @@ export class EnemySystemManager {
     return null;
   }
 
-  // 有効なスポーン位置を探す
+  // Find a valid spawn position
   private findValidSpawnPosition(gameState: GameState): Position | null {
     const maxAttempts = 50;
 
@@ -292,9 +290,9 @@ export class EnemySystemManager {
     return null;
   }
 
-  // スポーン位置の有効性チェック
+  // Check if the spawn position is valid
   private isValidSpawnPosition(pos: Position, gameState: GameState): boolean {
-    // プレイヤーとの衝突チェック
+    // Check for player collision
     if (
       pos.x === gameState.playerPosition.x &&
       pos.y === gameState.playerPosition.y
@@ -302,18 +300,18 @@ export class EnemySystemManager {
       return false;
     }
 
-    // 既存の敵との衝突チェック
+    // Check for existing enemy collision
     const hasEnemy = this.getEnemyAtPosition(pos) !== null;
     if (hasEnemy) return false;
 
-    // 食べ物との衝突チェック（将来的に実装）
+    // Check for food collision (will be implemented later)
     // const hasFood = pos.x === gameState.foodPosition.x && pos.y === gameState.foodPosition.y;
     // if (hasFood) return false;
 
     return true;
   }
 
-  // 敵の描画情報を取得
+  // Get enemy display information
   public getEnemyDisplayInfo(enemy: Enemy): {
     char: string;
     attributes: CellAttributes;
@@ -339,13 +337,12 @@ export class EnemySystemManager {
         return this.ghostManager.getEnemyDisplayInfo(enemy);
       case EnemyType.SWARM:
         return this.swarmManager.getEnemyDisplayInfo(enemy);
-      // 将来的に他の敵タイプを追加
       default:
         return { char: "?", attributes: { color: "white" } };
     }
   }
 
-  // 全ての敵を取得
+  // Get all enemies
   public getAllEnemies(): Enemy[] {
     const enemies: Enemy[] = [];
     enemies.push(...this.wandererManager.getAllEnemies());
@@ -358,11 +355,10 @@ export class EnemySystemManager {
     enemies.push(...this.wallCreeperManager.getAllEnemies());
     enemies.push(...this.ghostManager.getAllEnemies());
     enemies.push(...this.swarmManager.getAllEnemies());
-    // 将来的に他の敵マネージャーからも取得
     return enemies;
   }
 
-  // 特定位置の敵を取得
+  // Get an enemy at a specific position
   public getEnemyAtPosition(pos: Position): Enemy | null {
     const wandererEnemy = this.wandererManager.getEnemyAtPosition(pos);
     if (wandererEnemy) return wandererEnemy;
@@ -394,11 +390,10 @@ export class EnemySystemManager {
     const swarmEnemy = this.swarmManager.getEnemyAtPosition(pos);
     if (swarmEnemy) return swarmEnemy;
 
-    // 将来的に他の敵マネージャーもチェック
     return null;
   }
 
-  // 敵の総数を取得
+  // Get the total number of enemies
   public getTotalEnemyCount(): number {
     return (
       this.wandererManager.getAllEnemies().length +
@@ -412,10 +407,9 @@ export class EnemySystemManager {
       this.ghostManager.getAllEnemies().length +
       this.swarmManager.getAllEnemies().length
     );
-    // 将来的に他の敵マネージャーの数も加算
   }
 
-  // 破壊エフェクトを取得
+  // Get all destroy effects
   public getAllDestroyEffects(): EnemyDestroyEffect[] {
     const effects: EnemyDestroyEffect[] = [];
     effects.push(...this.wandererManager.getDestroyEffects());
@@ -428,11 +422,10 @@ export class EnemySystemManager {
     effects.push(...this.wallCreeperManager.getDestroyEffects());
     effects.push(...this.ghostManager.getDestroyEffects());
     effects.push(...this.swarmManager.getDestroyEffects());
-    // 将来的に他の敵マネージャーからも取得
     return effects;
   }
 
-  // スコア表示エフェクトを取得
+  // Get all score display effects
   public getAllScoreDisplayEffects(): ScoreDisplayEffect[] {
     const effects: ScoreDisplayEffect[] = [];
     effects.push(...this.wandererManager.getScoreDisplayEffects());
@@ -445,11 +438,10 @@ export class EnemySystemManager {
     effects.push(...this.wallCreeperManager.getScoreDisplayEffects());
     effects.push(...this.ghostManager.getScoreDisplayEffects());
     effects.push(...this.swarmManager.getScoreDisplayEffects());
-    // 将来的に他の敵マネージャーからも取得
     return effects;
   }
 
-  // すべての破壊エフェクトを更新
+  // Update all destroy effects
   public updateAllDestroyEffects(): void {
     this.wandererManager.updateDestroyEffects();
     this.guardManager.updateDestroyEffects();
@@ -458,10 +450,9 @@ export class EnemySystemManager {
     this.mimicManager.updateDestroyEffects();
     this.snakeManager.updateDestroyEffects();
     this.wallCreeperManager.updateDestroyEffects();
-    // 将来的に他の敵マネージャーも更新
   }
 
-  // 領域内の敵を破壊
+  // Destroy enemies in an area
   public destroyEnemiesInArea(
     startPos: Position,
     endPos: Position
@@ -476,7 +467,7 @@ export class EnemySystemManager {
     let destroyedCount = 0;
     let totalScore = 0;
     for (const enemy of enemiesInBoundingBox) {
-      // 敵の実際のbaseScoreを使用
+      // Use the actual baseScore of the enemy
       const score = enemy.baseScore * enemiesInBoundingBox.length; // Simple multiplier
       if (this.destroyEnemyById(enemy.id, score, enemiesInBoundingBox.length)) {
         destroyedCount++;
@@ -491,71 +482,70 @@ export class EnemySystemManager {
     score: number,
     multiplier: number
   ): boolean {
-    // ワンダラーマネージャーで破壊を試行
+    // Try to destroy with the Wanderer manager
     const wandererEnemy = this.wandererManager.getEnemy(id);
     if (wandererEnemy) {
       return this.wandererManager.destroyEnemy(id, score, multiplier);
     }
 
-    // ガードマネージャーで破壊を試行
+    // Try to destroy with the Guard manager
     const guardEnemy = this.guardManager.getEnemy(id);
     if (guardEnemy) {
       return this.guardManager.destroyEnemy(id, score, multiplier);
     }
 
-    // チェイサーマネージャーで破壊を試行
+    // Try to destroy with the Chaser manager
     const chaserEnemy = this.chaserManager.getEnemy(id);
     if (chaserEnemy) {
       return this.chaserManager.destroyEnemy(id, score, multiplier);
     }
 
-    // スプリッターマネージャーで破壊を試行
+    // Try to destroy with the Splitter manager
     const splitterEnemy = this.splitterManager.getEnemy(id);
     if (splitterEnemy) {
       return this.splitterManager.destroyEnemy(id, score, multiplier);
     }
 
-    // スピードスターマネージャーで破壊を試行
+    // Try to destroy with the Speedster manager
     const speedsterEnemy = this.speedsterManager.getEnemy(id);
     if (speedsterEnemy) {
       return this.speedsterManager.destroyEnemy(id, score, multiplier);
     }
 
-    // ミミックマネージャーで破壊を試行
+    // Try to destroy with the Mimic manager
     const mimicEnemy = this.mimicManager.getEnemy(id);
     if (mimicEnemy) {
       return this.mimicManager.destroyEnemy(id, score, multiplier);
     }
 
-    // スネークマネージャーで破壊を試行
+    // Try to destroy with the Snake manager
     const snakeEnemy = this.snakeManager.getEnemy(id);
     if (snakeEnemy) {
       return this.snakeManager.destroyEnemy(id, score, multiplier);
     }
 
-    // ウォールクリーパーマネージャーで破壊を試行
+    // Try to destroy with the Wall Creeper manager
     const wallCreeperEnemy = this.wallCreeperManager.getEnemy(id);
     if (wallCreeperEnemy) {
       return this.wallCreeperManager.destroyEnemy(id, score, multiplier);
     }
 
-    // ゴーストマネージャーで破壊を試行
+    // Try to destroy with the Ghost manager
     const ghostEnemy = this.ghostManager.getEnemy(id);
     if (ghostEnemy) {
       return this.ghostManager.destroyEnemy(id, score, multiplier);
     }
 
-    // スワームマネージャーで破壊を試行
+    // Try to destroy with the Swarm manager
     const swarmEnemy = this.swarmManager.getEnemy(id);
     if (swarmEnemy) {
       return this.swarmManager.destroyEnemy(id, score, multiplier);
     }
 
-    // 将来的に他の敵マネージャーでも試行
     return false;
   }
 
-  // 領域内の敵を取得
+  // Get enemies in an area
   public getEnemiesInArea(startPos: Position, endPos: Position): Enemy[] {
     const enemies: Enemy[] = [];
     enemies.push(...this.wandererManager.getEnemiesInArea(startPos, endPos));
@@ -568,11 +558,10 @@ export class EnemySystemManager {
     enemies.push(...this.wallCreeperManager.getEnemiesInArea(startPos, endPos));
     enemies.push(...this.ghostManager.getEnemiesInArea(startPos, endPos));
     enemies.push(...this.swarmManager.getEnemiesInArea(startPos, endPos));
-    // 将来的に他の敵マネージャーからも取得してマージ
     return enemies;
   }
 
-  // 敵との衝突チェック
+  // Check for enemy collision
   public checkEnemyCollision(pos: Position): Enemy | null {
     const enemy = this.getEnemyAtPosition(pos);
     if (enemy && !enemy.isBlinking) {
@@ -581,7 +570,7 @@ export class EnemySystemManager {
     return null;
   }
 
-  // 設定の更新
+  // Update spawn settings
   public updateSpawnSettings(settings: {
     spawnInterval?: number;
     fastSpawnInterval?: number;
@@ -598,7 +587,7 @@ export class EnemySystemManager {
     }
   }
 
-  // デバッグ情報
+  // Debug information
   public getDebugInfo(): any {
     return {
       totalEnemies: this.getTotalEnemyCount(),
@@ -613,11 +602,10 @@ export class EnemySystemManager {
       mimicInfo: this.mimicManager.getDebugInfo(),
       snakeInfo: this.snakeManager.getDebugInfo(),
       ghostInfo: this.ghostManager.getGhostDebugInfo(),
-      // 将来的に他の敵マネージャーの情報も追加
     };
   }
 
-  // 結果のマージ
+  // Merge results
   private mergeResults(
     target: EnemyUpdateResult,
     source: EnemyUpdateResult
@@ -627,7 +615,7 @@ export class EnemySystemManager {
     target.scoreToAdd += source.scoreToAdd;
   }
 
-  // 全ての敵をクリア（プレイヤー爆発時など）
+  // Clear all enemies (when player explodes)
   public clearAllEnemies(): void {
     this.wandererManager.getAllEnemies().forEach((enemy) => {
       this.wandererManager.removeEnemy(enemy.id);
@@ -671,13 +659,11 @@ export class EnemySystemManager {
     this.swarmManager = new SwarmEnemyManager(); // Resets swarms
     this.spawnTimer = 0; // Reset spawn timer as well
 
-    // グローバルIDジェネレーターもリセット
+    // Reset the global ID generator
     GlobalEnemyIdGenerator.getInstance().reset();
-
-    // 将来的に他の敵マネージャーもリセット
   }
 
-  // ガード敵のターゲットを更新
+  // Update guard enemy targets
   public updateGuardTargets(foodPosition: Position): void {
     this.guardManager.updateGuardTargets(foodPosition);
   }

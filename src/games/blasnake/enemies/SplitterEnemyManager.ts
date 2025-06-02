@@ -30,11 +30,11 @@ export class SplitterEnemyManager extends BaseEnemyManager {
     moveInterval: 48,
     blinkDuration: 120,
     threatLevel: ThreatLevel.MEDIUM,
-    maxSplits: 1, // 子敵は分裂しない
+    maxSplits: 1, // Child enemies do not split
     childBlinkDuration: 60,
     childScoreMultiplier: 1,
     splitSearchRadius: 2,
-    splitWarningDuration: 30, // 分裂予告時間
+    splitWarningDuration: 30, // Split warning time
   };
 
   public createEnemy(
@@ -81,10 +81,10 @@ export class SplitterEnemyManager extends BaseEnemyManager {
       spawnTime: Date.now(),
       threatLevel: this.SPLITTER_CONFIG.threatLevel,
       playerLearningHints: [
-        "分裂を見越して広いエリアで囲む",
-        "子敵の出現位置を予測して対処",
-        "分裂タイミングを調整して有利な状況を作る",
-        "他の敵との位置関係を考慮して撃破順序を決める",
+        "Anticipate splits and surround them in a wide area",
+        "Predict child enemy spawn locations and prepare",
+        "Adjust split timing to create advantageous situations",
+        "Consider positioning relative to other enemies when deciding destruction order",
       ],
       isChild: isChild,
       splitCount: splitCount,
@@ -119,14 +119,14 @@ export class SplitterEnemyManager extends BaseEnemyManager {
 
     const splitter = enemy;
 
-    // 分裂予告タイマーの更新
+    // Update split warning timer
     if (splitter.splitWarningTimer > 0) {
       splitter.splitWarningTimer--;
 
-      // 分裂予告が終了したら分裂実行
+      // If split warning ends, execute split
       if (splitter.splitWarningTimer === 0 && splitter.specialTimer === 1) {
         this.performSplit(splitter);
-        // 親敵を破壊
+        // Destroy parent enemy
         splitter.isDestroyed = true;
       }
     }
@@ -137,7 +137,7 @@ export class SplitterEnemyManager extends BaseEnemyManager {
 
     const splitter = enemy;
 
-    // ランダムウォーク（30%の確率で方向転換）
+    // Random walk (30% chance to change direction)
     if (Math.random() < 0.3) {
       splitter.direction = Math.floor(Math.random() * 4);
     }
@@ -147,7 +147,6 @@ export class SplitterEnemyManager extends BaseEnemyManager {
       splitter.x = newPos.x;
       splitter.y = newPos.y;
     } else {
-      // 移動できない場合は方向を変更
       splitter.direction = Math.floor(Math.random() * 4);
     }
   }
@@ -162,7 +161,7 @@ export class SplitterEnemyManager extends BaseEnemyManager {
 
     const splitter = enemy;
 
-    // 分裂予告中は点滅表示
+    // Blinking display during split warning
     if (splitter.splitWarningTimer > 0) {
       const isFlashing = Math.floor(splitter.splitWarningTimer / 5) % 2 === 0;
       return {
@@ -174,7 +173,7 @@ export class SplitterEnemyManager extends BaseEnemyManager {
       };
     }
 
-    // 通常表示
+    // Normal display
     return {
       char: this.SPLITTER_CONFIG.displayChar,
       attributes: {
@@ -186,7 +185,7 @@ export class SplitterEnemyManager extends BaseEnemyManager {
     };
   }
 
-  // スプリッター敵が破壊される際の分裂処理
+  // Split processing when splitter enemy is destroyed
   public destroyEnemy(
     id: string,
     score: number = 0,
@@ -199,15 +198,15 @@ export class SplitterEnemyManager extends BaseEnemyManager {
 
     const splitter = enemy;
 
-    // 分裂予告を開始
+    // Start split warning
     if (!splitter.isChild && splitter.splitCount < splitter.maxSplits) {
       splitter.splitWarningTimer = this.SPLITTER_CONFIG.splitWarningDuration;
-      // 分裂フラグを設定（updateEnemyLogicで処理される）
-      splitter.specialTimer = 1; // 分裂待機状態
-      return false; // まだ破壊しない
+      // Set split flag (processed in updateEnemyLogic)
+      splitter.specialTimer = 1; // Split standby state
+      return false; // Not destroyed yet
     }
 
-    // 子敵または分裂済みの場合は通常の破壊処理
+    // Normal destruction process for child enemies or already split enemies
     return super.destroyEnemy(id, score, multiplier);
   }
 
@@ -225,7 +224,6 @@ export class SplitterEnemyManager extends BaseEnemyManager {
       `💥 Splitter ${parentSplitter.id} splitting into ${splitPositions.length} children`
     );
 
-    // 子敵を生成
     for (const position of splitPositions) {
       const childId = this.spawnSplitter(position, true, {
         isChild: true,
@@ -256,12 +254,12 @@ export class SplitterEnemyManager extends BaseEnemyManager {
         y: splitter.y + dir.y,
       };
 
-      // 基本的な境界チェック
+      // Basic boundary check
       if (newPos.x < 1 || newPos.x >= 39 || newPos.y < 2 || newPos.y >= 24) {
         continue;
       }
 
-      // この位置が有効かチェック（簡易版）
+      // Check if this position is valid (simplified)
       if (this.isValidSplitPosition(newPos)) {
         positions.push(newPos);
       }
@@ -271,12 +269,12 @@ export class SplitterEnemyManager extends BaseEnemyManager {
   }
 
   private isValidSplitPosition(pos: Position): boolean {
-    // 基本的な境界チェック
+    // Basic boundary check
     if (pos.x < 1 || pos.x >= 39 || pos.y < 2 || pos.y >= 24) {
       return false;
     }
 
-    // 他の敵との重複チェック（点滅中でない敵のみ）
+    // Check for overlap with other enemies (only non-blinking enemies)
     const hasOtherEnemy = this.getAllEnemies().some(
       (enemy) => !enemy.isBlinking && enemy.x === pos.x && enemy.y === pos.y
     );
@@ -284,7 +282,7 @@ export class SplitterEnemyManager extends BaseEnemyManager {
     return !hasOtherEnemy;
   }
 
-  // デバッグ情報
+  // Debug information
   public getDebugInfo(): any {
     const allEnemies = this.getEnemiesByType(EnemyType.SPLITTER);
     const splitters = allEnemies.filter(

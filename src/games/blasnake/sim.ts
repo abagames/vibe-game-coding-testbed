@@ -3,7 +3,6 @@ import { InputState } from "../../core/coreTypes.js";
 import { CoreGameLogic } from "./core.js";
 import { NodeAudioService } from "../../utils/NodeAudioService.js";
 
-// デバッグモード設定 - 通常プレイテスト用
 // Debug Mode Settings - For Normal Gameplay Testing
 //
 // FOR LEVEL DEBUGGING: Change these settings to quickly test level progression:
@@ -18,9 +17,9 @@ import { NodeAudioService } from "../../utils/NodeAudioService.js";
 // - maxTicks = 3600 (about 60 seconds of testing)
 // - Complex input patterns (to test various gameplay scenarios)
 
-const DEBUG_MODE = true; // デバッグ情報は表示したまま
-const INVINCIBLE = false; // 無敵状態を解除 // Set to true for level debugging
-const TIME_ACCELERATION = 1.0; // 通常速度に戻す // Set to 100.0+ for level debugging
+const DEBUG_MODE = true; // Keep debug info displayed
+const INVINCIBLE = false; // Set to true for level debugging
+const TIME_ACCELERATION = 1.0; // Set to 100.0+ for level debugging
 const CONSTRAIN_TO_BOUNDS = true;
 
 // Instantiate GameManager
@@ -61,7 +60,7 @@ for (let i = 0; i < initialSnakeLength; i++) {
 (coreGame as any).direction = 3; // Start RIGHT (assuming 3 is Direction.RIGHT)
 (coreGame as any).nextDirection = 3; // Start RIGHT
 
-const maxTicks = 3600; // 通常速度で約60秒間のテスト
+const maxTicks = 3600; // Approx. 60 seconds of testing at normal speed
 let tick = 0;
 
 // Screen center circling pattern
@@ -86,10 +85,10 @@ if (remainingTicks > 0) {
 }
 
 let inputIndex = 0;
-let lastLevel = 1; // 前回のレベルを記録
-let lastLives = (game.getCoreGameLogic() as any).initialLivesCount || 3; // Get initial lives from coreGame if possible
+let lastLevel = 1; // Record the previous level
+let lastLives = (game.getCoreGameLogic() as any).initialLivesCount || 3; // Get initial lives
 
-// game.isGameOver() will now check GameManager's state, which in turn checks CoreGameLogic
+// game.isGameOver() now checks GameManager's state
 while (tick < maxTicks && !game.isGameOver()) {
   let currentInput: InputState = {
     up: false,
@@ -104,7 +103,7 @@ while (tick < maxTicks && !game.isGameOver()) {
     ...(inputs[inputIndex] || {}),
   };
 
-  game.update(currentInput); // This calls GameManager.update
+  game.update(currentInput); // Calls GameManager.update
 
   const currentCoreGame = game.getCoreGameLogic();
   const currentLives = currentCoreGame.getLives();
@@ -156,12 +155,12 @@ while (tick < maxTicks && !game.isGameOver()) {
     const levelInfo = currentCoreGame.getCurrentLevelInfo();
     console.log(`🎯 Current Level: ${levelInfo}`);
 
-    const currentSpawnDebugInfo = currentCoreGame.getSpawnDebugInfo(); // re-fetch for clarity
+    const currentSpawnDebugInfo = currentCoreGame.getSpawnDebugInfo();
     console.log(
       `⏰ Game Time: ${currentSpawnDebugInfo.gameTimeSeconds.toFixed(1)}s`
     );
 
-    const enemyDebugInfo = currentCoreGame.getEnemyDebugInfo(); // re-fetch for clarity
+    const enemyDebugInfo = currentCoreGame.getEnemyDebugInfo();
     console.log(`👹 Total Enemies: ${enemyDebugInfo.totalEnemies}`);
 
     const nonZeroCounts = Object.entries(currentSpawnDebugInfo.enemyCounts)
@@ -213,7 +212,7 @@ console.log(
 );
 
 if (game.isGameOver()) {
-  // GameManager knows if the game (via CoreGameLogic) is over
+  // GameManager checks CoreGameLogic for game over state
   console.log("💀 GAME OVER!");
   if (finalCoreGame.getLives() <= 0) {
     console.log("💔 All lives lost!");

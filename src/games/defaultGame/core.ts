@@ -1,17 +1,11 @@
 import {
-  cglColor,
-  CellAttributes,
-  CellInfo,
   InputState,
-  GridData,
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
-  AudioService,
   BaseGameOptions,
 } from "../../core/coreTypes.js";
 import { BaseGame } from "../../core/BaseGame.js";
 
-const INITIAL_LIVES = 3;
 const PLAYER_MOVEMENT_INTERVAL = 3; // Move once every 3 frames
 
 interface DefaultGameOptions extends BaseGameOptions {

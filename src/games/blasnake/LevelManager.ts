@@ -7,27 +7,27 @@ import {
 
 const FRAMES_PER_SECOND = 60;
 
-// レベル定義データ
+// Level definition data
 const SIMPLE_LEVELS: SimpleLevel[] = [
-  // レベル1: ワンダラー導入（簡単）
+  // Level 1: Wanderer Introduction (Easy)
   {
     id: 1,
-    name: "基本訓練",
-    timeThreshold: 0 * FRAMES_PER_SECOND, // ゲーム開始時
+    name: "Basic Training",
+    timeThreshold: 0 * FRAMES_PER_SECOND, // Game start
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.WANDERER],
     spawnPattern: {
       enemyType: EnemyType.WANDERER,
       count: 3,
-      interval: 600, // 10秒間隔 (600 frames)
+      interval: 600, // 10 second interval (600 frames)
       maxTotal: 5,
     },
   },
 
-  // レベル2: ガード導入（簡単）
+  // Level 2: Guard Introduction (Easy)
   {
     id: 2,
-    name: "守護者登場",
+    name: "Guardian Appears",
     timeThreshold: 20 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.GUARD],
@@ -39,70 +39,70 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     },
   },
 
-  // レベル3: ワンダラー + ガード混合（標準的難易度に近づく）
+  // Level 3: Wanderer + Guard Mix (Approaching standard difficulty)
   {
     id: 3,
-    name: "混合戦闘I",
+    name: "Mixed Combat I",
     timeThreshold: 40 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.WANDERER, EnemyType.GUARD],
     spawnPattern: {
-      enemyType: EnemyType.WANDERER, // メイン
+      enemyType: EnemyType.WANDERER, // Main
       count: 2,
-      interval: 480, // 8秒間隔 (480 frames)
+      interval: 480, // 8 second interval (480 frames)
       maxTotal: 7,
     },
   },
 
-  // レベル4: チェイサー導入（標準的難易度）
+  // Level 4: Chaser Introduction (Standard difficulty)
   {
     id: 4,
-    name: "追跡者登場",
+    name: "Tracker Appears",
     timeThreshold: 60 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.CHASER],
     spawnPattern: {
       enemyType: EnemyType.CHASER,
       count: 2,
-      interval: 720, // 12秒間隔 (720 frames)
+      interval: 720, // 12 second interval (720 frames)
       maxTotal: 4,
     },
   },
 
-  // レベル5: ワンダラー + チェイサー混合（標準的難易度）
+  // Level 5: Wanderer + Chaser Mix (Standard difficulty)
   {
     id: 5,
-    name: "混合戦闘II",
+    name: "Mixed Combat II",
     timeThreshold: 80 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.WANDERER, EnemyType.CHASER],
     spawnPattern: {
       enemyType: EnemyType.WANDERER,
       count: 2,
-      interval: 420, // 7秒間隔 (420 frames)
+      interval: 420, // 7 second interval (420 frames)
       maxTotal: 6,
     },
   },
 
-  // レベル6: スプリッター導入（標準的難易度）
+  // Level 6: Splitter Introduction (Standard difficulty)
   {
     id: 6,
-    name: "分裂者登場",
+    name: "Divider Appears",
     timeThreshold: 100 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.SPLITTER],
     spawnPattern: {
       enemyType: EnemyType.SPLITTER,
       count: 1,
-      interval: 900, // 15秒間隔 (900 frames)
+      interval: 900, // 15 second interval (900 frames)
       maxTotal: 6,
     },
   },
 
-  // レベル7: 3種混合戦闘（標準的難易度を超える）
+  // Level 7: 3-Type Mixed Combat (Exceeds standard difficulty)
   {
     id: 7,
-    name: "混合戦闘III",
+    name: "Mixed Combat III",
     timeThreshold: 120 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.WANDERER, EnemyType.CHASER, EnemyType.SPLITTER],
@@ -114,10 +114,10 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     },
   },
 
-  // レベル8: スピードスター導入（難易度上昇）
+  // Level 8: Speedster Introduction (Increased difficulty)
   {
     id: 8,
-    name: "高速戦闘",
+    name: "High-Speed Combat",
     timeThreshold: 140 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.SPEEDSTER],
@@ -129,10 +129,10 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     },
   },
 
-  // レベル9: ミミック導入（難易度上昇）
+  // Level 9: Mimic Introduction (Increased difficulty)
   {
     id: 9,
-    name: "模倣者登場",
+    name: "Imitator Appears",
     timeThreshold: 160 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.MIMIC],
@@ -144,10 +144,10 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     },
   },
 
-  // レベル10: スネーク導入（難易度上昇）
+  // Level 10: Snake Introduction (Increased difficulty)
   {
     id: 10,
-    name: "スネーク登場",
+    name: "Snake Appears",
     timeThreshold: 180 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.SNAKE],
@@ -159,10 +159,10 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     },
   },
 
-  // レベル11: ウォールクリーパー導入（難易度上昇）
+  // Level 11: Wall Creeper Introduction (Increased difficulty)
   {
     id: 11,
-    name: "壁這い登場",
+    name: "Wall Crawler Appears",
     timeThreshold: 200 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.WALL_CREEPER],
@@ -174,10 +174,10 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     },
   },
 
-  // レベル12: ゴースト導入（難易度上昇）
+  // Level 12: Ghost Introduction (Increased difficulty)
   {
     id: 12,
-    name: "幽霊登場",
+    name: "Ghost Appears",
     timeThreshold: 220 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.GHOST],
@@ -189,10 +189,10 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     },
   },
 
-  // レベル13: スワーム導入（難易度上昇）
+  // Level 13: Swarm Introduction (Increased difficulty)
   {
     id: 13,
-    name: "群れ登場",
+    name: "Swarm Appears",
     timeThreshold: 240 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.SWARM],
@@ -204,10 +204,10 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
     },
   },
 
-  // レベル14-19: 高難易度混合戦闘（12-15匹程度）
+  // Level 14-19: High Difficulty Mixed Combat (Around 12-15 enemies)
   {
     id: 14,
-    name: "混合戦闘IV",
+    name: "Mixed Combat IV",
     timeThreshold: 260 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.CHASER, EnemyType.SPLITTER, EnemyType.SPEEDSTER],
@@ -221,7 +221,7 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
 
   {
     id: 15,
-    name: "混合戦闘V",
+    name: "Mixed Combat V",
     timeThreshold: 280 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.MIMIC, EnemyType.SNAKE, EnemyType.WALL_CREEPER],
@@ -235,7 +235,7 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
 
   {
     id: 16,
-    name: "混合戦闘VI",
+    name: "Mixed Combat VI",
     timeThreshold: 300 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [EnemyType.GHOST, EnemyType.SWARM, EnemyType.SPEEDSTER],
@@ -249,7 +249,7 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
 
   {
     id: 17,
-    name: "混合戦闘VII",
+    name: "Mixed Combat VII",
     timeThreshold: 320 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [
@@ -268,7 +268,7 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
 
   {
     id: 18,
-    name: "混合戦闘VIII",
+    name: "Mixed Combat VIII",
     timeThreshold: 340 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [
@@ -287,7 +287,7 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
 
   {
     id: 19,
-    name: "最終試練",
+    name: "Final Trial",
     timeThreshold: 360 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [
@@ -307,7 +307,7 @@ const SIMPLE_LEVELS: SimpleLevel[] = [
 
   {
     id: 20,
-    name: "全敵統合",
+    name: "All Enemies Integrated",
     timeThreshold: 380 * FRAMES_PER_SECOND,
     duration: 20 * FRAMES_PER_SECOND,
     enemyTypes: [

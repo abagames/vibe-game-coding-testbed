@@ -22,10 +22,10 @@ import { SimpleLevelManager } from "./LevelManager.js";
 
 const INITIAL_LIVES = 3;
 const SNAKE_MOVEMENT_INTERVAL = 8; // Move once every 8 frames
-const INITIAL_SNAKE_LENGTH = 12; // 初期の蛇の長さ
-const SCORE_GROWTH_THRESHOLD = 1000; // スコア成長の閾値
-const LENGTH_FOR_EXTRA_LIFE = 30; // 機数増加の長さ閾値
-const MAX_LIVES = 5; // 最大機数
+const INITIAL_SNAKE_LENGTH = 12;
+const SCORE_GROWTH_THRESHOLD = 1000;
+const LENGTH_FOR_EXTRA_LIFE = 30;
+const MAX_LIVES = 5;
 
 enum Direction {
   UP,
@@ -57,11 +57,11 @@ export interface BlasnakeGameOptions {
   initialLives?: number;
   movementInterval?: number;
   enemyCount?: number;
-  // デバッグ用オプション
+  // Debug options
   debugMode?: boolean;
   invincible?: boolean;
-  timeAcceleration?: number; // 時間進行の倍率（1.0 = 通常、2.0 = 2倍速）
-  constrainToBounds?: boolean; // 画面境界での移動制約
+  timeAcceleration?: number; // Time progression multiplier (1.0 = normal, 2.0 = double speed)
+  constrainToBounds?: boolean; // Movement constraint at screen boundaries
   startInPlayingState?: boolean; // Option to start the game directly in the playing state
   audioService?: AudioService; // Add audioService for BaseGame, though CoreGameLogic itself doesn't use it directly for its own sounds, it's for the renderer (BaseGame)
 }

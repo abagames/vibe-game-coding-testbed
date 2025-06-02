@@ -10,7 +10,7 @@ import {
 } from "./types.js";
 import { cglColor, CellAttributes } from "../../../core/coreTypes.js";
 
-// グローバルな敵ID生成システム
+// Global enemy ID generation system
 export class GlobalEnemyIdGenerator {
   private static instance: GlobalEnemyIdGenerator;
   private nextId: number = 1;
@@ -44,7 +44,7 @@ export abstract class BaseEnemyManager {
   protected destroyEffects: EnemyDestroyEffect[] = [];
   protected scoreDisplayEffects: ScoreDisplayEffect[] = [];
 
-  // 抽象メソッド - 各敵タイプで実装
+  // Abstract method - Implement in each enemy type
   abstract createEnemy(
     type: EnemyType,
     position: Position,
@@ -56,7 +56,7 @@ export abstract class BaseEnemyManager {
     attributes: CellAttributes;
   };
 
-  // 共通メソッド
+  // Common methods
   public addEnemy(enemy: Enemy): void {
     this.enemies.set(enemy.id, enemy);
   }
@@ -85,23 +85,18 @@ export abstract class BaseEnemyManager {
     };
 
     for (const enemy of this.enemies.values()) {
-      // 点滅状態の更新
       this.updateBlinking(enemy);
 
-      // 破壊フラグチェック
       if (enemy.isDestroyed) {
         result.enemiesToRemove.push(enemy.id);
         continue;
       }
 
-      // 敵固有のロジック更新
       this.updateEnemyLogic(enemy, gameState);
 
-      // 移動処理
       this.updateMovement(enemy, gameState);
     }
 
-    // 破壊された敵を削除
     for (const id of result.enemiesToRemove) {
       this.removeEnemy(id);
     }
@@ -133,7 +128,7 @@ export abstract class BaseEnemyManager {
   }
 
   protected moveEnemy(enemy: Enemy, gameState: GameState): void {
-    // デフォルトのランダム移動（各敵タイプでオーバーライド可能）
+    // Default random movement (can be overridden by each enemy type)
     if (Math.random() < 0.3) {
       enemy.direction = Math.floor(Math.random() * 4);
     }
@@ -143,7 +138,6 @@ export abstract class BaseEnemyManager {
       enemy.x = newPos.x;
       enemy.y = newPos.y;
     } else {
-      // 移動できない場合は方向を変更
       enemy.direction = Math.floor(Math.random() * 4);
     }
   }
@@ -170,18 +164,18 @@ export abstract class BaseEnemyManager {
   }
 
   protected isValidPosition(pos: Position, gameState: GameState): boolean {
-    // 壁チェック（画面境界）
+    // Wall check (screen boundary)
     if (pos.x < 1 || pos.x >= 39 || pos.y < 2 || pos.y >= 24) {
       return false;
     }
 
-    // スネーク全体との衝突チェック（頭部と胴体すべて）
+    // Collision check with the entire snake (head and all body parts)
     const hasSnake = gameState.snakeSegments.some(
       (segment) => segment.x === pos.x && segment.y === pos.y
     );
     if (hasSnake) return false;
 
-    // 他の敵との衝突チェック（点滅中でない敵のみ）
+    // Collision check with other enemies (only non-blinking enemies)
     const hasOtherEnemy = this.getAllEnemies().some(
       (enemy) => !enemy.isBlinking && enemy.x === pos.x && enemy.y === pos.y
     );
@@ -194,19 +188,18 @@ export abstract class BaseEnemyManager {
     return GlobalEnemyIdGenerator.getInstance().generateId(enemyType);
   }
 
-  // エフェクト管理
+  // Effect management
   public addDestroyEffect(effect: EnemyDestroyEffect): void {
     this.destroyEffects.push(effect);
   }
 
   public updateDestroyEffects(): void {
-    // 破壊エフェクトの更新
     for (let i = this.destroyEffects.length - 1; i >= 0; i--) {
       this.destroyEffects[i].duration--;
       if (this.destroyEffects[i].duration <= 0) {
         const finishedEffect = this.destroyEffects[i];
 
-        // 破壊エフェクト終了時にスコア表示エフェクトを作成
+        // Create score display effect when destruction effect ends
         if (finishedEffect.score > 0) {
           const baseScore =
             finishedEffect.multiplier > 0
@@ -216,7 +209,7 @@ export abstract class BaseEnemyManager {
           this.scoreDisplayEffects.push({
             x: finishedEffect.x,
             y: finishedEffect.y,
-            duration: 90, // 1.5秒間表示
+            duration: 90, // Display for 1.5 seconds
             maxDuration: 90,
             score: finishedEffect.score,
             baseScore: baseScore,
@@ -228,7 +221,6 @@ export abstract class BaseEnemyManager {
       }
     }
 
-    // スコア表示エフェクトの更新
     for (let i = this.scoreDisplayEffects.length - 1; i >= 0; i--) {
       this.scoreDisplayEffects[i].duration--;
       if (this.scoreDisplayEffects[i].duration <= 0) {
@@ -245,7 +237,7 @@ export abstract class BaseEnemyManager {
     return this.scoreDisplayEffects;
   }
 
-  // 敵の破壊処理
+  // Enemy destruction processing
   public destroyEnemy(
     id: string,
     score: number = 0,
@@ -256,7 +248,7 @@ export abstract class BaseEnemyManager {
 
     enemy.isDestroyed = true;
 
-    // 破壊エフェクトを追加（スコア情報は保持するが表示はしない）
+    // Add destruction effect (keep score information but do not display)
     this.addDestroyEffect({
       x: enemy.x,
       y: enemy.y,
@@ -269,7 +261,7 @@ export abstract class BaseEnemyManager {
     return true;
   }
 
-  // 領域内の敵を取得
+  // Get enemies in area
   public getEnemiesInArea(startPos: Position, endPos: Position): Enemy[] {
     const minX = Math.min(startPos.x, endPos.x);
     const maxX = Math.max(startPos.x, endPos.x);
@@ -282,7 +274,7 @@ export abstract class BaseEnemyManager {
     );
   }
 
-  // 特定位置の敵を取得
+  // Get enemy at specific position
   public getEnemyAtPosition(pos: Position): Enemy | null {
     return (
       this.getAllEnemies().find(
@@ -291,7 +283,7 @@ export abstract class BaseEnemyManager {
     );
   }
 
-  // デバッグ情報
+  // Debug information
   public getDebugInfo(): any {
     return {
       totalEnemies: this.enemies.size,

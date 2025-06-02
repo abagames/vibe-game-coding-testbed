@@ -122,7 +122,6 @@ export class ConsoleSimulator {
   private _logAndRenderState(): void {
     const screenData = this.gameInstance.getVirtualScreenData();
 
-    // デバッグ情報はconsole.logで出力（必要時のみ）
     const inputDirections = [];
     if (this.lastInput.up) inputDirections.push("up");
     if (this.lastInput.down) inputDirections.push("down");
@@ -130,12 +129,11 @@ export class ConsoleSimulator {
     if (this.lastInput.right) inputDirections.push("right");
     if (this.lastInput.action1) inputDirections.push("action1");
 
-    // デバッグ情報をconsole.logで出力（コメントアウト可能）
+    // Output debug information to console.log
     // console.log(`--- Tick: ${this.tickCount} (Mode: ${this.mode}) ---`);
     // console.log(`Input: ${inputDirections.join(", ") || "None"}`);
     // console.log(`Score: ${this.gameInstance.getScore()} | Lives: ${this.gameInstance.getLives()} | GameOver: ${this.gameInstance.isGameOver()}`);
 
-    // ゲーム画面のみを表示
     let output = "-".repeat(this.screenWidth + 2) + "\n"; // Top border
     for (let y = 0; y < this.screenHeight; y++) {
       output += "|"; // Left border
