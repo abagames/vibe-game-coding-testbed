@@ -93,12 +93,13 @@ export abstract class BaseGame implements GameCore {
 
   public drawText(
     text: string,
-    x: number,
-    y: number,
+    _x: number,
+    _y: number,
     attributes?: CellAttributes
   ): void {
+    const x = Math.floor(_x);
+    const y = Math.floor(_y);
     if (y < 0 || y >= VIRTUAL_SCREEN_HEIGHT) {
-      console.warn(`drawText: y coordinate (${y}) out of bounds.`);
       return;
     }
 
