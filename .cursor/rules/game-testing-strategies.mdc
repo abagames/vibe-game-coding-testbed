@@ -13,29 +13,67 @@ Don't wait for bugs to surface naturally - actively hunt them down using control
 ### Simulation-Based Testing Pattern
 
 #### 1. Create Dedicated Test Simulations
-For each game in `src/games/[gameName]/`, create a `sim.ts` file that:
-- Isolates specific game mechanics
-- Uses controlled input sequences
-- Provides detailed logging of internal state
-- Outputs visual representations of game state
+For each game in `src/games/[gameName]/`, create a `sim.ts` file. This file should:
+- Import the game's core logic (e.g., `YourGameClass` from `./core.js`).
+- Instantiate the game, often with modified parameters for specific test scenarios.
+- Use controlled input sequences or input generation strategies.
+- Provide detailed logging of internal state and a visual representation of the game state.
 
-Example structure:
+**Example Structure (Option A: Using a utility like `ConsoleSimulator` - Recommended for structured tests):**
 ```typescript
 // src/games/[gameName]/sim.ts
-import { CoreGameLogic } from "./core.js";
+import { YourGameClass, YourGameOptions } from "./core.js";
+import { ConsoleSimulator } from "../../utils/consoleSimulator.js";
+// import { NodeAudioService } from "../../utils/NodeAudioService.js"; // If audio testing is needed
 
-const game = new CoreGameLogic({
+const gameOptions: YourGameOptions = {
   // Modified parameters for testing
   initialLives: 1,
-  movementInterval: 1, // Faster for testing
+  // gameSpecificParameter: testValue,
+  // audioService: new NodeAudioService(), // Example for audio
+};
+
+const game = new YourGameClass(gameOptions);
+
+// Example: Predefined input sequence (ConsoleSimulator uses single char codes)
+const predefinedMoves: string[] = "rrrr.a.dddd.a.llll".split(""); // . for no-op, a for action1
+
+const simulator = new ConsoleSimulator(game, "predefined", {
+  totalTicks: 100, // How many frames to simulate
+  tickDurationMs: 50, // Speed of simulation (ms per tick)
+  predefinedMoves: predefinedMoves,
 });
 
-// Controlled input sequence
-const inputs = [
-  { right: true },
-  { down: true },
-  // ... specific sequence to test edge case
-];
+game.initializeGame(); // Ensure game is initialized before simulation
+simulator.run();
+```
+*The `ConsoleSimulator` (from `src/utils/consoleSimulator.ts`) provides modes like "predefined", "random", "fixed" input, and handles structured screen rendering and tick management.*
+
+**Example Structure (Option B: Direct simulation loop - For simpler or highly custom tests):**
+```typescript
+// src/games/[gameName]/sim.ts
+import { YourGameClass, YourGameOptions } from "./core.js";
+import { InputState, VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT } from "../../core/coreTypes.js";
+
+function printGameScreen(game: YourGameClass) { /* ... see visualization section ... */ }
+
+const gameOptions: YourGameOptions = { initialLives: 1 };
+const game = new YourGameClass(gameOptions);
+game.initializeGame();
+
+let frame = 0;
+const maxFrames = 200;
+
+while(frame < maxFrames && !game.isGameOver()) {
+  const input: InputState = { /* construct desired input for the frame */ };
+  // Example: input.right = true; if (frame % 10 === 0) input.action1 = true;
+  
+  game.update(input);
+  printGameScreen(game); // Visualize state
+  console.log(`Frame: ${frame}, Score: ${game.getScore()}, Lives: ${game.getLives()}`);
+  frame++;
+}
+console.log("Simulation ended.");
 ```
 
 #### 2. Parameter Manipulation for Edge Cases
@@ -64,24 +102,32 @@ enemySystem.updateSpawnSettings({
 ```
 
 #### 3. State Visualization and Logging
-Add comprehensive logging to expose internal state:
+Add comprehensive logging to expose internal state. For screen visualization in the console, a helper function is useful:
 
 ```typescript
-// Visual state output
-console.log("=== CURRENT SCREEN STATE ===");
-const screenData = game.getVirtualScreenData();
-for (let y = 0; y < screenData.length; y++) {
-  let line = "|";
-  for (let x = 0; x < screenData[y].length; x++) {
-    line += screenData[y][x].char;
+// Example printGameScreen function (adapt VIRTUAL_SCREEN_WIDTH/HEIGHT if needed)
+import { VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT } from "../../core/coreTypes.js"; // Or from your game's constants
+
+function printGameScreen(game: YourGameClass): void { // YourGameClass should implement getVirtualScreenData()
+  const screenData = game.getVirtualScreenData();
+  let headerFooter = "+" + "-".repeat(VIRTUAL_SCREEN_WIDTH) + "+";
+  console.log("\n" + headerFooter);
+  for (let y = 0; y < VIRTUAL_SCREEN_HEIGHT; y++) {
+    let row = "|";
+    for (let x = 0; x < VIRTUAL_SCREEN_WIDTH; x++) {
+      row += screenData[y][x]?.char || " "; // Access char safely
+    }
+    row += "|";
+    console.log(row);
   }
-  line += "|";
-  console.log(line);
+  console.log(headerFooter);
+  console.log(`Score: ${game.getScore()}, Lives: ${game.getLives()}, GameOver: ${game.isGameOver()}`);
+  // Add any other relevant game-specific state here
 }
 
-// Internal state logging
-console.log(`Snake Head: (${head.x},${head.y}), Length: ${snake.length}`);
-console.log(`Guidelines: [${guidelines.map(g => `(${g.x},${g.y})`).join(" ")}]`);
+// Internal state logging (remains as is)
+// console.log(`Snake Head: (${head.x},${head.y}), Length: ${snake.length}`);
+// console.log(`Guidelines: [${guidelines.map(g => `(${g.x},${g.y})`).join(" ")}]`);
 ```
 
 ### Specific Testing Strategies

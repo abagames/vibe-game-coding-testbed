@@ -24,29 +24,43 @@ interface YourGameOptions {
 }
 
 constructor(options: YourGameOptions = {}) {
-  super(options); // Passes { initialLives, gameSpeed } to BaseGame
+  super(options); // Passes relevant options to BaseGame
   // Game-specific initialization
 }
 ```
 
 ### Available BaseGame Methods
-- `drawText(text, x, y, attributes?)`: Draw text to virtual screen
-- `drawCenteredText(text, y, attributes?)`: Draw centered text at y coordinate
-- `getCellInfo(x, y)`: Get cell information at coordinates
-- `addScore(value)`: Modify score
-- `loseLife()`: Decrease lives, handle game over
-- `winGame()`: Mark game as won and trigger game over
-- `getScore()`, `getLives()`, `isGameOver()`, `isGameWon()`: State getters
-- `getVirtualScreenData()`: Get the full grid
-- `renderStandardUI()`: Render score and lives display
-- `renderGameOverScreen(wonGame?)`: Render game over screen
-- `setGameSpeed(speed)`, `getGameSpeed()`, `adjustGameSpeed(delta)`: Speed control
+- `drawText(text, x, y, attributes?)`: Draw text to virtual screen.
+- `drawCenteredText(text, y, attributes?)`: Draw centered text at y coordinate.
+- `getCellInfo(x, y)`: Get cell information at coordinates.
+- `addScore(value)`: Modify score. Updates session high score if current score is higher.
+- `loseLife()`: Decrease lives. If lives reach 0, triggers game over.
+- `gainLife(count?: number)`: Increase lives by `count` (default 1).
+- `getScore()`: Get current score.
+- `getLives()`: Get current number of lives.
+- `isGameOver()`: Check if the game is over (returns boolean based on `gameOverState`).
+- `triggerGameOver()`: Manually end the game (sets `gameOverState` to true) and commit high score.
+- `getVirtualScreenData()`: Get the full grid data.
+- `renderStandardUI()`: Draws score, lives, and restart instruction. Typically called by `BaseGame.update()`.
+- `renderGameOverScreen()`: Draws the game over message, final score, high score, and restart prompt. Called by `BaseGame.update()` when `isGameOver()` is true. Note: Takes no arguments in `BaseGame.ts`.
+- `setIsDemoPlay(isDemo: boolean)`: Set demo play mode (mutes audio by default).
+- `play(sound: SoundEffectType, seed?: number)`: Play a sound effect (if not in demo mode and audioService is available).
+- `playMml(mml: string | string[])`: Play MML music (if not in demo mode and audioService is available).
+- `playBgm()`: Start background music (if not in demo mode and audioService is available).
+- `stopBgm()`: Stop background music (if not in demo mode and audioService is available).
+- `getHighScore()`: Get the current session's or stored high score.
+- `commitHighScoreToStorage()`: Manually trigger saving the current high score (also done automatically on game over if enabled).
+- `resetGame()` (protected): Resets score, lives to initial, `gameOverState` to false, and clears screen. Useful for restarting game logic, often called in the derived class's `initializeGame` or by a restart mechanism.
 
 ### BaseGame Constructor Options
 ```typescript
 interface BaseGameOptions {
-  initialLives?: number; // Default: 3
-  gameSpeed?: number;    // Default: 1.0, range: 0.1-3.0
+  initialLives?: number;    // Default: 3
+  isDemoPlay?: boolean;     // Default: false. If true, audio might be disabled by game logic.
+  audioService?: AudioService; // Optional. For sound and music playback.
+  gameName?: string;        // Optional. Used for naming the game, e.g., in high score storage.
+  enableHighScoreStorage?: boolean; // Default: false. If true, game will attempt to store/retrieve high scores.
+  isBrowserEnvironment?: boolean; // Default: false. Must be true for high score storage to work (indicates localStorage availability).
 }
 ```
 
