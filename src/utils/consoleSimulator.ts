@@ -9,7 +9,7 @@ import {
 
 type SimulationMode = "fixed" | "random" | "interactive" | "predefined";
 
-interface ConsoleSimulatorOptions {
+export interface ConsoleSimulatorOptions {
   predefinedMoves?: string[]; // For 'predefined' mode
   fixedInput?: InputState; // For 'fixed' mode
   totalTicks?: number;
