@@ -22,6 +22,7 @@ export interface CellAttributes {
   entityType?: string; // e.g., 'player', 'wall', 'item', 'enemy'
   entityId?: string; // Unique ID for an entity instance
   isPassable?: boolean; // For collision detection
+  blink?: boolean; // Add blink property for flashing text/effects
   // Add other attributes as needed
 }
 
