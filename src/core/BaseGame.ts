@@ -18,13 +18,14 @@ export abstract class BaseGame implements GameCore {
   protected gameOverState: boolean;
   private readonly initialLives: number;
   protected isDemoPlay: boolean; // Demo play mode flag
-  protected audioService?: AudioService; // Added audioService instance variable
+  protected audioService?: AudioService; // AudioService instance variable
+  public gameTickCounter: number; // Global game tick tracking
 
   // High score options
   protected gameName?: string;
   protected enableHighScoreStorage: boolean;
   protected isBrowserEnvironment: boolean;
-  protected internalHighScore: number = 0; // Session high score
+  protected internalHighScore: number; // Session high score
 
   constructor(options: BaseGameOptions = {}) {
     const {
@@ -42,6 +43,7 @@ export abstract class BaseGame implements GameCore {
     this.lives = initialLives;
     this.gameOverState = false;
     this.virtualScreen = this.initializeVirtualScreen();
+    this.gameTickCounter = 0;
 
     // Store high score options
     this.gameName = gameName;
@@ -229,8 +231,10 @@ export abstract class BaseGame implements GameCore {
     this.score = 0;
     this.lives = this.initialLives;
     this.gameOverState = false;
-    this.virtualScreen = this.initializeVirtualScreen();
-    // internalHighScore is NOT reset here
+    this.clearVirtualScreen();
+    this.gameTickCounter = 0; // Reset game tick counter
+    // Derived classes should call super.resetGame() if they override this
+    // and then perform their own game-specific resets.
   }
 
   /**
@@ -325,13 +329,16 @@ export abstract class BaseGame implements GameCore {
 
   // Template method that clears screen each frame before calling updateGame
   public update(inputState: InputState): void {
-    this.clearVirtualScreen(); // Clear screen only when game is active and updating
-    if (!this.gameOverState) {
-      this.updateGame(inputState); // Call abstract game logic update
-    } else {
-      // Render game over screen if game ended this frame or is ongoing
+    this.gameTickCounter++; // Increment global game tick counter
+    if (!this.isGameOver()) {
+      this.clearVirtualScreen(); // Clear screen only if game is not over
+      this.updateGame(inputState); // Call the game-specific update logic
+    }
+    // If game is over (either before this update or during updateGame), render game over screen
+    if (this.isGameOver()) {
+      this.clearVirtualScreen(); // Ensure screen is clear before game over screen
       this.renderGameOverScreen();
     }
-    this.renderStandardUI();
+    this.renderStandardUI(); // Render score, lives, etc.
   }
 }
