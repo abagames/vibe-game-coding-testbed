@@ -66,6 +66,8 @@ export function renderVirtualScreen(
         }
         text(cell.char, drawX, drawY, {
           color: cellColor as Color,
+          backgroundColor:
+            (cell.attributes.backgroundColor as Color) || "transparent",
           isSmallText: true,
         });
       }
