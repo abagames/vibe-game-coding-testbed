@@ -1,0 +1,32 @@
+import { HopwayGame, HopwayGameOptions } from "./core";
+import {
+  initStandardTextGame,
+  StandardGameHelperOptions,
+} from "../../utils/browserHelper.js";
+import { BrowserAudioService } from "../../utils/BrowserAudioService.js";
+
+const gameFactory = () => {
+  const gameOptions: HopwayGameOptions = {
+    isBrowserEnvironment: true,
+    enableHighScoreStorage: true,
+    audioService: new BrowserAudioService(),
+    gameName: "Hopway", // gameName for high score key
+
+    carDensity: 0.02,
+    maxCarSpeed: 0.3,
+    minCarSpeed: 0.1,
+    playerMoveInterval: 5,
+    initialLives: 3,
+    minCarFollowingDistance: 2.0,
+  };
+  return new HopwayGame(gameOptions);
+};
+
+const helperOptions: Partial<StandardGameHelperOptions> = {
+  gameName: "Hopway", // Also ensure gameName is part of helperOptions if browserHelper uses it
+  enableHighScoreStorage: true,
+  enableGlobalReset: true, // Default behavior for 'R' key restart
+};
+
+// Initialize and start the game in the browser
+initStandardTextGame(gameFactory, helperOptions);
