@@ -41,6 +41,22 @@ export class EventManager {
   }
 
   /**
+   * Calculate the maximum number of concurrent events based on game time.
+   * Assumes 60 ticks per second (60 FPS).
+   * 1st minute: max 1 event
+   * 2nd minute: max 2 events
+   * ... up to 5th minute: max 5 events
+   * After 5 minutes: stays at max 5 events
+   */
+  private getMaxConcurrentEvents(): number {
+    const ticksPerSecond = 60;
+    const ticksPerMinute = ticksPerSecond * 60;
+    const currentMinute =
+      Math.floor(this.game.gameTickCounter / ticksPerMinute) + 1;
+    return Math.min(currentMinute, 5);
+  }
+
+  /**
    * Registers a type of event that can be triggered in the game.
    */
   public registerEventType(
@@ -127,11 +143,15 @@ export class EventManager {
   }
 
   private tryToTriggerEvent(): void {
-    // Optional: Limit to one major event at a time, or add more complex rules for concurrent events
-    // For now, let's allow one event to trigger per check interval if conditions are met.
-    // if(this.activeEvents.some(e => e.isActive)) {
-    //   return; // Example: only one active event at a time
-    // }
+    // Check if we've reached the maximum concurrent events limit
+    const maxConcurrentEvents = this.getMaxConcurrentEvents();
+    const currentActiveEvents = this.activeEvents.filter(
+      (e) => e.isActive
+    ).length;
+
+    if (currentActiveEvents >= maxConcurrentEvents) {
+      return; // Already at maximum concurrent events for current time
+    }
 
     const availableEvents = this.registeredEventTypes.filter((reg) => {
       // Check if an event of this type is already active
@@ -154,7 +174,9 @@ export class EventManager {
     for (const registration of availableEvents) {
       if (Math.random() < registration.probability) {
         console.log(
-          `EventManager: Triggering new event "${registration.eventType}"`
+          `EventManager: Triggering new event "${registration.eventType}" (${
+            currentActiveEvents + 1
+          }/${maxConcurrentEvents} concurrent events)`
         );
         const newEvent = registration.factory(
           ...(registration.factoryArgs || [])
@@ -304,5 +326,9 @@ export class EventManager {
       }
     }
     return null;
+  }
+
+  public getActiveEvents(): GameEvent[] {
+    return this.activeEvents;
   }
 }

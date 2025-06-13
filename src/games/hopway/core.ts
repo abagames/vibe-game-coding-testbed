@@ -31,26 +31,124 @@ const BOTTOM_SAFE_ROW = VIRTUAL_SCREEN_HEIGHT - 2;
 const TOP_SAFE_ROW = 1;
 export const MEDIAN_ROW = 12;
 
-// Original slow car probability, now used as a default
-const DEFAULT_SLOW_CAR_PROBABILITY = 0;
-const SLOW_CAR_SPEED_FACTOR = 0.4;
-const SLOW_CAR_CHAR = "T";
+// Score Zone Constants
+interface ScoreZone {
+  x: number;
+  width: number;
+  multiplier: number;
+  char: string;
+  color: cglColor;
+}
 
-// Car Mechanics
-const CAR_CHAR = "#";
-const CAR_SPAWN_ATTEMPT_PROBABILITY = 0.1;
-const DYNAMIC_SPAWN_TARGET_MULTIPLIER = 1.2;
-const LANE_CHANGE_SIGNAL_DURATION_TICKS = 15;
-const LANE_CHANGE_COOLDOWN_TICKS = 30;
-const LANE_CHANGE_INITIATE_DISTANCE_FACTOR = 1.5;
-const LANE_CHANGE_SAFETY_CHECK_AHEAD_FACTOR = 1.5;
-const LANE_CHANGE_SAFETY_CHECK_BEHIND_FACTOR = 1.0;
-const SIGNAL_CHAR_UP = "^";
-const SIGNAL_CHAR_DOWN = "v";
+class ScoreZoneManager {
+  private zones: ScoreZone[] = [];
+  private lastGenerationTick: number = 0;
+  private readonly generationInterval: number = 600; // Generate new zones every 10 seconds
 
-// New Time-based Spawning Constants
-const BASE_SPAWN_INTERVAL_TICKS = 150; // Average ticks between spawns
-const SPAWN_INTERVAL_VARIATION_TICKS = 50; // Random variation in spawn time
+  public generateZones(): void {
+    this.zones = [];
+    const availablePositions: number[] = [];
+
+    // Create list of all possible starting positions
+    for (let x = 0; x < VIRTUAL_SCREEN_WIDTH; x++) {
+      availablePositions.push(x);
+    }
+
+    // Try to place zones
+    const zoneTypes = [
+      {
+        multiplier: 2,
+        width: 6,
+        probability: 0.5,
+        char: "2",
+        color: "green" as cglColor,
+      },
+      {
+        multiplier: 3,
+        width: 4,
+        probability: 1 / 3,
+        char: "3",
+        color: "yellow" as cglColor,
+      },
+      {
+        multiplier: 5,
+        width: 2,
+        probability: 0.2,
+        char: "5",
+        color: "red" as cglColor,
+      },
+    ];
+
+    for (const zoneType of zoneTypes) {
+      if (Math.random() < zoneType.probability) {
+        // Find a valid position for this zone
+        const validPositions = availablePositions.filter(
+          (x) =>
+            x + zoneType.width <= VIRTUAL_SCREEN_WIDTH &&
+            this.canPlaceZone(x, zoneType.width)
+        );
+
+        if (validPositions.length > 0) {
+          const randomIndex = Math.floor(Math.random() * validPositions.length);
+          const startX = validPositions[randomIndex];
+
+          // Create zone
+          this.zones.push({
+            x: startX,
+            width: zoneType.width,
+            multiplier: zoneType.multiplier,
+            char: zoneType.char,
+            color: zoneType.color,
+          });
+
+          // Remove occupied positions
+          for (let i = startX; i < startX + zoneType.width; i++) {
+            const index = availablePositions.indexOf(i);
+            if (index > -1) {
+              availablePositions.splice(index, 1);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private canPlaceZone(x: number, width: number): boolean {
+    // Check if the zone would overlap with existing zones
+    for (const zone of this.zones) {
+      if (!(x >= zone.x + zone.width || x + width <= zone.x)) {
+        return false; // Overlaps
+      }
+    }
+    return true;
+  }
+
+  public shouldGenerateNewZones(currentTick: number): boolean {
+    return currentTick - this.lastGenerationTick >= this.generationInterval;
+  }
+
+  public markGenerated(currentTick: number): void {
+    this.lastGenerationTick = currentTick;
+  }
+
+  public getZones(): ScoreZone[] {
+    return this.zones;
+  }
+
+  public getMultiplierAt(x: number): number {
+    for (const zone of this.zones) {
+      if (x >= zone.x && x < zone.x + zone.width) {
+        return zone.multiplier;
+      }
+    }
+    return 1; // Default multiplier
+  }
+
+  public reset(): void {
+    this.zones = [];
+    this.lastGenerationTick = 0;
+  }
+}
 
 export interface HopwayGameOptions extends BaseGameOptions {
   carDensity?: number;
@@ -62,6 +160,7 @@ export interface HopwayGameOptions extends BaseGameOptions {
   safeZoneChar?: string;
   slowCarProbability?: number;
   forceWeather?: WeatherType;
+  forceRoadConstruction?: boolean; // For testing construction obstacles
 }
 
 export class HopwayGame extends BaseGame {
@@ -74,6 +173,22 @@ export class HopwayGame extends BaseGame {
     dy: number;
     ticks: number;
   };
+  private playerCanMove: boolean; // Prevents movement until first key press after respawn
+  private previousInputState: InputState; // Track previous frame input for isJustPressed detection
+
+  // Death animation state
+  private isPlayingDeathAnimation: boolean = false;
+  private deathAnimationStartTick: number = 0;
+  private readonly deathAnimationDurationTicks: number = 120; // 2 seconds at 60fps
+  private deathAnimationFrame: number = 0;
+
+  // Score display animation state
+  private isShowingScoreDisplay: boolean = false;
+  private scoreDisplayStartTick: number = 0;
+  private readonly scoreDisplayDurationTicks: number = 60; // 1 second at 60fps
+  private scoreDisplayText: string = "";
+  private scoreDisplayX: number = 0;
+  private scoreDisplayY: number = 0;
 
   private playerMoveInterval: number;
   private safeZoneChar: string;
@@ -81,8 +196,15 @@ export class HopwayGame extends BaseGame {
   private eventManager: EventManager;
   private carManager: CarManager;
   private options: HopwayGameOptions;
+  private scoreZoneManager: ScoreZoneManager;
 
   public gameTickCounter: number = 0;
+
+  // Time-based scoring system
+  private timeScore: number = 1000; // Starting score that decreases over time
+  private lastTimeScoreDecreaseTick: number = 0;
+  private readonly timeScoreDecreaseInterval: number = 1; // Decrease every 60 ticks (1 second at 60fps)
+  private readonly timeScoreDecreaseAmount: number = 1; // Amount to decrease per interval
 
   constructor(options: HopwayGameOptions = {}) {
     super({
@@ -99,80 +221,93 @@ export class HopwayGame extends BaseGame {
     this.playerY = 0;
     this.lastPlayerMoveTick = 0;
     this.playerSlipState = { isSlipping: false, dx: 0, dy: 0, ticks: 0 };
+    this.playerCanMove = false;
+    this.previousInputState = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      action1: false,
+      r: false,
+    };
+    this.isPlayingDeathAnimation = false;
+    this.deathAnimationStartTick = 0;
+    this.deathAnimationFrame = 0;
 
     this.eventManager = new EventManager(this);
     this.carManager = new CarManager(this, options);
+    this.scoreZoneManager = new ScoreZoneManager();
 
     this.eventManager.registerEventType(
       "TRAFFIC_JAM",
       () => new TrafficJamEvent({ duration: 300 }), // ~5 seconds at 60tps
-      0.002, // Probability per check
+      0.002,
       1800 // Cooldown ticks
     );
     this.eventManager.registerEventType(
       "BROKEN_DOWN_CAR",
       () => new BrokenDownCarEvent({ duration: 900 }), // ~15 seconds
-      0.001, // Probability per check
-      4800 // Cooldown ticks
+      0.001,
+      2400 // Cooldown
     );
     this.eventManager.registerEventType(
       "ROAD_CONSTRUCTION",
       () => new RoadConstructionEvent({ duration: 1200 }), // ~20 seconds
-      0.001, // Probability per check
-      6000 // Cooldown
+      0.001,
+      3000 // Cooldown
     );
     this.eventManager.registerEventType(
       "EMERGENCY_VEHICLE",
       () => new EmergencyVehicleEvent(),
-      0.005, // High probability for debugging
-      3000 // Short cooldown for debugging
+      0.003,
+      3000 // Cooldown
     );
     this.eventManager.registerEventType(
       "CAR_COLLISION",
       () => new CarCollisionEvent({ duration: 600 }),
-      0.01,
-      1200
+      0.002,
+      1200 // Cooldown
     );
     this.eventManager.registerEventType(
       "WRONG_WAY_DRIVER",
       () => new WrongWayDriverEvent(),
-      0.003, // Probability
-      2500 // Cooldown ticks
+      0.003,
+      2500 // Cooldown
     );
     this.eventManager.registerEventType(
       "CLUMSY_TRUCK",
       () => new ClumsyTruckEvent(),
-      0.002, // Probability
-      2000 // Cooldown ticks
+      0.002,
+      2000 // Cooldown
     );
     this.eventManager.registerEventType(
       "WEATHER",
       () => new WeatherEvent({ duration: 900 }), // ~15 seconds
-      0.0025, // Probability per check
-      3000 // Cooldown ticks
+      0.0025,
+      3000 // Cooldown
     );
     this.eventManager.registerEventType(
       "POLICE_PRESENCE",
       () => new PolicePresenceEvent(this),
       0.0015,
-      4000
+      4000 // Cooldown
     );
     this.eventManager.registerEventType(
       "VIP_ESCORT",
       () => new VIPEscortEvent(),
-      0.001, // Rare event
+      0.001,
       8000 // Long cooldown
     );
     this.eventManager.registerEventType(
       "OIL_SLICK",
       () => new OilSlickEvent(),
-      0.003, // Probability
+      0.003,
       2000 // Cooldown
     );
     this.eventManager.registerEventType(
       "RUSH_HOUR",
       () => new RushHourEvent({}), // Use default options
-      0.001, // Rare event
+      0.001,
       5000 // Cooldown
     );
     this.eventManager.registerEventType(
@@ -184,8 +319,8 @@ export class HopwayGame extends BaseGame {
     this.eventManager.registerEventType(
       "POWER_OUTAGE",
       () => new PowerOutageEvent({ duration: 900 }),
-      0.0015, // Probability
-      5000 // Cooldown
+      0.0015,
+      4000 // Cooldown
     );
   }
 
@@ -196,8 +331,25 @@ export class HopwayGame extends BaseGame {
     this.lastPlayerMoveTick = -1;
     this.gameTickCounter = 0;
     this.playerSlipState = { isSlipping: false, dx: 0, dy: 0, ticks: 0 };
+    this.playerCanMove = false;
+    this.previousInputState = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      action1: false,
+      r: false,
+    };
+    this.timeScore = 1000;
+    this.lastTimeScoreDecreaseTick = 0;
+    this.isPlayingDeathAnimation = false;
+    this.deathAnimationStartTick = 0;
+    this.deathAnimationFrame = 0;
     this.carManager.initialize();
     this.eventManager.reset();
+    this.scoreZoneManager.reset();
+    this.scoreZoneManager.generateZones();
+    this.scoreZoneManager.markGenerated(this.gameTickCounter);
 
     if (this.options.forceWeather) {
       this.eventManager.manuallyTriggerEvent(
@@ -207,9 +359,15 @@ export class HopwayGame extends BaseGame {
         })
       );
     }
+
+    if (this.options.forceRoadConstruction) {
+      this.eventManager.manuallyTriggerEvent(
+        new RoadConstructionEvent({ duration: 9999 })
+      );
+    }
   }
 
-  protected updateGame(inputState: InputState): void {
+  public updateGame(inputState: InputState): void {
     if (this.isGameOver()) {
       if (inputState.r) {
         this.initializeGame();
@@ -223,6 +381,36 @@ export class HopwayGame extends BaseGame {
     }
 
     this.gameTickCounter++;
+
+    // Handle death animation
+    if (this.isPlayingDeathAnimation) {
+      this.updateDeathAnimation();
+      this.drawEverything();
+      return;
+    }
+
+    // Handle score display animation - but continue game updates
+    if (this.isShowingScoreDisplay) {
+      this.updateScoreDisplay();
+      // Continue game updates during score display
+      this.updateTimeScore();
+      this.updateScoreZones();
+      this.eventManager.update(inputState);
+      // Don't update player state during score display
+
+      const animalEvent = this.eventManager.getActiveEventByType(
+        "ANIMAL_CROSSING"
+      ) as AnimalCrossingEvent | undefined;
+      const animals = animalEvent ? animalEvent.getAnimals() : [];
+      this.carManager.update(animals);
+
+      this.drawEverything();
+      this.drawScoreDisplay();
+      return;
+    }
+
+    this.updateTimeScore();
+    this.updateScoreZones();
     this.eventManager.update(inputState);
     this.updatePlayerState(inputState);
 
@@ -241,15 +429,128 @@ export class HopwayGame extends BaseGame {
   }
 
   private levelComplete(): void {
-    this.addScore(100);
+    // Calculate score with multiplier based on player position
+    const multiplier = this.scoreZoneManager.getMultiplierAt(this.playerX);
+    const baseScore = 100 + this.timeScore;
+    const finalScore = baseScore * multiplier;
+
+    this.addScore(finalScore);
     this.play("powerUp");
-    this.playerX = PLAYER_START_X;
-    this.playerY = PLAYER_START_Y;
+
+    // Show multiplier effect if > 1
+    if (multiplier > 1) {
+      console.log(
+        `Score multiplied by ${multiplier}x! ${baseScore} × ${multiplier} = ${finalScore}`
+      );
+    }
+
+    // Reset time score for next level
+    this.timeScore = 1000;
+    this.lastTimeScoreDecreaseTick = this.gameTickCounter;
+
+    // Generate new score zones for next level
+    this.scoreZoneManager.generateZones();
+    this.scoreZoneManager.markGenerated(this.gameTickCounter);
+
+    // Show score display for 1 second at the goal position
+    this.isShowingScoreDisplay = true;
+    this.scoreDisplayStartTick = this.gameTickCounter;
+    this.scoreDisplayText = `+${finalScore.toLocaleString()}`;
+    this.scoreDisplayX = this.playerX; // Show at the goal position where player completed
+    this.scoreDisplayY = this.playerY; // Show at the goal position where player completed
+  }
+
+  private updateTimeScore(): void {
+    // Decrease time score over time
+    if (
+      this.gameTickCounter - this.lastTimeScoreDecreaseTick >=
+      this.timeScoreDecreaseInterval
+    ) {
+      this.timeScore = Math.max(
+        0,
+        this.timeScore - this.timeScoreDecreaseAmount
+      );
+      this.lastTimeScoreDecreaseTick = this.gameTickCounter;
+    }
+  }
+
+  private updateScoreZones(): void {
+    // Score zones are only generated when player completes a level
+    // No periodic generation during gameplay
+  }
+
+  private updateDeathAnimation(): void {
+    const elapsedTicks = this.gameTickCounter - this.deathAnimationStartTick;
+    this.deathAnimationFrame = elapsedTicks;
+
+    if (elapsedTicks >= this.deathAnimationDurationTicks) {
+      // Animation finished, respawn player
+      this.isPlayingDeathAnimation = false;
+      // Now actually lose the life after animation
+      super.loseLife();
+      if (!this.isGameOver()) {
+        this.resetPlayerPosition();
+      }
+    }
+  }
+
+  private updateScoreDisplay(): void {
+    const elapsedTicks = this.gameTickCounter - this.scoreDisplayStartTick;
+
+    if (elapsedTicks >= this.scoreDisplayDurationTicks) {
+      // Score display finished, complete the level transition
+      this.isShowingScoreDisplay = false;
+      this.resetPlayerPosition();
+    }
+  }
+
+  private startDeathAnimation(): void {
+    this.isPlayingDeathAnimation = true;
+    this.deathAnimationStartTick = this.gameTickCounter;
+    this.deathAnimationFrame = 0;
+  }
+
+  public override loseLife(): void {
+    // Don't lose life during death animation to prevent immediate game over
+    if (this.isPlayingDeathAnimation) {
+      return;
+    }
+    super.loseLife();
   }
 
   private updatePlayerState(inputState: InputState): void {
+    // Don't update player state during death animation
+    if (this.isPlayingDeathAnimation) {
+      return;
+    }
+
     let canMove =
       this.gameTickCounter - this.lastPlayerMoveTick >= this.playerMoveInterval;
+
+    // Check if player can move (must press a key first after respawn)
+    if (!this.playerCanMove) {
+      // Enable movement if any directional key is JUST pressed (isJustPressed)
+      const isJustPressedUp = inputState.up && !this.previousInputState.up;
+      const isJustPressedDown =
+        inputState.down && !this.previousInputState.down;
+      const isJustPressedLeft =
+        inputState.left && !this.previousInputState.left;
+      const isJustPressedRight =
+        inputState.right && !this.previousInputState.right;
+
+      if (
+        isJustPressedUp ||
+        isJustPressedDown ||
+        isJustPressedLeft ||
+        isJustPressedRight
+      ) {
+        this.playerCanMove = true;
+      } else {
+        // Update previous input state for next frame
+        this.previousInputState = { ...inputState };
+        return; // Cannot move until first key press
+      }
+    }
 
     // Process slip state first
     if (this.playerSlipState.isSlipping) {
@@ -278,6 +579,9 @@ export class HopwayGame extends BaseGame {
     if (dx !== 0 || dy !== 0) {
       this.movePlayer(dx, dy);
     }
+
+    // Update previous input state for next frame
+    this.previousInputState = { ...inputState };
   }
 
   private movePlayer(
@@ -320,6 +624,10 @@ export class HopwayGame extends BaseGame {
 
   private drawEverything(): void {
     this.drawSafeZones();
+    // Don't draw score zones during score display
+    if (!this.isShowingScoreDisplay) {
+      this.drawScoreZones();
+    }
     this.eventManager.drawActiveEvents();
     this.carManager.draw();
     this.drawPlayer();
@@ -329,10 +637,35 @@ export class HopwayGame extends BaseGame {
     // Render score and lives from BaseGame
     super.renderStandardUI();
 
-    // Custom message rendering
+    // Show current difficulty level (max concurrent events)
+    const maxEvents = this.getMaxConcurrentEvents();
+    const currentMinute = Math.floor(this.gameTickCounter / 3600) + 1;
+    this.drawText(`Minute ${currentMinute} (Max Events: ${maxEvents})`, 1, 0, {
+      color: "white",
+    });
+
+    // Show time score in the bottom right corner
+    const timeScoreText = `Time: ${this.timeScore}`;
+    const timeScoreX = VIRTUAL_SCREEN_WIDTH - timeScoreText.length;
+    this.drawText(timeScoreText, timeScoreX, VIRTUAL_SCREEN_HEIGHT - 1, {
+      color:
+        this.timeScore > 500
+          ? "green"
+          : this.timeScore > 200
+          ? "yellow"
+          : "red",
+    });
+
+    // Custom message rendering (shortened to fit with time score)
     const eventMessage = this.eventManager.getActiveEventMessage();
     if (eventMessage) {
-      this.drawText(eventMessage, 1, VIRTUAL_SCREEN_HEIGHT - 1, {
+      // Truncate event message if it would overlap with time score
+      const maxMessageLength = VIRTUAL_SCREEN_WIDTH - timeScoreText.length - 2;
+      const truncatedMessage =
+        eventMessage.length > maxMessageLength
+          ? eventMessage.substring(0, maxMessageLength - 3) + "..."
+          : eventMessage;
+      this.drawText(truncatedMessage, 1, VIRTUAL_SCREEN_HEIGHT - 1, {
         color: "yellow",
       });
     } else {
@@ -341,6 +674,13 @@ export class HopwayGame extends BaseGame {
         color: "light_black",
       });
     }
+  }
+
+  private getMaxConcurrentEvents(): number {
+    const ticksPerSecond = 60;
+    const ticksPerMinute = ticksPerSecond * 60;
+    const currentMinute = Math.floor(this.gameTickCounter / ticksPerMinute) + 1;
+    return Math.min(currentMinute, 7);
   }
 
   private drawSafeZones(): void {
@@ -367,40 +707,87 @@ export class HopwayGame extends BaseGame {
     );
   }
 
+  private drawScoreZones(): void {
+    const zones = this.scoreZoneManager.getZones();
+    for (const zone of zones) {
+      // Draw the score zone with width-appropriate format
+      let zoneText: string;
+      if (zone.width === 6) {
+        zoneText = `--x${zone.char}--`; // --x2--
+      } else if (zone.width === 4) {
+        zoneText = `-x${zone.char}-`; // -x3-
+      } else if (zone.width === 2) {
+        zoneText = `x${zone.char}`; // x5
+      } else {
+        // Fallback for any other width
+        zoneText = `x${zone.char}`;
+      }
+      this.drawText(zoneText, zone.x, TOP_SAFE_ROW, { color: zone.color });
+    }
+  }
+
   private drawPlayer(): void {
-    this.drawText("P", this.playerX, this.playerY, { color: "cyan" });
+    if (this.isPlayingDeathAnimation) {
+      // Death animation: cycle through different characters and colors
+      const animationChars = ["X", "*", "+", ".", " "];
+      const animationColors: cglColor[] = [
+        "red",
+        "yellow",
+        "white",
+        "light_black",
+        "light_black",
+      ];
+      const frameRate = 8; // Change character every 8 ticks
+      const charIndex =
+        Math.floor(this.deathAnimationFrame / frameRate) %
+        animationChars.length;
+
+      if (animationChars[charIndex] !== " ") {
+        this.drawText(animationChars[charIndex], this.playerX, this.playerY, {
+          color: animationColors[charIndex],
+        });
+      }
+    } else {
+      this.drawText("P", this.playerX, this.playerY, { color: "cyan" });
+    }
+  }
+
+  private drawScoreDisplay(): void {
+    // Draw the score display text at the goal position in white
+    const textLength = this.scoreDisplayText.length;
+    let displayX = this.scoreDisplayX;
+
+    // Adjust position to keep text on screen
+    if (displayX + textLength > VIRTUAL_SCREEN_WIDTH) {
+      displayX = VIRTUAL_SCREEN_WIDTH - textLength;
+    }
+    if (displayX < 0) {
+      displayX = 0;
+    }
+
+    this.drawText(this.scoreDisplayText, displayX, this.scoreDisplayY, {
+      color: "white",
+    });
   }
 
   private resetPlayerPosition(): void {
     this.playerX = PLAYER_START_X;
     this.playerY = PLAYER_START_Y;
     this.lastPlayerMoveTick = this.gameTickCounter; // Add a small delay before moving again
+    this.playerCanMove = false; // Require key press to start moving again
+    this.previousInputState = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      action1: false,
+      r: false,
+    };
   }
 
   private checkCollisions(): void {
     const cars = this.carManager.getCars();
     const playerCellContent = this.getCellInfo(this.playerX, this.playerY);
-
-    // Check for collision with animals from event
-    const animalEvent = this.eventManager.getActiveEventByType(
-      "ANIMAL_CROSSING"
-    ) as AnimalCrossingEvent | undefined;
-    if (animalEvent) {
-      const animals = animalEvent.getAnimals();
-      for (const animal of animals) {
-        if (
-          Math.floor(this.playerX) === Math.floor(animal.x) &&
-          this.playerY === animal.y
-        ) {
-          this.play("hit");
-          this.loseLife();
-          if (!this.isGameOver()) {
-            this.resetPlayerPosition();
-          }
-          return;
-        }
-      }
-    }
 
     // Check for collision with cars
     for (const car of cars) {
@@ -409,10 +796,7 @@ export class HopwayGame extends BaseGame {
         this.playerY === car.y
       ) {
         this.play("explosion");
-        this.loseLife();
-        if (!this.isGameOver()) {
-          this.resetPlayerPosition();
-        }
+        this.startDeathAnimation();
         return; // Only one collision per frame
       }
     }
@@ -423,10 +807,7 @@ export class HopwayGame extends BaseGame {
       playerCellContent.attributes.entityType === "static_obstacle"
     ) {
       this.play("hit");
-      this.loseLife();
-      if (!this.isGameOver()) {
-        this.resetPlayerPosition();
-      }
+      this.startDeathAnimation();
       return;
     }
   }
@@ -478,5 +859,9 @@ export class HopwayGame extends BaseGame {
     options: Partial<Car> = {}
   ): Car {
     return this.carManager.spawnCarInLane(y, direction, options);
+  }
+
+  public getPlayerY(): number {
+    return this.playerY;
   }
 }
