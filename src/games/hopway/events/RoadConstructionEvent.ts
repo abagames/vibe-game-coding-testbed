@@ -38,9 +38,31 @@ export class RoadConstructionEvent implements GameEvent {
       return;
     }
 
-    // Select a lane for construction
-    this.affectedLaneY =
-      this.options.laneY ?? lanes[Math.floor(Math.random() * lanes.length)].y;
+    // Select a lane for construction based on player position
+    if (this.options.laneY !== undefined) {
+      this.affectedLaneY = this.options.laneY;
+    } else {
+      const playerY = game.getPlayerY();
+      const screenMidpoint = 12;
+
+      // Filter lanes based on player position
+      let availableLanes: Array<{ y: number; direction: number }>;
+      if (playerY <= screenMidpoint) {
+        // Player is in upper half, place construction in lower half
+        availableLanes = lanes.filter((lane) => lane.y > screenMidpoint);
+      } else {
+        // Player is in lower half, place construction in upper half
+        availableLanes = lanes.filter((lane) => lane.y < screenMidpoint);
+      }
+
+      // If no lanes available on opposite side, use any lane
+      if (availableLanes.length === 0) {
+        availableLanes = lanes;
+      }
+
+      this.affectedLaneY =
+        availableLanes[Math.floor(Math.random() * availableLanes.length)].y;
+    }
 
     const length = this.options.length ?? 10;
     // Place construction in the middle of the road by default
