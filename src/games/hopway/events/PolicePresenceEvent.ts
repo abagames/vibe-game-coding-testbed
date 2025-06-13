@@ -1,6 +1,9 @@
 import { HopwayGame } from "../core";
 import { GameEvent } from "./GameEvent";
-import { VIRTUAL_SCREEN_WIDTH } from "../../../core/coreTypes";
+import {
+  VIRTUAL_SCREEN_WIDTH,
+  VIRTUAL_SCREEN_HEIGHT,
+} from "../../../core/coreTypes";
 import { MEDIAN_ROW } from "../core";
 
 const EVENT_DURATION_TICKS = 1500; // Approximately 25 seconds at 60 TPS
@@ -28,6 +31,8 @@ export class PolicePresenceEvent implements GameEvent {
 
   start(): void {
     this.isActive = true;
+    this.isSpeedTrapActive = true;
+    this.speedTrapTicks = 0;
   }
 
   update(): void {
@@ -36,9 +41,9 @@ export class PolicePresenceEvent implements GameEvent {
 
     if (this.isSpeedTrapActive) {
       this.speedTrapTicks++;
-      if (this.speedTrapTicks > SPEED_TRAP_DURATION_TICKS) {
+      if (this.speedTrapTicks >= SPEED_TRAP_DURATION_TICKS) {
         this.isSpeedTrapActive = false;
-        // Effect ends automatically by carManager
+        this.speedTrapTicks = 0;
       }
     }
   }
@@ -52,17 +57,54 @@ export class PolicePresenceEvent implements GameEvent {
   }
 
   public getDisplayMessage(): string | null {
-    if (!this.isSpeedTrapActive) return null;
-    const remainingS = (
-      (SPEED_TRAP_DURATION_TICKS - this.speedTrapTicks) /
-      60
-    ).toFixed(1);
-    return `SPEED TRAP ACTIVE! ${remainingS}s`;
+    if (!this.isActive) return null;
+
+    if (this.isSpeedTrapActive) {
+      const remainingS = (
+        (SPEED_TRAP_DURATION_TICKS - this.speedTrapTicks) /
+        60
+      ).toFixed(1);
+      return `SPEED TRAP ACTIVE! ${remainingS}s`;
+    } else {
+      const remainingS = (
+        (this.durationTicks - this.elapsedTicks) /
+        60
+      ).toFixed(1);
+      return `POLICE PRESENCE ${remainingS}s`;
+    }
   }
 
-  public draw(): void {
-    // All visual effects are handled by the car speed reduction
-    // and the message is handled by getDisplayMessage.
+  public draw(game: HopwayGame): void {
+    if (!this.isActive) return;
+
+    // Draw police car at the median
+    game.drawText("P", this.policeCarPosition.x, this.policeCarPosition.y, {
+      color: "blue",
+    });
+
+    // Draw police influence area (optional visual indicator)
+    if (this.isSpeedTrapActive) {
+      // Draw speed trap indicators around the police car
+      const radius = Math.min(POLICE_INFLUENCE_RADIUS, 8); // Limit visual radius
+      for (let dx = -radius; dx <= radius; dx += 2) {
+        for (let dy = -2; dy <= 2; dy += 1) {
+          const x = this.policeCarPosition.x + dx;
+          const y = this.policeCarPosition.y + dy;
+          if (
+            x >= 0 &&
+            x < VIRTUAL_SCREEN_WIDTH &&
+            y >= 0 &&
+            y < VIRTUAL_SCREEN_HEIGHT
+          ) {
+            // Only draw if the cell is empty
+            const cellInfo = game.getCellInfo(x, y);
+            if (!cellInfo || cellInfo.char === " ") {
+              game.drawText(".", x, y, { color: "blue" });
+            }
+          }
+        }
+      }
+    }
   }
 
   public getPoliceCarPosition(): { x: number; y: number } {
