@@ -637,13 +637,6 @@ export class HopwayGame extends BaseGame {
     // Render score and lives from BaseGame
     super.renderStandardUI();
 
-    // Show current difficulty level (max concurrent events)
-    const maxEvents = this.getMaxConcurrentEvents();
-    const currentMinute = Math.floor(this.gameTickCounter / 3600) + 1;
-    this.drawText(`Minute ${currentMinute} (Max Events: ${maxEvents})`, 1, 0, {
-      color: "white",
-    });
-
     // Show time score in the bottom right corner
     const timeScoreText = `Time: ${this.timeScore}`;
     const timeScoreX = VIRTUAL_SCREEN_WIDTH - timeScoreText.length;
