@@ -20,8 +20,8 @@ const SIGNAL_CHAR_DOWN = "v";
 const WRONG_WAY_AVOIDANCE_DISTANCE = 10;
 
 // New Time-based Spawning Constants
-const BASE_SPAWN_INTERVAL_TICKS = 300; // Average ticks between spawns
-const SPAWN_INTERVAL_VARIATION_TICKS = 80; // Random variation in spawn time
+const BASE_SPAWN_INTERVAL_TICKS = 360; // Average ticks between spawns
+const SPAWN_INTERVAL_VARIATION_TICKS = 90; // Random variation in spawn time
 
 // Constants from HopwayGame
 const TOP_SAFE_ROW = 1;
@@ -448,6 +448,9 @@ export class CarManager {
   }
 
   private getCarColor(car: Car): cglColor {
+    // Check for color override first
+    if (car.colorOverride) return car.colorOverride as cglColor;
+
     if (car.isWrongWay) return "red";
     if (car.isEmergency) return "light_red";
     if (car.isClumsy) return "yellow";
