@@ -27,7 +27,7 @@ export class RushHourEvent implements GameEvent {
   private originalLaneChangeDistance: number = 0;
 
   constructor(options: RushHourEventOptions) {
-    this.durationTicks = options.duration ?? 600; // 10 seconds at 60tps
+    this.durationTicks = options.duration ?? 300; // 5 seconds at 60tps
     this.spawnMultiplier = options.spawnMultiplier ?? 2.0;
     this.speedMultiplier = options.speedMultiplier ?? 1.15;
     this.laneChangeCooldownFactor = options.laneChangeCooldownFactor ?? 0.5; // Cooldown is halved
