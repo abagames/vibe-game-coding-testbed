@@ -31,6 +31,10 @@ const BOTTOM_SAFE_ROW = VIRTUAL_SCREEN_HEIGHT - 2;
 const TOP_SAFE_ROW = 1;
 export const MEDIAN_ROW = 12;
 
+// Extra life system constants
+const MAX_LIVES = 5;
+const INITIAL_EXTRA_LIFE_THRESHOLDS = [10000, 20000, 30000, 50000, 80000]; // Initial Fibonacci-based sequence
+
 // Score Zone Constants
 interface ScoreZone {
   x: number;
@@ -206,6 +210,9 @@ export class HopwayGame extends BaseGame {
   private readonly timeScoreDecreaseInterval: number = 1; // Decrease every 60 ticks (1 second at 60fps)
   private readonly timeScoreDecreaseAmount: number = 1; // Amount to decrease per interval
 
+  // Extra life system
+  private extraLifeThresholdIndex: number = 0; // Track which threshold we're checking next
+
   constructor(options: HopwayGameOptions = {}) {
     super({
       ...options,
@@ -342,6 +349,7 @@ export class HopwayGame extends BaseGame {
     };
     this.timeScore = 1000;
     this.lastTimeScoreDecreaseTick = 0;
+    this.extraLifeThresholdIndex = 0;
     this.isPlayingDeathAnimation = false;
     this.deathAnimationStartTick = 0;
     this.deathAnimationFrame = 0;
@@ -435,6 +443,7 @@ export class HopwayGame extends BaseGame {
     const finalScore = baseScore * multiplier;
 
     this.addScore(finalScore);
+    this.checkForExtraLife();
     this.play("powerUp");
 
     // Show multiplier effect if > 1
@@ -477,6 +486,41 @@ export class HopwayGame extends BaseGame {
   private updateScoreZones(): void {
     // Score zones are only generated when player completes a level
     // No periodic generation during gameplay
+  }
+
+  private getNextExtraLifeThreshold(): number {
+    if (this.extraLifeThresholdIndex < INITIAL_EXTRA_LIFE_THRESHOLDS.length) {
+      return INITIAL_EXTRA_LIFE_THRESHOLDS[this.extraLifeThresholdIndex];
+    } else {
+      // Continue Fibonacci sequence after initial thresholds
+      // 80000 + 50000 = 130000, then 130000 + 80000 = 210000, etc.
+      const fibIndex =
+        this.extraLifeThresholdIndex - INITIAL_EXTRA_LIFE_THRESHOLDS.length;
+      let prev1 = 50000; // Second to last initial threshold
+      let prev2 = 80000; // Last initial threshold
+
+      for (let i = 0; i <= fibIndex; i++) {
+        const next = prev1 + prev2;
+        prev1 = prev2;
+        prev2 = next;
+      }
+
+      return prev2;
+    }
+  }
+
+  private checkForExtraLife(): void {
+    const currentScore = this.getScore();
+    const nextThreshold = this.getNextExtraLifeThreshold();
+
+    if (currentScore >= nextThreshold && this.getLives() < MAX_LIVES) {
+      this.gainLife(1);
+      this.play("powerUp");
+      console.log(
+        `Extra life earned at ${nextThreshold.toLocaleString()} points! Lives: ${this.getLives()}`
+      );
+      this.extraLifeThresholdIndex++;
+    }
   }
 
   private updateDeathAnimation(): void {
@@ -634,8 +678,25 @@ export class HopwayGame extends BaseGame {
   }
 
   public override renderStandardUI(): void {
-    // Render score and lives from BaseGame
-    super.renderStandardUI();
+    // Top row: Score (left), High Score (right), Lives (center)
+    // Current score on the left
+    this.drawText(`${this.getScore()}`, 1, 0, { color: "white" });
+
+    // High score on the right with "HI" prefix (blasnake style)
+    const hiScoreText = `HI ${this.getHighScore()}`;
+    const hiScoreX = VIRTUAL_SCREEN_WIDTH - hiScoreText.length - 1;
+    this.drawText(hiScoreText, hiScoreX, 0, { color: "yellow" });
+
+    // Remaining lives as characters in the center (blasnake style)
+    const remainingLives = Math.min(this.getLives() - 1, MAX_LIVES - 1); // Don't show current life, cap at 4
+    if (remainingLives > 0) {
+      const livesStartX = Math.floor(
+        (VIRTUAL_SCREEN_WIDTH - remainingLives * 2) / 2
+      );
+      for (let i = 0; i < remainingLives; i++) {
+        this.drawText("P", livesStartX + i * 2, 0, { color: "cyan" });
+      }
+    }
 
     // Show time score in the bottom right corner
     const timeScoreText = `Time: ${this.timeScore}`;
