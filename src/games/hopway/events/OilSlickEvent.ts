@@ -4,6 +4,7 @@ import {
   cglColor,
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
+  InputState,
 } from "../../../core/coreTypes";
 import { getRandomInt } from "../../../utils/math.js";
 
@@ -72,7 +73,7 @@ export class OilSlickEvent implements GameEvent {
     game.play("hit"); // Placeholder sound
   }
 
-  public update(game: HopwayGame): void {
+  public update(game: HopwayGame, inputState: InputState): void {
     if (!this.isActive) {
       return;
     }
@@ -88,6 +89,14 @@ export class OilSlickEvent implements GameEvent {
 
   public isFinished(): boolean {
     return this.elapsedTicks >= this.durationTicks;
+  }
+
+  public getDisplayMessage(): string | null {
+    if (!this.isActive) return null;
+    const remainingS = ((this.durationTicks - this.elapsedTicks) / 60).toFixed(
+      1
+    );
+    return `OIL SLICK ON ROAD! ${remainingS}s`;
   }
 
   public draw(game: HopwayGame): void {
