@@ -12,10 +12,9 @@ const gameFactory = () => {
     audioService: new BrowserAudioService(),
     gameName: "Hopway", // gameName for high score key
 
-    carDensity: 0.02,
-    maxCarSpeed: 0.3,
+    maxCarSpeed: 0.25,
     minCarSpeed: 0.1,
-    playerMoveInterval: 5,
+    playerMoveInterval: 8,
     initialLives: 3,
     minCarFollowingDistance: 2.0,
   };
