@@ -1,4 +1,4 @@
-import { VIRTUAL_SCREEN_WIDTH } from "../../../core/coreTypes";
+import { VIRTUAL_SCREEN_WIDTH, InputState } from "../../../core/coreTypes";
 import { HopwayGame } from "../core";
 import { GameEvent } from "./GameEvent";
 
@@ -47,7 +47,7 @@ export class PowerOutageEvent implements GameEvent {
     game.play("explosion"); // A startling sound for power outage
   }
 
-  update(game: HopwayGame): void {
+  update(game: HopwayGame, inputState: InputState): void {
     this.elapsedTicks++;
   }
 

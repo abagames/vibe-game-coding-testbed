@@ -3,6 +3,7 @@ import { GameEvent } from "./GameEvent";
 import {
   VIRTUAL_SCREEN_HEIGHT,
   VIRTUAL_SCREEN_WIDTH,
+  InputState,
 } from "../../../core/coreTypes";
 
 export type WeatherType = "RAIN" | "FOG";
@@ -58,7 +59,7 @@ export class WeatherEvent implements GameEvent {
     );
   }
 
-  update(game: HopwayGame): void {
+  update(game: HopwayGame, inputState: InputState): void {
     if (this.weatherType === "RAIN") {
       this.updateRain(game);
     }

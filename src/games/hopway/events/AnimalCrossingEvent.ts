@@ -1,5 +1,5 @@
 import { HopwayGame } from "../core";
-import { VIRTUAL_SCREEN_WIDTH } from "../../../core/coreTypes";
+import { VIRTUAL_SCREEN_WIDTH, InputState } from "../../../core/coreTypes";
 import { GameEvent } from "./GameEvent";
 import { Animal } from "./Animal";
 import { getRandomInt } from "../../../utils/math";
@@ -32,7 +32,7 @@ export class AnimalCrossingEvent implements GameEvent {
     console.log(`Event Started: ${this.type}`);
   }
 
-  update(game: HopwayGame): void {
+  update(game: HopwayGame, inputState: InputState): void {
     if (!this.isActive) return;
 
     this.elapsedTicks++;

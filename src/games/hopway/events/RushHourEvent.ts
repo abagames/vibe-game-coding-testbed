@@ -1,5 +1,6 @@
 import { HopwayGame } from "../core";
 import { GameEvent } from "./GameEvent";
+import { InputState } from "../../../core/coreTypes";
 
 export interface RushHourEventOptions {
   duration?: number;
@@ -57,7 +58,7 @@ export class RushHourEvent implements GameEvent {
     );
   }
 
-  update(game: HopwayGame): void {
+  update(game: HopwayGame, inputState: InputState): void {
     // Event logic could go here if it needs to change over time
   }
 

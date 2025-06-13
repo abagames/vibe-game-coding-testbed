@@ -1,5 +1,6 @@
 import { HopwayGame } from "../core";
 import { GameEvent } from "./GameEvent";
+import { InputState } from "../../../core/coreTypes";
 import { Car } from "../CarManager";
 
 export class WrongWayDriverEvent implements GameEvent {
@@ -19,7 +20,7 @@ export class WrongWayDriverEvent implements GameEvent {
     if (car) {
       this.wrongWayCar = car;
       this.isActive = true;
-      game.play("laserShoot"); // A jarring, futuristic sound for a sudden event
+      game.play("synth"); // A jarring, futuristic sound for a sudden event
       console.log(
         `Event Started: ${this.type}. Car ID: ${this.wrongWayCar.id}`
       );
@@ -31,7 +32,7 @@ export class WrongWayDriverEvent implements GameEvent {
     }
   }
 
-  update(game: HopwayGame): void {
+  update(game: HopwayGame, inputState: InputState): void {
     if (!this.wrongWayCar) {
       return;
     }
