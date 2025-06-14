@@ -20,8 +20,8 @@ const SIGNAL_CHAR_DOWN = "v";
 const WRONG_WAY_AVOIDANCE_DISTANCE = 10;
 
 // New Time-based Spawning Constants
-const BASE_SPAWN_INTERVAL_TICKS = 360; // Average ticks between spawns
-const SPAWN_INTERVAL_VARIATION_TICKS = 90; // Random variation in spawn time
+const BASE_SPAWN_INTERVAL_TICKS = 160; // Average ticks between spawns
+const SPAWN_INTERVAL_VARIATION_TICKS = 40; // Random variation in spawn time
 
 // Constants from HopwayGame
 const TOP_SAFE_ROW = 1;
@@ -308,6 +308,9 @@ export class CarManager {
   private nextCarId: number;
   private lanes: Array<{ y: number; direction: number; nextSpawnTick: number }>;
 
+  // Dedicated tick counter for car spawning (only increments during normal gameplay)
+  private carSpawnTickCounter: number = 0;
+
   // Car configuration
   public maxCarSpeed: number;
   public minCarSpeed: number;
@@ -343,6 +346,7 @@ export class CarManager {
   public initialize(): void {
     this.cars = [];
     this.nextCarId = 0;
+    this.carSpawnTickCounter = 0; // Reset spawn tick counter
     this.initializeLanes();
 
     // Reset event-driven parameters
@@ -354,35 +358,24 @@ export class CarManager {
       LANE_CHANGE_INITIATE_DISTANCE_FACTOR;
   }
 
+  public incrementSpawnTick(): void {
+    // Only increment spawn tick counter during normal gameplay
+    // This prevents car spam after death/score animations
+    this.carSpawnTickCounter++;
+  }
+
   private initializeLanes(): void {
     this.cars = [];
     this.lanes = [];
     for (let y = MEDIAN_ROW + 1; y < BOTTOM_SAFE_ROW; y++) {
       const nextSpawnTick =
-        this.game.getGameTickCounter() +
-        Math.random() * BASE_SPAWN_INTERVAL_TICKS;
+        this.carSpawnTickCounter + Math.random() * BASE_SPAWN_INTERVAL_TICKS;
       this.lanes.push({ y, direction: 1, nextSpawnTick });
     }
     for (let y = TOP_SAFE_ROW + 1; y < MEDIAN_ROW; y++) {
       const nextSpawnTick =
-        this.game.getGameTickCounter() +
-        Math.random() * BASE_SPAWN_INTERVAL_TICKS;
+        this.carSpawnTickCounter + Math.random() * BASE_SPAWN_INTERVAL_TICKS;
       this.lanes.push({ y, direction: -1, nextSpawnTick });
-    }
-
-    // Handle new car spawning
-    const now = this.game.getGameTickCounter();
-    for (const lane of this.lanes) {
-      if (now >= lane.nextSpawnTick) {
-        const isSlow = Math.random() < this.slowCarProbability;
-        this.spawnCar(lane.y, lane.direction, isSlow);
-        const spawnInterval =
-          (BASE_SPAWN_INTERVAL_TICKS +
-            (Math.random() * SPAWN_INTERVAL_VARIATION_TICKS -
-              SPAWN_INTERVAL_VARIATION_TICKS / 2)) /
-          this.spawnIntervalMultiplier;
-        lane.nextSpawnTick = now + spawnInterval;
-      }
     }
   }
 
@@ -487,10 +480,9 @@ export class CarManager {
       return true;
     });
 
-    // Handle new car spawning
-    const now = this.game.getGameTickCounter();
+    // Handle new car spawning using dedicated spawn tick counter
     for (const lane of this.lanes) {
-      if (now >= lane.nextSpawnTick) {
+      if (this.carSpawnTickCounter >= lane.nextSpawnTick) {
         const isSlow = Math.random() < this.slowCarProbability;
         this.spawnCar(lane.y, lane.direction, isSlow);
         const spawnInterval =
@@ -498,7 +490,7 @@ export class CarManager {
             (Math.random() * SPAWN_INTERVAL_VARIATION_TICKS -
               SPAWN_INTERVAL_VARIATION_TICKS / 2)) /
           this.spawnIntervalMultiplier;
-        lane.nextSpawnTick = now + spawnInterval;
+        lane.nextSpawnTick = this.carSpawnTickCounter + spawnInterval;
       }
     }
   }
