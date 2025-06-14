@@ -1,4 +1,4 @@
-import { HopwayGame, HopwayGameOptions } from "./core";
+import { HopwayGameManager, HopwayGameManagerOptions } from "./GameManager.js";
 import {
   initStandardTextGame,
   StandardGameHelperOptions,
@@ -6,7 +6,7 @@ import {
 import { BrowserAudioService } from "../../utils/BrowserAudioService.js";
 
 const gameFactory = () => {
-  const gameOptions: HopwayGameOptions = {
+  const gameOptions: HopwayGameManagerOptions = {
     isBrowserEnvironment: true,
     enableHighScoreStorage: true,
     audioService: new BrowserAudioService(),
@@ -18,7 +18,7 @@ const gameFactory = () => {
     initialLives: 3,
     minCarFollowingDistance: 2.0,
   };
-  return new HopwayGame(gameOptions);
+  return new HopwayGameManager(gameOptions);
 };
 
 const helperOptions: Partial<StandardGameHelperOptions> = {
@@ -28,4 +28,9 @@ const helperOptions: Partial<StandardGameHelperOptions> = {
 };
 
 // Initialize and start the game in the browser
-initStandardTextGame(gameFactory, helperOptions);
+initStandardTextGame(gameFactory, helperOptions, {
+  isSoundEnabled: true,
+  audioSeed: 1,
+  audioTempo: 156,
+  bgmVolume: 6,
+});

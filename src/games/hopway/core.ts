@@ -375,7 +375,7 @@ export class HopwayGame extends BaseGame {
     }
   }
 
-  public updateGame(inputState: InputState): void {
+  protected updateGame(inputState: InputState): void {
     if (this.isGameOver()) {
       if (inputState.r) {
         this.initializeGame();
@@ -391,14 +391,13 @@ export class HopwayGame extends BaseGame {
     this.gameTickCounter++;
 
     // Handle death animation
-    if (this.isPlayingDeathAnimation) {
+    if (this.isPlayingDeathAnimation && !this.isDemoPlay) {
       this.updateDeathAnimation();
-      this.drawEverything();
       return;
     }
 
     // Handle score display animation - but continue game updates
-    if (this.isShowingScoreDisplay) {
+    if (this.isShowingScoreDisplay && !this.isDemoPlay) {
       this.updateScoreDisplay();
       // Continue game updates during score display
       this.updateTimeScore();
@@ -412,15 +411,20 @@ export class HopwayGame extends BaseGame {
       const animals = animalEvent ? animalEvent.getAnimals() : [];
       this.carManager.update(animals);
 
-      this.drawEverything();
-      this.drawScoreDisplay();
       return;
     }
 
-    this.updateTimeScore();
+    // Skip time score updates during demo mode (demo doesn't need scoring)
+    if (!this.isDemoPlay) {
+      this.updateTimeScore();
+    }
     this.updateScoreZones();
     this.eventManager.update(inputState);
-    this.updatePlayerState(inputState);
+
+    // Skip player-related processing during demo mode
+    if (!this.isDemoPlay) {
+      this.updatePlayerState(inputState);
+    }
 
     const animalEvent = this.eventManager.getActiveEventByType(
       "ANIMAL_CROSSING"
@@ -428,11 +432,13 @@ export class HopwayGame extends BaseGame {
     const animals = animalEvent ? animalEvent.getAnimals() : [];
     this.carManager.update(animals);
 
-    this.checkCollisions();
-    this.drawEverything();
+    // Skip collision detection and level completion during demo mode
+    if (!this.isDemoPlay) {
+      this.checkCollisions();
 
-    if (this.playerY === TOP_SAFE_ROW) {
-      this.levelComplete();
+      if (this.playerY === TOP_SAFE_ROW) {
+        this.levelComplete();
+      }
     }
   }
 
@@ -486,6 +492,30 @@ export class HopwayGame extends BaseGame {
   private updateScoreZones(): void {
     // Score zones are only generated when player completes a level
     // No periodic generation during gameplay
+  }
+
+  private drawScoreZones(): void {
+    // Don't draw score zones during demo mode
+    if (this.isDemoPlay) {
+      return;
+    }
+
+    const zones = this.scoreZoneManager.getZones();
+    for (const zone of zones) {
+      // Draw the score zone with width-appropriate format
+      let zoneText: string;
+      if (zone.width === 6) {
+        zoneText = `--x${zone.char}--`; // --x2--
+      } else if (zone.width === 4) {
+        zoneText = `-x${zone.char}-`; // -x3-
+      } else if (zone.width === 2) {
+        zoneText = `x${zone.char}`; // x5
+      } else {
+        // Fallback for any other width
+        zoneText = `x${zone.char}`;
+      }
+      this.drawText(zoneText, zone.x, TOP_SAFE_ROW, { color: zone.color });
+    }
   }
 
   private getNextExtraLifeThreshold(): number {
@@ -678,6 +708,19 @@ export class HopwayGame extends BaseGame {
   }
 
   public override renderStandardUI(): void {
+    // Always draw the game elements first
+    this.drawEverything();
+
+    // Draw score display if active (but not during demo mode)
+    if (this.isShowingScoreDisplay && !this.isDemoPlay) {
+      this.drawScoreDisplay();
+    }
+
+    // Don't render UI during demo mode (GameManager will handle title screen UI)
+    if (this.isDemoPlay) {
+      return;
+    }
+
     // Top row: Score (left), High Score (right), Lives (center)
     // Current score on the left
     this.drawText(`${this.getScore()}`, 1, 0, { color: "white" });
@@ -761,26 +804,12 @@ export class HopwayGame extends BaseGame {
     );
   }
 
-  private drawScoreZones(): void {
-    const zones = this.scoreZoneManager.getZones();
-    for (const zone of zones) {
-      // Draw the score zone with width-appropriate format
-      let zoneText: string;
-      if (zone.width === 6) {
-        zoneText = `--x${zone.char}--`; // --x2--
-      } else if (zone.width === 4) {
-        zoneText = `-x${zone.char}-`; // -x3-
-      } else if (zone.width === 2) {
-        zoneText = `x${zone.char}`; // x5
-      } else {
-        // Fallback for any other width
-        zoneText = `x${zone.char}`;
-      }
-      this.drawText(zoneText, zone.x, TOP_SAFE_ROW, { color: zone.color });
-    }
-  }
-
   private drawPlayer(): void {
+    // Don't draw player during demo mode
+    if (this.isDemoPlay) {
+      return;
+    }
+
     if (this.isPlayingDeathAnimation) {
       // Death animation: cycle through different characters and colors
       const animationChars = ["X", "*", "+", ".", " "];

@@ -1,10 +1,14 @@
-import { HopwayGame, HopwayGameOptions } from "./core.js";
+import { HopwayGameManager, HopwayGameManagerOptions } from "./GameManager.js";
 import {
   ConsoleSimulator,
   ConsoleSimulatorOptions,
 } from "../../utils/consoleSimulator.js";
 import { NodeAudioService } from "../../utils/NodeAudioService.js";
-import { InputState } from "../../core/coreTypes";
+import {
+  InputState,
+  VIRTUAL_SCREEN_HEIGHT,
+  VIRTUAL_SCREEN_WIDTH,
+} from "../../core/coreTypes";
 // import { OilSlickEvent } from "./events/OilSlickEvent.js";
 // import { RoadConstructionEvent } from "./events/RoadConstructionEvent";
 // import { RushHourEvent } from "./events/RushHourEvent";
@@ -12,13 +16,14 @@ import { InputState } from "../../core/coreTypes";
 // import { VIPEscortEvent } from "./events/VIPEscortEvent.js";
 
 async function runSimulation() {
-  const gameOptions: HopwayGameOptions = {
+  const gameOptions: HopwayGameManagerOptions = {
     isBrowserEnvironment: false,
     enableHighScoreStorage: false,
     audioService: new NodeAudioService(),
+    startInPlayingState: true, // Skip title screen for simulation
   };
 
-  const game = new HopwayGame(gameOptions);
+  const game = new HopwayGameManager(gameOptions);
   game.initializeGame();
 
   const simOnlyOptions: ConsoleSimulatorOptions = {
@@ -42,11 +47,12 @@ const testDifficultyProgression = () => {
   console.log("Testing Difficulty Progression (Accelerated)");
   console.log("=".repeat(50));
 
-  const game = new HopwayGame({
+  const game = new HopwayGameManager({
     // Increase event probabilities for faster testing
     carDensity: 0.3,
     maxCarSpeed: 2,
     minCarSpeed: 0.5,
+    startInPlayingState: true,
   });
 
   game.initializeGame();
@@ -65,7 +71,10 @@ const testDifficultyProgression = () => {
     console.log(`--- MINUTE ${minute} ---`);
 
     // Set the game tick counter to simulate time progression
-    (game as any).gameTickCounter = startTick;
+    const coreGame = game.getCoreGame();
+    if (!coreGame) continue;
+
+    (coreGame as any).gameTickCounter = startTick;
 
     // Calculate expected max events for this minute
     const maxEvents = Math.min(minute, 5);
@@ -83,22 +92,22 @@ const testDifficultyProgression = () => {
 
     let eventsTriggered = 0;
     const initialActiveEvents =
-      game.getEventManager().getActiveEvents?.() || [];
+      coreGame.getEventManager().getActiveEvents?.() || [];
     const initialEventCount = initialActiveEvents.filter(
-      (e) => e.isActive
+      (e: any) => e.isActive
     ).length;
 
     // Run simulation for a portion of the minute
     for (let tick = startTick; tick < startTick + 600; tick += 10) {
       // Sample every 10 ticks
-      (game as any).gameTickCounter = tick;
-      game.updateGame(dummyInput);
+      (coreGame as any).gameTickCounter = tick;
+      game.update(dummyInput);
 
       // Check current active events
       const currentActiveEvents =
-        game.getEventManager().getActiveEvents?.() || [];
+        coreGame.getEventManager().getActiveEvents?.() || [];
       const currentEventCount = currentActiveEvents.filter(
-        (e) => e.isActive
+        (e: any) => e.isActive
       ).length;
 
       if (currentEventCount > initialEventCount + eventsTriggered) {
@@ -148,11 +157,12 @@ const testScoreDisplay = () => {
   console.log("Testing Score Display Feature");
   console.log("=".repeat(50));
 
-  const game = new HopwayGame({
+  const game = new HopwayGameManager({
     carDensity: 0, // No cars to interfere
     maxCarSpeed: 0,
     minCarSpeed: 0,
     playerMoveInterval: 1, // Allow movement every tick for testing
+    startInPlayingState: true,
   });
 
   game.initializeGame();
@@ -167,13 +177,13 @@ const testScoreDisplay = () => {
   console.log("Simulating upward movement to trigger level completion...\n");
 
   let frameCount = 0;
-  const maxFrames = 100; // Should be enough for score display duration
+  const maxFrames = 10; // Reduced for debugging
   let hasGivenUpInput = false;
 
   const simulate = () => {
     if (frameCount >= maxFrames) {
       console.log("Score display test completed.");
-      console.log("-".repeat(42));
+      console.log("------------------------------------------");
       return;
     }
 
@@ -201,7 +211,7 @@ const testScoreDisplay = () => {
       hasGivenUpInput = true;
     }
 
-    game.updateGame(currentInput);
+    game.update(currentInput);
 
     // Display game state every 5 frames to see the score display
     if (frameCount % 5 === 0) {
@@ -236,7 +246,7 @@ const runOriginalSimulation = () => {
   console.log("Running Original Simulation");
   console.log("=".repeat(50));
 
-  const game = new HopwayGame();
+  const game = new HopwayGameManager({ startInPlayingState: true });
   game.initializeGame();
 
   let frameCount = 0;
@@ -266,7 +276,7 @@ const runOriginalSimulation = () => {
       r: false,
     };
 
-    game.updateGame(inputState);
+    game.update(inputState);
 
     // Display game state every 30 frames
     if (frameCount % 30 === 0) {
@@ -292,3 +302,103 @@ function renderScreen(screen: any[][]): string {
 // setTimeout(runOriginalSimulation, 1000);
 
 // runSimulation().catch((e) => console.error("Error during simulation:", e));
+
+console.log("Score display test completed.");
+console.log("------------------------------------------");
+
+// Test title screen display
+console.log("");
+console.log("==================================================");
+console.log("Testing Title Screen Display");
+console.log("==================================================");
+
+// Create a new game manager starting in title state
+const titleTestManager = new HopwayGameManager({
+  isDemoPlay: false,
+  startInPlayingState: false, // Start in title screen
+});
+
+titleTestManager.initializeGame();
+
+console.log(
+  `Initial flow state: ${(titleTestManager as any).currentFlowState}`
+);
+
+// Test title screen for a few frames
+for (let frame = 0; frame < 3; frame++) {
+  const emptyInput: InputState = {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    action1: false,
+    r: false,
+  };
+
+  titleTestManager.update(emptyInput);
+  const screenData = titleTestManager.getVirtualScreenData();
+
+  console.log(`Title Screen Frame ${frame}:`);
+  for (let y = 0; y < VIRTUAL_SCREEN_HEIGHT; y++) {
+    let line = "|";
+    for (let x = 0; x < VIRTUAL_SCREEN_WIDTH; x++) {
+      const cell = screenData[y][x];
+      line += cell?.char || " ";
+    }
+    line += "|";
+    console.log(line);
+  }
+  console.log(`Flow state: ${(titleTestManager as any).currentFlowState}`);
+  console.log("------------------------------------------");
+}
+
+// Test game over screen countdown
+console.log("");
+console.log("==================================================");
+console.log("Testing Game Over Screen Countdown");
+console.log("==================================================");
+
+// Create a new game manager for game over test
+const gameOverTestManager = new HopwayGameManager({
+  initialLives: 1, // Start with 1 life to trigger game over quickly
+  isDemoPlay: false,
+  startInPlayingState: true, // Start directly in playing state
+});
+
+gameOverTestManager.initializeGame();
+
+// Force game over by losing all lives
+const coreGame = gameOverTestManager.getCoreGame();
+if (coreGame) {
+  coreGame.loseLife(); // This should trigger game over
+}
+
+console.log(`Game over state: ${gameOverTestManager.isGameOver()}`);
+
+// Test countdown for 5 frames
+for (let frame = 0; frame < 5; frame++) {
+  const emptyInput: InputState = {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    action1: false,
+    r: false,
+  };
+
+  gameOverTestManager.update(emptyInput);
+  const screenData = gameOverTestManager.getVirtualScreenData();
+
+  console.log(`Frame ${frame}:`);
+  for (let y = 0; y < VIRTUAL_SCREEN_HEIGHT; y++) {
+    let line = "|";
+    for (let x = 0; x < VIRTUAL_SCREEN_WIDTH; x++) {
+      const cell = screenData[y][x];
+      line += cell?.char || " ";
+    }
+    line += "|";
+    console.log(line);
+  }
+  console.log(`Game over state: ${gameOverTestManager.isGameOver()}`);
+  console.log("------------------------------------------");
+}
