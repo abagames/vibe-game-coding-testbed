@@ -45,28 +45,22 @@ const AUDIO_PATTERNS = {
 
   // Traffic jam horn sounds
   TRAFFIC_JAM_HORNS: [
-    "@synth@s11111 v40 l4 o4 c2",
-    "@synth@s22222 v35 l4 o3 f2",
-    "@synth@s33333 v30 l4 o4 g2",
+    "@synth@s11111 v45 l4 o4 c2",
+    "@synth@s22222 v40 l4 o3 f2",
+    "@synth@s33333 v40 l4 o4 g2",
   ],
 
   // Construction machinery
-  CONSTRUCTION_NOISE: "@hit@d@s99999 v30 l16 o4 cr cr cr cr",
+  CONSTRUCTION_NOISE: "@hit@d@s99999 v45 l16 o4 cr cr cr cr",
 
   // Weather effects
-  RAIN_SOUND: "@synth@s77777 v20 l32 o6 crcrcrcrcrcrcr",
-  THUNDER: "@explosion@s88888 v70 l1 o2 c",
-
-  // Level complete fanfare
-  LEVEL_COMPLETE_FANFARE: [
-    "@synth@s333 v90 l16 o4 c e g >c< e g >c<", // Victory melody
-    "@synth@s600 v60 l8 o3 c g c g c", // Harmony
-  ],
+  RAIN_SOUND: "@synth@s77777 v36 l32 o6 crcrcrcrcrcrcr",
+  THUNDER: "@explosion@s88888 v70 l1 o3 c",
 
   // Extra life jingle
   EXTRA_LIFE_JINGLE: [
-    "@synth@s100 v90 l8 o5 ceg>c<egc",
-    "@synth@s200 v80 l4 o4 cg",
+    "@synth@s100 v90 l8 o6 ceg>c<egc",
+    "@synth@s200 v80 l4 o5 cg",
   ],
 
   // Danger warning
@@ -83,9 +77,9 @@ const AUDIO_PATTERNS = {
 
   // Animal crossing sounds
   ANIMAL_SOUNDS: [
-    "@synth@s111 v30 l8 o4 ege", // Bird chirp (simplified)
-    "@synth@s222 v25 l4 o3 c2", // Low animal sound
-    "@synth@s333 v35 l16 o5 crcrcr", // Quick animal movement
+    "@synth@s111 v40 l8 o4 ege", // Bird chirp (simplified)
+    "@synth@s222 v35 l4 o3 c2", // Low animal sound
+    "@synth@s333 v45 l16 o5 crcrcr", // Quick animal movement
   ],
 } as const;
 
@@ -508,7 +502,7 @@ export class HopwayGame extends BaseGame {
     // Enhanced audio for level completion
     if (multiplier > 1) {
       // Special fanfare for multiplier zones
-      this.play("powerUp", 999);
+      this.play("powerUp", 999 + multiplier);
       console.log(
         `Score multiplied by ${multiplier}x! ${baseScore} × ${multiplier} = ${finalScore}`
       );
