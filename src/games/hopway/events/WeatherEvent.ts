@@ -48,10 +48,19 @@ export class WeatherEvent implements GameEvent {
       carManager.minCarSpeed *= 0.8;
       carManager.maxCarSpeed *= 0.85;
       this.initializeRain(game);
-      game.play("laser"); // Placeholder sound for rain
+
+      // Enhanced rain audio
+      game.playEventSound("WEATHER_RAIN");
+
+      // Occasional thunder for dramatic effect
+      if (Math.random() < 0.3) {
+        setTimeout(() => {
+          game.playEventSound("WEATHER_STORM");
+        }, 1000 + Math.random() * 3000); // Thunder 1-4 seconds after rain starts
+      }
     } else {
-      // FOG
-      game.play("select"); // Placeholder sound for fog
+      // FOG - subtle atmospheric sound
+      game.play("synth", 12345);
     }
 
     console.log(
@@ -62,6 +71,15 @@ export class WeatherEvent implements GameEvent {
   update(game: HopwayGame, inputState: InputState): void {
     if (this.weatherType === "RAIN") {
       this.updateRain(game);
+
+      // Removed frequent rain sounds to avoid audio spam
+      // Rain sound only plays when weather event starts
+
+      // Keep occasional thunder but reduce frequency
+      if (this.elapsedTicks % 1200 === 0 && Math.random() < 0.1) {
+        // Every 20 seconds, 10% chance
+        game.playEventSound("WEATHER_STORM", this.elapsedTicks);
+      }
     }
   }
 

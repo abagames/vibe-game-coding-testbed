@@ -25,15 +25,18 @@ export class TrafficJamEvent implements GameEvent {
     const carManager = game.getCarManager();
     this.originalSlowCarProbability = carManager.slowCarProbability;
     carManager.slowCarProbability = 0.75; // Drastically increase slow car chance
-    game.play("explosion"); // A more fitting sound for a major event
+
+    // Enhanced traffic jam audio - play horn sounds
+    game.playEventSound("TRAFFIC_JAM");
+
     console.log(
       `Event Started: ${this.type}. Duration: ${this.durationTicks} ticks.`
     );
   }
 
-  update(): void {
-    // Nothing to do here, the core logic is based on elapsedTicks
-    // which is managed by the EventManager.
+  update(game: HopwayGame): void {
+    // Removed frequent horn sounds to avoid audio spam
+    // Horn sound only plays when event starts
   }
 
   end(game: HopwayGame): void {

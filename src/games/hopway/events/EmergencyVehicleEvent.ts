@@ -60,7 +60,8 @@ export class EmergencyVehicleEvent implements GameEvent {
     });
 
     if (this.vehicle) {
-      game.play("laser"); // Use a distinct sound
+      // Use the enhanced emergency vehicle sound
+      game.playEventSound("EMERGENCY_VEHICLE");
     } else {
       this.end(game);
     }

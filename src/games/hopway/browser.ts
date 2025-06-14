@@ -28,9 +28,16 @@ const helperOptions: Partial<StandardGameHelperOptions> = {
 };
 
 // Initialize and start the game in the browser
-initStandardTextGame(gameFactory, helperOptions, {
-  isSoundEnabled: true,
-  audioSeed: 1,
-  audioTempo: 156,
-  bgmVolume: 6,
-});
+initStandardTextGame(
+  gameFactory,
+  helperOptions,
+  {
+    isSoundEnabled: true,
+    audioSeed: 3,
+    audioTempo: 150,
+    bgmVolume: 2,
+  },
+  {
+    bgm: "Digital_Leap.mp3",
+  }
+);

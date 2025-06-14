@@ -29,6 +29,10 @@ export class AnimalCrossingEvent implements GameEvent {
     this.animals = [];
     this.spawnAnimal(game); // Spawn one immediately
     this.nextAnimalSpawnTicks = getRandomInt(120, 240);
+
+    // Play animal crossing sound
+    game.playEventSound("ANIMAL_CROSSING");
+
     console.log(`Event Started: ${this.type}`);
   }
 
@@ -141,5 +145,8 @@ export class AnimalCrossingEvent implements GameEvent {
     }
 
     this.animals.push(newAnimal);
+
+    // Removed frequent animal sounds to avoid audio spam
+    // Animal sound only plays when event starts
   }
 }

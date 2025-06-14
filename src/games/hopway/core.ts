@@ -35,6 +35,60 @@ export const MEDIAN_ROW = 12;
 const MAX_LIVES = 5;
 const INITIAL_EXTRA_LIFE_THRESHOLDS = [10000, 20000, 30000, 50000, 80000]; // Initial Fibonacci-based sequence
 
+// Audio constants for consistent sound design
+const AUDIO_PATTERNS = {
+  // Emergency vehicle siren
+  EMERGENCY_SIREN: "@synth@s12345 v60 l8 o5 c>c<c>c<c>c<",
+
+  // Police siren
+  POLICE_SIREN: "@synth@s54321 v50 l4 o5 c>c<r4c>c<r4c>c<r4",
+
+  // Traffic jam horn sounds
+  TRAFFIC_JAM_HORNS: [
+    "@synth@s11111 v40 l4 o4 c2",
+    "@synth@s22222 v35 l4 o3 f2",
+    "@synth@s33333 v30 l4 o4 g2",
+  ],
+
+  // Construction machinery
+  CONSTRUCTION_NOISE: "@hit@d@s99999 v30 l16 o4 cr cr cr cr",
+
+  // Weather effects
+  RAIN_SOUND: "@synth@s77777 v20 l32 o6 crcrcrcrcrcrcr",
+  THUNDER: "@explosion@s88888 v70 l1 o2 c",
+
+  // Level complete fanfare
+  LEVEL_COMPLETE_FANFARE: [
+    "@synth@s333 v90 l16 o4 c e g >c< e g >c<", // Victory melody
+    "@synth@s600 v60 l8 o3 c g c g c", // Harmony
+  ],
+
+  // Extra life jingle
+  EXTRA_LIFE_JINGLE: [
+    "@synth@s100 v90 l8 o5 ceg>c<egc",
+    "@synth@s200 v80 l4 o4 cg",
+  ],
+
+  // Danger warning
+  DANGER_WARNING: [
+    "@laser@s1000 v80 l16 o6 c r c r c r c r",
+    "@synth@s1100 v40 l8 o4 c+ r c+ r c+ r c+ r",
+  ],
+
+  // Time running out warning
+  TIME_WARNING: "@synth@s800 v50 l4 o5 c r c r c r >c<",
+
+  // Oil slick slip sound
+  OIL_SLIP: "@laser@s666 v40 l16 o4 c>c<c>c<c>c<",
+
+  // Animal crossing sounds
+  ANIMAL_SOUNDS: [
+    "@synth@s111 v30 l8 o4 ege", // Bird chirp (simplified)
+    "@synth@s222 v25 l4 o3 c2", // Low animal sound
+    "@synth@s333 v35 l16 o5 crcrcr", // Quick animal movement
+  ],
+} as const;
+
 // Score Zone Constants
 interface ScoreZone {
   x: number;
@@ -289,7 +343,7 @@ export class HopwayGame extends BaseGame {
     );
     this.eventManager.registerEventType(
       "WEATHER",
-      () => new WeatherEvent({ duration: 900 }), // ~15 seconds
+      () => new WeatherEvent({ duration: 600 }),
       0.0025,
       3000 // Cooldown
     );
@@ -359,6 +413,9 @@ export class HopwayGame extends BaseGame {
     this.scoreZoneManager.generateZones();
     this.scoreZoneManager.markGenerated(this.gameTickCounter);
 
+    // Start background music for the game
+    this.playBgm();
+
     if (this.options.forceWeather) {
       this.eventManager.manuallyTriggerEvent(
         new WeatherEvent({
@@ -409,6 +466,8 @@ export class HopwayGame extends BaseGame {
     // Skip time score updates during demo mode (demo doesn't need scoring)
     if (!this.isDemoPlay) {
       this.updateTimeScore();
+      // Removed frequent background music to avoid audio spam
+      // Background music is now only played at game start
     }
     this.updateScoreZones();
     this.eventManager.update(inputState);
@@ -422,6 +481,9 @@ export class HopwayGame extends BaseGame {
       "ANIMAL_CROSSING"
     ) as AnimalCrossingEvent | undefined;
     const animals = animalEvent ? animalEvent.getAnimals() : [];
+
+    // Increment car spawn tick counter only during normal gameplay
+    this.carManager.incrementSpawnTick();
     this.carManager.update(animals);
 
     // Skip collision detection and level completion during demo mode
@@ -442,13 +504,17 @@ export class HopwayGame extends BaseGame {
 
     this.addScore(finalScore);
     this.checkForExtraLife();
-    this.play("powerUp");
 
-    // Show multiplier effect if > 1
+    // Enhanced audio for level completion
     if (multiplier > 1) {
+      // Special fanfare for multiplier zones
+      this.play("powerUp", 999);
       console.log(
         `Score multiplied by ${multiplier}x! ${baseScore} × ${multiplier} = ${finalScore}`
       );
+    } else {
+      // Standard level complete sound
+      this.play("powerUp");
     }
 
     // Reset time score for next level
@@ -473,11 +539,31 @@ export class HopwayGame extends BaseGame {
       this.gameTickCounter - this.lastTimeScoreDecreaseTick >=
       this.timeScoreDecreaseInterval
     ) {
+      const previousTimeScore = this.timeScore;
       this.timeScore = Math.max(
         0,
         this.timeScore - this.timeScoreDecreaseAmount
       );
       this.lastTimeScoreDecreaseTick = this.gameTickCounter;
+
+      // Audio warnings for low time score
+      if (previousTimeScore > 100 && this.timeScore <= 100) {
+        // First warning at 100 points
+        this.playMml(AUDIO_PATTERNS.TIME_WARNING);
+      } else if (previousTimeScore > 50 && this.timeScore <= 50) {
+        // More urgent warning at 50 points
+        this.playMml([...AUDIO_PATTERNS.DANGER_WARNING]);
+      } else if (previousTimeScore > 10 && this.timeScore <= 10) {
+        // Critical warning at 10 points
+        this.play("laser", 999);
+      }
+
+      // Player dies when timer reaches 0
+      if (previousTimeScore > 0 && this.timeScore <= 0) {
+        // Play death sound and start death animation
+        this.play("explosion", 999);
+        this.startDeathAnimation();
+      }
     }
   }
 
@@ -537,7 +623,8 @@ export class HopwayGame extends BaseGame {
 
     if (currentScore >= nextThreshold && this.getLives() < MAX_LIVES) {
       this.gainLife(1);
-      this.play("powerUp");
+      // Special extra life jingle
+      this.playMml([...AUDIO_PATTERNS.EXTRA_LIFE_JINGLE]);
       console.log(
         `Extra life earned at ${nextThreshold.toLocaleString()} points! Lives: ${this.getLives()}`
       );
@@ -611,6 +698,8 @@ export class HopwayGame extends BaseGame {
         isJustPressedRight
       ) {
         this.playerCanMove = true;
+        // Play subtle game start sound on first movement only
+        this.play("select");
       } else {
         // Update previous input state for next frame
         this.previousInputState = { ...inputState };
@@ -668,7 +757,9 @@ export class HopwayGame extends BaseGame {
       this.playerY = newY;
       if (!isSlippingMove) {
         this.lastPlayerMoveTick = this.gameTickCounter;
-        this.play("click");
+
+        // Remove frequent movement sounds to avoid audio spam
+        // Only play sound for special movements or important actions
 
         // Check for oil slick effect on the player
         const effect = this.eventManager.getEffectAt(
@@ -682,7 +773,8 @@ export class HopwayGame extends BaseGame {
             dy: dy,
             ticks: 2, // Slip for 2 ticks
           };
-          this.play("laser");
+          // Enhanced oil slip sound
+          this.playMml(AUDIO_PATTERNS.OIL_SLIP);
         }
       }
     }
@@ -700,6 +792,11 @@ export class HopwayGame extends BaseGame {
   }
 
   public override renderStandardUI(): void {
+    // Don't render game elements or UI during game over
+    if (this.isGameOver()) {
+      return;
+    }
+
     // Always draw the game elements first
     this.drawEverything();
 
@@ -853,6 +950,13 @@ export class HopwayGame extends BaseGame {
       action1: false,
       r: false,
     };
+
+    // Reset timer when player respawns
+    this.timeScore = 1000;
+    this.lastTimeScoreDecreaseTick = this.gameTickCounter;
+
+    // Car spawn timing is now handled by dedicated tick counter
+    // No need to reset timers as the counter only increments during normal gameplay
   }
 
   private checkCollisions(): void {
@@ -865,7 +969,14 @@ export class HopwayGame extends BaseGame {
         Math.floor(this.playerX) === Math.floor(car.x) &&
         this.playerY === car.y
       ) {
-        this.play("explosion");
+        // Enhanced car collision sound with variation based on car type
+        this.play("explosion", car.id || this.gameTickCounter);
+
+        // Add dramatic crash sound for high-speed collisions
+        if (car.speed && Math.abs(car.speed) > 0.5) {
+          this.playMml("@explosion@s" + (car.id || 123) + " v80 l8 o2 c4r4c4");
+        }
+
         this.startDeathAnimation();
         return; // Only one collision per frame
       }
@@ -876,7 +987,8 @@ export class HopwayGame extends BaseGame {
       playerCellContent &&
       playerCellContent.attributes.entityType === "static_obstacle"
     ) {
-      this.play("hit");
+      // Different sound for static obstacle collision
+      this.play("hit", this.gameTickCounter % 200);
       this.startDeathAnimation();
       return;
     }
@@ -933,5 +1045,80 @@ export class HopwayGame extends BaseGame {
 
   public getPlayerY(): number {
     return this.playerY;
+  }
+
+  // Enhanced audio methods for event-specific sounds
+  public playEventSound(eventType: string, variation?: number): void {
+    const seed = variation || this.gameTickCounter;
+
+    switch (eventType) {
+      case "EMERGENCY_VEHICLE":
+        this.playMml(AUDIO_PATTERNS.EMERGENCY_SIREN);
+        break;
+      case "POLICE_PRESENCE":
+        this.playMml(AUDIO_PATTERNS.POLICE_SIREN);
+        break;
+      case "TRAFFIC_JAM":
+        // Play random horn sound from the array
+        const hornIndex = seed % AUDIO_PATTERNS.TRAFFIC_JAM_HORNS.length;
+        this.playMml(AUDIO_PATTERNS.TRAFFIC_JAM_HORNS[hornIndex]);
+        break;
+      case "ROAD_CONSTRUCTION":
+        this.playMml(AUDIO_PATTERNS.CONSTRUCTION_NOISE);
+        break;
+      case "WEATHER_RAIN":
+        this.playMml(AUDIO_PATTERNS.RAIN_SOUND);
+        break;
+      case "WEATHER_STORM":
+        this.playMml(AUDIO_PATTERNS.THUNDER);
+        break;
+      case "ANIMAL_CROSSING":
+        // Play random animal sound
+        const animalIndex = seed % AUDIO_PATTERNS.ANIMAL_SOUNDS.length;
+        this.playMml(AUDIO_PATTERNS.ANIMAL_SOUNDS[animalIndex]);
+        break;
+      case "CAR_COLLISION":
+        this.play("explosion", seed);
+        this.playMml("@explosion@s" + seed + " v60 l4 o3 c2r2c2");
+        break;
+      case "WRONG_WAY_DRIVER":
+        // Danger warning for wrong way driver
+        this.playMml([...AUDIO_PATTERNS.DANGER_WARNING]);
+        break;
+      case "POWER_OUTAGE":
+        // Electronic shutdown sound
+        this.playMml("@synth@s" + seed + " v40 l8 o4 c4>c<c4>c<c2");
+        break;
+      default:
+        // Generic event sound
+        this.play("select", seed);
+        break;
+    }
+  }
+
+  // Method for events to trigger ambient sounds
+  public playAmbientEventSound(eventType: string, intensity: number = 1): void {
+    const volume = Math.min(70, 20 + intensity * 10); // Scale volume with intensity
+    const seed = this.gameTickCounter + Math.floor(intensity * 100);
+
+    switch (eventType) {
+      case "RUSH_HOUR":
+        // Continuous traffic noise
+        this.playMml(`@synth@s${seed} v${volume} l16 o3 crcrcrcr`);
+        break;
+      case "WEATHER_RAIN":
+        // Continuous rain sound
+        this.playMml(
+          `@synth@s${seed} v${Math.min(volume, 30)} l32 o6 ${"cr".repeat(8)}`
+        );
+        break;
+      case "CONSTRUCTION":
+        // Intermittent construction noise
+        if (this.gameTickCounter % 120 === 0) {
+          // Every 2 seconds
+          this.playMml(`@hit@d@s${seed} v${volume} l16 o4 cr cr cr`);
+        }
+        break;
+    }
   }
 }
