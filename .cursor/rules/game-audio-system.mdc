@@ -1,0 +1,305 @@
+---
+description: Add sound effects and music to games
+globs: 
+alwaysApply: false
+---
+# Game Audio System Guide
+
+## Overview
+VGCT provides a comprehensive audio system for adding sound effects and music to games through the AudioService interface and BaseGame's built-in audio methods.
+
+## Audio Service Architecture
+
+### AudioService Interface
+All audio functionality is accessed through the [AudioService interface](mdc:src/core/coreTypes.ts):
+```typescript
+interface AudioService {
+  playSoundEffect(sound: SoundEffectType, seed?: number): void;
+  playMml(mml: string | string[]): void;
+  startPlayingBgm(): void;
+  stopPlayingBgm(): void;
+}
+```
+
+### Browser Implementation
+The [BrowserAudioService](mdc:src/utils/BrowserAudioService.ts) implements AudioService using the sounds-some-sounds library through [browserHelper.ts](mdc:src/utils/browserHelper.ts).
+
+## BaseGame Audio Methods
+
+### Sound Effects
+Use `play(sound, seed?)` in your game class:
+```typescript
+// Basic sound effects
+this.play("coin");        // Collect item
+this.play("explosion");   // Player death
+this.play("powerUp");     // Level complete
+this.play("hit");         // Collision
+this.play("jump");        // Movement
+this.play("laser");       // Shooting/special action
+this.play("select");      // Menu selection
+
+// Randomized effects with seed
+this.play("coin", 123);
+this.play("explosion", 456);
+```
+
+### Available Sound Effect Types
+From [coreTypes.ts](mdc:src/core/coreTypes.ts):
+- `"coin"` - Collection/pickup sounds
+- `"laser"` - Shooting/energy sounds  
+- `"explosion"` - Destruction/death sounds
+- `"powerUp"` - Achievement/bonus sounds
+- `"hit"` - Impact/collision sounds
+- `"jump"` - Movement/action sounds
+- `"select"` - Menu/UI selection
+- `"click"` - Button/interaction sounds
+- `"synth"` - Synthesized tones
+- `"tone"` - Pure tone sounds
+
+### Seed Parameter for Variation
+The `seed` parameter creates consistent variations:
+```typescript
+// Same seed = same sound variation
+this.play("powerUp", 42);
+this.play("hit", 100);
+```
+
+## MML (Music Macro Language) System
+
+### Basic MML Usage
+Use `playMml(mml)` for custom music and complex sound effects:
+```typescript
+// Simple melody
+this.playMml("C4D4E4F4G4A4B4C5");
+
+// Multiple parts (harmony)
+this.playMml([
+  "C4E4G4C5",           // Melody
+  "C3G3C4G3",           // Bass line
+  "E4G4E4G4"            // Harmony
+]);
+
+// Rhythm and timing
+this.playMml("C4.D4E4F2G1");  // Different note lengths
+```
+
+### MML Syntax Reference
+
+#### Basic Elements
+- **Notes**: `C`, `D`, `E`, `F`, `G`, `A`, `B`
+- **Octaves**: `o3` (low), `o4` (middle), `o5` (high) or `C3`, `C4`, `C5`
+- **Sharps/Flats**: `C+` or `C#`, `D-` or `Db`
+- **Note Lengths**: `l1` (whole), `l2` (half), `l4` (quarter), `l8` (eighth), `l16` (sixteenth)
+- **Dotted Notes**: `C4.` (1.5x length)
+- **Tied Notes**: `C4^8` (tie quarter note to eighth note)
+- **Rests**: `r4` (quarter rest), `r8` (eighth rest)
+
+#### Advanced Controls
+- **Volume**: `v50` (0-127, where 127 is maximum volume)
+- **Octave Up/Down**: `>` (up one octave), `<` (down one octave)
+- **Default Length**: `l16` (sets default note length to sixteenth notes)
+
+#### Tone and Sound Effects
+- **Synth Tone**: `@synth` - Synthesized instrument sound
+- **Sound Effects**: `@explosion`, `@hit`, `@coin`, `@laser`, etc.
+- **Random Seed**: `@s123456789` - Sets random seed for tone generation
+- **Drum Parts**: `@d` - Designates track as drum/percussion
+
+### Advanced MML Examples
+
+#### Multi-Part Composition with Different Tones
+```typescript
+this.playMml([
+  // Lead melody with synth tone
+  "@synth@s308454596 v50 l16 o4 r4b4 >c+erer8.<b b2 >c+2",
+  
+  // Bass line with different synth seed
+  "@synth@s771118616 v35 l4 o4 f+f+ f+1 >c+ <g+ f+f+",
+  
+  // Harmony part
+  "@synth@s848125671 v40 l4 o4 d+16d+16f+16e16e16e16e16<b16 >ee",
+  
+  // Drum track 1
+  "@explosion@d@s364411560 v40 l16 o4 cr8.cr8. cr8.cr8. cr8.cr8.",
+  
+  // Drum track 2  
+  "@hit@d@s234851483 v50 l16 o4 rcr4^16c rcr4. ccr4^16c rcr4."
+]);
+```
+
+#### Game-Specific Sound Effects
+```typescript
+// Siren effect (emergency vehicles)
+this.playMml("@synth@s12345 v60 l8 o5 c6c5c6c5c6c5");
+
+// Power-up jingle with multiple parts
+this.playMml([
+  "@synth@s100 v50 l8 o4 ceg>c<egc",
+  "@synth@s200 v30 l4 o3 c1g1"
+]);
+
+// Alarm with drum backing
+this.playMml([
+  "@synth@s300 v70 l4 o6 c r c r c r",
+  "@hit@d@s400 v40 l8 o4 c r c r c r c r"
+]);
+
+// Victory fanfare
+this.playMml([
+  "@synth@s500 v60 l8 o4 c e g >c e g >c<",  // Trumpet melody
+  "@synth@s600 v40 l4 o3 c g c g c",          // Horn harmony
+  "@explosion@d@s700 v50 l4 o4 c r c r c"     // Celebratory drums
+]);
+```
+
+#### Complex Rhythm Patterns
+```typescript
+// Countdown beep with increasing intensity
+this.playMml([
+  "@synth@s800 v30 l4 o5 c r c r c r >c<",
+  "@hit@d@s900 v20 l8 o4 r4 c r4 c r4 c r2 c"
+]);
+
+// Danger warning with multiple layers
+this.playMml([
+  "@laser@s1000 v80 l16 o6 c r c r c r c r",
+  "@synth@s1100 v40 l8 o4 c+ r c+ r c+ r c+ r",
+  "@explosion@d@s1200 v30 l4 o4 c r c r"
+]);
+```
+
+### MML Best Practices
+
+#### Performance Optimization
+- Limit to 4-6 concurrent tracks maximum
+- Use shorter MML strings for frequently played sounds
+
+#### Sound Design Tips
+- Use different `@s` seeds for variation in similar sounds
+- Combine `@synth` with sound effect tones for unique sounds
+- Use `@d` drum parts for rhythm and percussion effects
+- Layer multiple tracks with different volumes for depth
+
+#### Common Patterns
+```typescript
+// Constants for reusable MML patterns
+const VICTORY_MELODY = "@synth@s123 v50 l8 o4 ceg>c<egc";
+const DANGER_ALARM = "@laser@s456 v70 l16 o6 cr cr cr cr";
+const DRUM_BEAT = "@hit@d@s789 v40 l8 o4 c r c r c r c r";
+
+// Use in game
+this.playMml([VICTORY_MELODY, DRUM_BEAT]);
+```
+
+## Background Music (BGM)
+
+### BGM Methods
+```typescript
+// Start background music
+this.playBgm();
+
+// Stop background music
+this.stopBgm();
+```
+
+### BGM Implementation
+BGM requires audio files to be defined in the browser initialization:
+```typescript
+// In browser.ts
+initStandardTextGame(
+  () => new YourGame(),
+  { gameName: "YourGame" },
+  undefined,
+  {
+    bgm: "path/to/your/bgm.mp3"  // Define BGM file
+  }
+);
+```
+
+## Game Integration Patterns
+
+### Constructor Setup
+Enable audio in your game constructor:
+```typescript
+import { BrowserAudioService } from "../../utils/BrowserAudioService.js";
+
+constructor(options: YourGameOptions = {}) {
+  super({
+    ...options,
+    audioService: new BrowserAudioService(), // Enable audio
+    gameName: "YourGame"
+  });
+}
+```
+
+### Common Audio Patterns
+```typescript
+// Player movement
+if (this.movePlayer(dx, dy)) {
+  this.play("click");
+}
+
+// Item collection
+if (this.collectItem()) {
+  this.play("coin", this.gameTickCounter); // Vary by time
+}
+
+// Enemy defeat
+this.play("explosion");
+this.playMml("T200 G4F4E4D4C4"); // Death sound
+
+// Level completion
+this.play("powerUp");
+this.playMml([
+  "T160 C5E5G5C6",      // Victory melody
+  "C4G4C5G4"            // Harmony
+]);
+
+// Danger warning
+this.playMml("T300 C6R8C6R8C6R8"); // Beeping alert
+```
+
+### Demo Mode Handling
+Audio is automatically disabled in demo mode:
+```typescript
+// BaseGame automatically handles this
+if (this.isDemoPlay) {
+  // Audio methods do nothing
+  return;
+}
+```
+
+## Sound Design Guidelines
+
+### Sound Effect Selection
+- **"coin"**: Item pickup, score increase
+- **"powerUp"**: Level complete, bonus achieved
+- **"explosion"**: Player death, enemy destruction
+- **"hit"**: Collision, damage taken
+- **"laser"**: Shooting, special abilities
+- **"click"**: Movement, UI interaction
+- **"jump"**: Player actions, menu navigation
+
+### MML for Special Effects
+Use MML when built-in sound effects aren't sufficient:
+```typescript
+// Police siren
+this.playMml("T240 C5F5C5F5C5F5");
+
+// Alarm
+this.playMml("T300 C6R4C6R4C6R4");
+
+// Countdown beep
+this.playMml("T120 C5R4C5R4C5R4C6");
+
+// Success chime
+this.playMml("C4E4G4C5");
+```
+
+## Example Implementation
+See [Hopway game](mdc:src/games/hopway/core.ts) for comprehensive audio usage:
+- Sound effects for player actions and collisions
+- MML for special event sounds
+- Proper audio service integration
+- Demo mode compatibility
+
