@@ -35,7 +35,7 @@ initStandardTextGame(
     isSoundEnabled: true,
     audioSeed: 3,
     audioTempo: 150,
-    bgmVolume: 2,
+    bgmVolume: 3,
   },
   {
     bgm: "Digital_Leap.mp3",
