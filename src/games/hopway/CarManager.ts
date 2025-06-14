@@ -20,8 +20,8 @@ const SIGNAL_CHAR_DOWN = "v";
 const WRONG_WAY_AVOIDANCE_DISTANCE = 10;
 
 // New Time-based Spawning Constants
-const BASE_SPAWN_INTERVAL_TICKS = 160; // Average ticks between spawns
-const SPAWN_INTERVAL_VARIATION_TICKS = 40; // Random variation in spawn time
+const BASE_SPAWN_INTERVAL_TICKS = 200; // Average ticks between spawns
+const SPAWN_INTERVAL_VARIATION_TICKS = 50; // Random variation in spawn time
 
 // Constants from HopwayGame
 const TOP_SAFE_ROW = 1;
@@ -328,11 +328,14 @@ export class CarManager {
   public laneChangeInitiateDistanceFactor: number =
     LANE_CHANGE_INITIATE_DISTANCE_FACTOR;
 
+  private difficulty: number;
+
   constructor(game: HopwayGame, options: HopwayGameOptions) {
     this.game = game;
     this.cars = [];
     this.nextCarId = 0;
     this.lanes = [];
+    this.difficulty = 1;
 
     this.maxCarSpeed = options.maxCarSpeed ?? 0.5;
     this.minCarSpeed = options.minCarSpeed ?? 0.2;
@@ -347,6 +350,7 @@ export class CarManager {
     this.cars = [];
     this.nextCarId = 0;
     this.carSpawnTickCounter = 0; // Reset spawn tick counter
+    this.difficulty = 1;
     this.initializeLanes();
 
     // Reset event-driven parameters
@@ -362,6 +366,7 @@ export class CarManager {
     // Only increment spawn tick counter during normal gameplay
     // This prevents car spam after death/score animations
     this.carSpawnTickCounter++;
+    this.difficulty += 1.0 / (5 * 3600);
   }
 
   private initializeLanes(): void {
@@ -489,7 +494,8 @@ export class CarManager {
           (BASE_SPAWN_INTERVAL_TICKS +
             (Math.random() * SPAWN_INTERVAL_VARIATION_TICKS -
               SPAWN_INTERVAL_VARIATION_TICKS / 2)) /
-          this.spawnIntervalMultiplier;
+          this.spawnIntervalMultiplier /
+          Math.sqrt(this.difficulty);
         lane.nextSpawnTick = this.carSpawnTickCounter + spawnInterval;
       }
     }
@@ -598,8 +604,9 @@ export class CarManager {
     spawnBehind: boolean = false
   ): void {
     const startX = direction > 0 ? -1 : VIRTUAL_SCREEN_WIDTH;
+    const maxCarSpeed = this.maxCarSpeed * this.difficulty;
     const baseSpeed =
-      this.minCarSpeed + Math.random() * (this.maxCarSpeed - this.minCarSpeed);
+      this.minCarSpeed + Math.random() * (maxCarSpeed - this.minCarSpeed);
     let speed = direction * baseSpeed * this.carSpeedMultiplier;
     let char = this.carChar;
 
