@@ -6,6 +6,33 @@ const CHARACTER_CELL_WIDTH = 4; // Total width for one large character (pattern 
 const CHARACTER_HEIGHT = 5; // Height of the patterns
 
 /**
+ * Calculates the Y offset needed to align the bottom of a character pattern.
+ * This is used to make lowercase letters align with uppercase letters at the bottom.
+ * @param patternLines The pattern lines for the character.
+ * @returns The Y offset to apply when drawing the character.
+ */
+function calculateBottomAlignmentOffset(patternLines: string[]): number {
+  // Find the last line that contains any 'l' characters
+  let lastContentLine = -1;
+  for (let i = patternLines.length - 1; i >= 0; i--) {
+    if (patternLines[i].includes("l")) {
+      lastContentLine = i;
+      break;
+    }
+  }
+
+  // If no content found, no offset needed
+  if (lastContentLine === -1) {
+    return 0;
+  }
+
+  // Calculate offset to align bottom of content with bottom of 5-line cell
+  // CHARACTER_HEIGHT - 1 is the bottom line index (0-based)
+  const bottomLineIndex = CHARACTER_HEIGHT - 1;
+  return bottomLineIndex - lastContentLine;
+}
+
+/**
  * Retrieves the 5-line pattern for a given character.
  * Each line in the returned array represents a row of the character pattern.
  * @param char The character to get the pattern for.
@@ -81,14 +108,17 @@ export function drawLargeText(
       continue;
     }
 
-    for (let yOffset = 0; yOffset < patternLines.length; yOffset++) {
-      const line = patternLines[yOffset];
+    // Calculate Y offset for bottom alignment (especially for lowercase letters)
+    const yOffset = calculateBottomAlignmentOffset(patternLines);
+
+    for (let lineIndex = 0; lineIndex < patternLines.length; lineIndex++) {
+      const line = patternLines[lineIndex];
       for (let xOffset = 0; xOffset < line.length; xOffset++) {
         if (line[xOffset] === "l") {
           game.drawText(
             fillCharacter,
             currentX + xOffset,
-            startY + yOffset,
+            startY + lineIndex + yOffset,
             attributes
           );
         }
