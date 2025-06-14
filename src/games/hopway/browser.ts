@@ -24,7 +24,7 @@ const gameFactory = () => {
 const helperOptions: Partial<StandardGameHelperOptions> = {
   gameName: "Hopway", // Also ensure gameName is part of helperOptions if browserHelper uses it
   enableHighScoreStorage: true,
-  enableGlobalReset: true, // Default behavior for 'R' key restart
+  enableGlobalReset: false,
 };
 
 // Initialize and start the game in the browser

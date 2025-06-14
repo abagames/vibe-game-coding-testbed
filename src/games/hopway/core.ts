@@ -377,14 +377,6 @@ export class HopwayGame extends BaseGame {
 
   protected updateGame(inputState: InputState): void {
     if (this.isGameOver()) {
-      if (inputState.r) {
-        this.initializeGame();
-      }
-      return;
-    }
-
-    if (inputState.r) {
-      this.initializeGame();
       return;
     }
 
@@ -764,11 +756,6 @@ export class HopwayGame extends BaseGame {
           : eventMessage;
       this.drawText(truncatedMessage, 1, VIRTUAL_SCREEN_HEIGHT - 1, {
         color: "yellow",
-      });
-    } else {
-      // Default message if no event is active
-      this.drawText("R: Restart", 1, VIRTUAL_SCREEN_HEIGHT - 1, {
-        color: "light_black",
       });
     }
   }

@@ -202,7 +202,7 @@ export function initStandardTextGame(
     VIRTUAL_SCREEN_HEIGHT,
     4,
     6,
-    helperOptions.enableGlobalReset !== false
+    helperOptions.enableGlobalReset === true
   );
 
   init({

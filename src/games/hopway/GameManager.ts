@@ -14,7 +14,7 @@ export enum GameFlowState {
   GAME_OVER,
 }
 
-const GAME_OVER_SCREEN_DURATION = 180; // 3 seconds at 60 FPS
+const GAME_OVER_SCREEN_DURATION = 300;
 
 export interface HopwayGameManagerOptions extends HopwayGameOptions {
   startInPlayingState?: boolean;
@@ -281,15 +281,7 @@ export class HopwayGameManager extends BaseGame {
     const highScoreDisplayText = `Hi-Score: ${this.getHighScore()}`;
     this.drawCenteredText(highScoreDisplayText, 12, { color: "yellow" });
 
-    this.drawCenteredText("Press Any Key to Continue", 16, { color: "cyan" });
-
-    // Show countdown timer
-    const secondsLeft = Math.ceil(this.gameOverTimer / 60);
-    if (secondsLeft > 0) {
-      this.drawCenteredText(`Returning to title in ${secondsLeft}...`, 18, {
-        color: "light_black",
-      });
-    }
+    this.drawCenteredText("Press Space/Z/X to Start", 16, { color: "cyan" });
   }
 
   // Expose methods for external access
