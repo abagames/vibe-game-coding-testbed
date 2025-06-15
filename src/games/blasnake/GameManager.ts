@@ -1,4 +1,4 @@
-import { BaseGame } from "../../core/BaseGame.js";
+import { BaseGame } from "./BaseGame.js";
 import {
   InputState,
   CellAttributes,
@@ -221,6 +221,10 @@ export class GameManager extends BaseGame {
     if (!this.actualGame || this.actualGame.isGameOver()) {
       this.actualGame = new CoreGameLogic(this.gameOptions, this);
     }
+
+    // Sync high score from manager to actual game
+    this.actualGame.setHighScore(this.getHighScore());
+
     this.actualGame.initializeGame();
   }
 
@@ -252,7 +256,18 @@ export class GameManager extends BaseGame {
         if (!this.actualGame) {
           this.initializeCoreGame();
         }
+
+        // Sync high score from manager to actual game
+        this.actualGame.setHighScore(this.getHighScore());
+
         this.actualGame.update(inputState); // CoreGameLogic will handle its own drawing
+
+        // Sync high score back from actual game if it was updated
+        const actualGameHighScore = this.actualGame.getHighScore();
+        if (actualGameHighScore > this.getHighScore()) {
+          this.internalHighScore = actualGameHighScore;
+        }
+
         if (this.actualGame.isGameOver()) {
           this.lastScore = this.actualGame.getScore();
           this.currentFlowState = GameFlowState.GAME_OVER;
@@ -395,7 +410,9 @@ export class GameManager extends BaseGame {
 
   private drawTitleScreen(): void {
     drawLargeText(
-      this,
+      (text: string, x: number, y: number, attributes?: CellAttributes) => {
+        this.drawText(text, x, y, attributes);
+      },
       "BLASNAKE",
       Math.floor(VIRTUAL_SCREEN_WIDTH / 2 - (8 * 4) / 2),
       Math.floor(this.titleTextCurrentY),

@@ -1,4 +1,4 @@
-import { BaseGame } from "../../core/BaseGame";
+import { BaseGame } from "./BaseGame";
 import {
   BaseGameOptions,
   InputState,
@@ -949,6 +949,10 @@ export class HopwayGame extends BaseGame {
     this.timeScore = 1000;
     this.lastTimeScoreDecreaseTick = this.gameTickCounter;
 
+    // Generate new score zones when player dies/respawns
+    this.scoreZoneManager.generateZones();
+    this.scoreZoneManager.markGenerated(this.gameTickCounter);
+
     // Car spawn timing is now handled by dedicated tick counter
     // No need to reset timers as the counter only increments during normal gameplay
   }
@@ -964,11 +968,13 @@ export class HopwayGame extends BaseGame {
         this.playerY === car.y
       ) {
         // Enhanced car collision sound with variation based on car type
-        this.play("explosion", car.id || this.gameTickCounter);
+        this.play("explosion", car.id % 9);
 
         // Add dramatic crash sound for high-speed collisions
         if (car.speed && Math.abs(car.speed) > 0.5) {
-          this.playMml("@explosion@s" + (car.id || 123) + " v80 l8 o2 c4r4c4");
+          this.playMml(
+            "@explosion@s" + (car.id % 9 || 123) + " v80 l8 o2 c4r4c4"
+          );
         }
 
         this.startDeathAnimation();
@@ -982,7 +988,7 @@ export class HopwayGame extends BaseGame {
       playerCellContent.attributes.entityType === "static_obstacle"
     ) {
       // Different sound for static obstacle collision
-      this.play("hit", this.gameTickCounter % 200);
+      this.play("hit", this.gameTickCounter % 9);
       this.startDeathAnimation();
       return;
     }
@@ -1043,7 +1049,7 @@ export class HopwayGame extends BaseGame {
 
   // Enhanced audio methods for event-specific sounds
   public playEventSound(eventType: string, variation?: number): void {
-    const seed = variation || this.gameTickCounter;
+    const seed = variation || Math.floor(Math.random() * 9);
 
     switch (eventType) {
       case "EMERGENCY_VEHICLE":
@@ -1093,7 +1099,7 @@ export class HopwayGame extends BaseGame {
   // Method for events to trigger ambient sounds
   public playAmbientEventSound(eventType: string, intensity: number = 1): void {
     const volume = Math.min(70, 20 + intensity * 10); // Scale volume with intensity
-    const seed = this.gameTickCounter + Math.floor(intensity * 100);
+    const seed = 999 + Math.floor(Math.random() * 9);
 
     switch (eventType) {
       case "RUSH_HOUR":

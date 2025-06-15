@@ -78,14 +78,14 @@ export interface BaseGameOptions {
   isBrowserEnvironment?: boolean; // Default: false. Must be true to enable localStorage.
 }
 
-export interface AudioService {
+export type AudioService = {
   playSoundEffect(sound: SoundEffectType, seed?: number): void;
   playMml(mml: string | string[]): void;
   startPlayingBgm(): void;
   stopPlayingBgm(): void;
-}
+};
 
-export interface GameCore {
+export type GameCore = {
   initializeGame(): void;
   update(inputState: InputState): void;
   getVirtualScreenData(): GridData;
@@ -99,4 +99,4 @@ export interface GameCore {
     attributes?: CellAttributes
   ): void;
   getCellInfo(x: number, y: number): CellInfo | null;
-}
+};

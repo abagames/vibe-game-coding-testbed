@@ -1,9 +1,10 @@
-import { BaseGame } from "../../core/BaseGame.js";
+import { BaseGame } from "./BaseGame.js";
 import {
   InputState,
   GridData,
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
+  CellAttributes,
 } from "../../core/coreTypes.js";
 import { HopwayGame, HopwayGameOptions } from "./core.js";
 import { drawLargeText } from "../../utils/largeTextHelper.js";
@@ -85,6 +86,10 @@ export class HopwayGameManager extends BaseGame {
 
     // Set demo play mode for the actual game
     this.actualGame.setIsDemoPlay(this.isDemoPlay);
+
+    // Sync high score from manager to actual game
+    this.actualGame.setHighScore(this.getHighScore());
+
     this.actualGame.initializeGame();
   }
 
@@ -99,7 +104,18 @@ export class HopwayGameManager extends BaseGame {
         if (!this.actualGame) {
           this.initializeCoreGame();
         }
+
+        // Sync high score from manager to actual game
+        this.actualGame.setHighScore(this.getHighScore());
+
         this.actualGame.update(inputState);
+
+        // Sync high score back from actual game if it was updated
+        const actualGameHighScore = this.actualGame.getHighScore();
+        if (actualGameHighScore > this.getHighScore()) {
+          this.internalHighScore = actualGameHighScore;
+        }
+
         if (this.actualGame.isGameOver()) {
           this.lastScore = this.actualGame.getScore();
           this.currentFlowState = GameFlowState.GAME_OVER;
@@ -189,16 +205,12 @@ export class HopwayGameManager extends BaseGame {
   }
 
   private updateGameOverScreen(inputState: InputState): void {
-    // Check for restart input (multiple keys for better accessibility)
+    // Check for restart input (action keys only)
     if (
       inputState.action1 ||
       inputState.action2 ||
       inputState.space ||
-      inputState.enter ||
-      inputState.up ||
-      inputState.down ||
-      inputState.left ||
-      inputState.right
+      inputState.enter
     ) {
       this.startGameFromTitleOrDemo();
       return;
@@ -246,7 +258,18 @@ export class HopwayGameManager extends BaseGame {
     const titleX = Math.floor((VIRTUAL_SCREEN_WIDTH - titleWidth) / 2);
     const titleY = 2; // Moved higher to leave more space for demo
 
-    drawLargeText(this, titleText, titleX, titleY, "#", { color: "cyan" });
+    drawLargeText(
+      (text: string, x: number, y: number, attributes?: CellAttributes) => {
+        this.drawText(text, x, y, attributes);
+      },
+      titleText,
+      titleX,
+      titleY,
+      "#",
+      {
+        color: "cyan",
+      }
+    );
 
     // Display Last Score and High Score
     const lastScoreText = `${this.lastScore}`;

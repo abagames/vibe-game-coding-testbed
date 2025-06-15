@@ -6,24 +6,33 @@ import {
   stopPlayingBgm as stopPlayingBgmFromHelper,
 } from "./browserHelper.js";
 
-export class BrowserAudioService implements AudioService {
-  playSoundEffect(sound: SoundEffectType, seed?: number): void {
-    playSoundEffectFromHelper(sound, seed);
-  }
+// Browser audio service functions
+export function playSoundEffect(sound: SoundEffectType, seed?: number): void {
+  playSoundEffectFromHelper(sound, seed);
+}
 
-  playMml(mml: string | string[]): void {
-    if (typeof mml === "string") {
-      playMmlFromHelper([mml]);
-    } else {
-      playMmlFromHelper(mml);
-    }
+export function playMml(mml: string | string[]): void {
+  if (typeof mml === "string") {
+    playMmlFromHelper([mml]);
+  } else {
+    playMmlFromHelper(mml);
   }
+}
 
-  startPlayingBgm(): void {
-    startPlayingBgmFromHelper();
-  }
+export function startPlayingBgm(): void {
+  startPlayingBgmFromHelper();
+}
 
-  stopPlayingBgm(): void {
-    stopPlayingBgmFromHelper();
-  }
+export function stopPlayingBgm(): void {
+  stopPlayingBgmFromHelper();
+}
+
+// Create browser audio service object
+export function createBrowserAudioService(): AudioService {
+  return {
+    playSoundEffect,
+    playMml,
+    startPlayingBgm,
+    stopPlayingBgm,
+  };
 }

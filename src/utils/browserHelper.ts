@@ -3,16 +3,19 @@ import {
   InputState,
   GridData,
   CellInfo,
-  GameCore,
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
   BaseGameOptions,
 } from "../core/coreTypes.js";
-import { BaseGame } from "../core/BaseGame.js";
+import {
+  BaseGameState,
+  GameOperations,
+  createBaseGame,
+  updateBaseGame,
+  getVirtualScreenData,
+  isGameOver,
+} from "../core/baseGame.js";
 
-/**
- * Maps crisp-game-lib keyboard input to the game's InputState.
- */
 export function mapCrispInputToGameInputState(): InputState {
   const code = keyboard.code;
   return {
@@ -21,28 +24,21 @@ export function mapCrispInputToGameInputState(): InputState {
     left: code.ArrowLeft.isPressed || code.KeyA.isPressed,
     right: code.ArrowRight.isPressed || code.KeyD.isPressed,
 
-    // X, Slash, Space
     action1:
       code.KeyX.isPressed || code.Slash.isPressed || code.Space.isPressed,
 
-    // Z, Period, Enter
     action2:
       code.KeyZ.isPressed || code.Period.isPressed || code.Enter.isPressed,
 
-    // Individual key states, can be useful for other specific bindings
     enter: code.Enter.isPressed,
     space: code.Space.isPressed,
-    escape: code.Escape.isPressed, // Assuming Escape key for escape functionality
-    r: code.KeyR.isPressed, // Assuming R key for restart
+    escape: code.Escape.isPressed,
+    r: code.KeyR.isPressed,
     period: code.Period.isPressed,
     slash: code.Slash.isPressed,
-    // Note: KeyZ and KeyX are already part of action1/action2
   };
 }
 
-/**
- * Renders the entire virtual screen data to the browser canvas using crisp-game-lib.
- */
 export function renderVirtualScreen(
   virtualScreenData: GridData,
   screenWidthChars: number,
@@ -58,7 +54,6 @@ export function renderVirtualScreen(
 
       if (cell.char !== " ") {
         let cellColor = cell.attributes.color || "white";
-        // Black and white are inverted in dark theme
         if (cellColor === "black") {
           cellColor = "white";
         } else if (cellColor === "white") {
@@ -75,9 +70,6 @@ export function renderVirtualScreen(
   }
 }
 
-/**
- * Creates standard crisp-game-lib options for text-based games.
- */
 export function createStandardGameOptions(
   screenWidth: number = VIRTUAL_SCREEN_WIDTH,
   screenHeight: number = VIRTUAL_SCREEN_HEIGHT,
@@ -95,11 +87,15 @@ export function createStandardGameOptions(
   };
 }
 
-/**
- * Standard game loop handler that can be used by both games.
- */
+type ModuleGameFactory = (options?: Partial<BaseGameOptions>) => {
+  state: any;
+  operations: any;
+};
+
+type ClassGameFactory = (options?: Partial<BaseGameOptions>) => any;
+
 export function createStandardGameLoop(
-  gameFactory: (options?: Partial<BaseGameOptions>) => GameCore,
+  gameFactory: ModuleGameFactory,
   gameName?: string,
   enableHighScoreStorage?: boolean,
   screenWidth: number = VIRTUAL_SCREEN_WIDTH,
@@ -108,57 +104,164 @@ export function createStandardGameLoop(
   charHeight: number = 6,
   enableGlobalReset: boolean = true
 ) {
-  let game: GameCore;
+  let gameState: any;
+  let gameOperations: any;
 
-  function resetGame() {
-    game = gameFactory({
+  function reinitializeGame() {
+    const gameData = gameFactory({
       isBrowserEnvironment: true,
       gameName: gameName,
       enableHighScoreStorage: enableHighScoreStorage === true,
     });
-    game.initializeGame();
+    gameState = gameData.state;
+    gameOperations = gameData.operations;
+
+    // Load high score from localStorage if enabled
+    if (enableHighScoreStorage && gameName) {
+      const storedHighScore = loadHighScoreFromStorage(gameName);
+      if (gameState.internalHighScore !== undefined) {
+        gameState.internalHighScore = Math.max(
+          gameState.internalHighScore,
+          storedHighScore
+        );
+      }
+    }
+
+    gameState = gameOperations.initializeGame(gameState);
   }
 
   function gameUpdate() {
-    if (!game) {
-      // Initialize game on first update if not already
-      resetGame();
+    if (!gameState || !gameOperations) {
+      reinitializeGame();
     }
 
     const gameInputState: InputState = mapCrispInputToGameInputState();
+    const wasGameOver = isGameOver(gameState);
 
-    // Handle global R for reset if no specific game state handles it
-    // This is closer to how BaseGame handled it.
     if (
       enableGlobalReset &&
       gameInputState.r &&
       keyboard.code.KeyR.isJustPressed
     ) {
-      if (
-        game instanceof BaseGame &&
-        (game as any).currentFlowState !== undefined
-      ) {
-        const gm = game as any; // GameManager specific logic
+      if (isGameOver(gameState)) {
+        // Check if the game has its own update logic (like GameManager)
         if (
-          gm.currentFlowState !== 3 /* GAME_OVER */ &&
-          gm.currentFlowState !== 2 /* PLAYING */
+          gameOperations.updateGame &&
+          typeof gameOperations.updateGame === "function"
         ) {
-          console.log(
-            "[browserHelper] Global R pressed, resetting game via resetGame()."
-          );
-          resetGame();
+          gameState = gameOperations.updateGame(gameState, gameInputState);
+        } else {
+          gameState = updateBaseGame(gameState, gameInputState, gameOperations);
         }
-        // If in PLAYING or GAME_OVER, let the GameManager handle 'r' via its update method.
       } else {
-        // If not a GameManager or state is unknown, default to reset.
         console.log(
-          "[browserHelper] Global R pressed (non-GameManager or unknown state), resetting game via resetGame()."
+          "[browserHelper] Global R pressed, reinitializing game via reinitializeGame()."
         );
-        resetGame();
+        reinitializeGame();
+      }
+    } else {
+      // Check if the game has its own update logic (like GameManager)
+      if (
+        gameOperations.updateGame &&
+        typeof gameOperations.updateGame === "function"
+      ) {
+        gameState = gameOperations.updateGame(gameState, gameInputState);
+      } else {
+        gameState = updateBaseGame(gameState, gameInputState, gameOperations);
       }
     }
 
-    game.update(gameInputState);
+    // Save high score when game becomes over
+    if (
+      !wasGameOver &&
+      isGameOver(gameState) &&
+      enableHighScoreStorage &&
+      gameName
+    ) {
+      if (gameState.internalHighScore !== undefined) {
+        saveHighScoreToStorage(gameName, gameState.internalHighScore);
+      }
+    }
+
+    const virtualScreenData = getVirtualScreenData(gameState);
+    renderVirtualScreen(
+      virtualScreenData,
+      screenWidth,
+      screenHeight,
+      charWidth,
+      charHeight
+    );
+  }
+
+  return { gameUpdate, reinitializeGame };
+}
+
+export function createStandardGameLoopForClass(
+  gameFactory: ClassGameFactory,
+  gameName?: string,
+  enableHighScoreStorage?: boolean,
+  screenWidth: number = VIRTUAL_SCREEN_WIDTH,
+  screenHeight: number = VIRTUAL_SCREEN_HEIGHT,
+  charWidth: number = 4,
+  charHeight: number = 6,
+  enableGlobalReset: boolean = true
+) {
+  let game: any;
+
+  function reinitializeGame() {
+    const gameOptions = {
+      isBrowserEnvironment: true,
+      gameName: gameName,
+      enableHighScoreStorage: enableHighScoreStorage === true,
+    };
+    game = gameFactory(gameOptions);
+
+    // Load high score from localStorage if enabled
+    if (
+      enableHighScoreStorage &&
+      gameName &&
+      game.internalHighScore !== undefined
+    ) {
+      const storedHighScore = loadHighScoreFromStorage(gameName);
+      game.internalHighScore = Math.max(
+        game.internalHighScore,
+        storedHighScore
+      );
+    }
+  }
+
+  function gameUpdate() {
+    if (!game) {
+      reinitializeGame();
+    }
+
+    const gameInputState: InputState = mapCrispInputToGameInputState();
+    const wasGameOver = game.isGameOver ? game.isGameOver() : false;
+
+    if (
+      enableGlobalReset &&
+      gameInputState.r &&
+      keyboard.code.KeyR.isJustPressed
+    ) {
+      if (wasGameOver) {
+        game.update(gameInputState);
+      } else {
+        console.log(
+          "[browserHelper] Global R pressed, reinitializing game via reinitializeGame()."
+        );
+        reinitializeGame();
+      }
+    } else {
+      game.update(gameInputState);
+    }
+
+    // Save high score when game becomes over
+    const isGameOverNow = game.isGameOver ? game.isGameOver() : false;
+    if (!wasGameOver && isGameOverNow && enableHighScoreStorage && gameName) {
+      if (game.internalHighScore !== undefined) {
+        saveHighScoreToStorage(gameName, game.internalHighScore);
+      }
+    }
 
     const virtualScreenData = game.getVirtualScreenData();
     renderVirtualScreen(
@@ -170,23 +273,54 @@ export function createStandardGameLoop(
     );
   }
 
-  return { gameUpdate, resetGame };
+  return { gameUpdate, reinitializeGame };
 }
 
-/**
- * Options for the standard text game helper.
- */
 export interface StandardGameHelperOptions {
   enableGlobalReset?: boolean;
   gameName?: string;
   enableHighScoreStorage?: boolean;
 }
 
-/**
- * Initializes a standard text-based game with crisp-game-lib.
- */
+// High score localStorage operations
+export function getHighScoreKey(gameName: string): string {
+  return `abagames-vgct-${gameName}`;
+}
+
+export function loadHighScoreFromStorage(gameName: string): number {
+  try {
+    const key = getHighScoreKey(gameName);
+    const storedScore = localStorage.getItem(key);
+    if (storedScore) {
+      const parsedScore = parseInt(storedScore, 10);
+      if (!isNaN(parsedScore)) {
+        return parsedScore;
+      }
+    }
+  } catch (e) {
+    console.error(
+      `Failed to retrieve high score from localStorage for ${gameName}:`,
+      e
+    );
+  }
+  return 0;
+}
+
+export function saveHighScoreToStorage(gameName: string, score: number): void {
+  try {
+    const key = getHighScoreKey(gameName);
+    localStorage.setItem(key, score.toString());
+    console.log(`[${gameName}] High score saved to storage: ${score}`);
+  } catch (e) {
+    console.error(
+      `Failed to save high score to localStorage for ${gameName}:`,
+      e
+    );
+  }
+}
+
 export function initStandardTextGame(
-  gameFactory: (options?: Partial<BaseGameOptions>) => GameCore,
+  gameFactory: ModuleGameFactory,
   helperOptions: Partial<StandardGameHelperOptions> = {},
   cglOptions?: Partial<Options>,
   audioFiles?: { [key: string]: string }
@@ -194,7 +328,7 @@ export function initStandardTextGame(
   const defaultOptions = createStandardGameOptions();
   const _cglOptions = { ...defaultOptions, ...cglOptions };
 
-  const { gameUpdate } = createStandardGameLoop(
+  const { gameUpdate, reinitializeGame } = createStandardGameLoop(
     gameFactory,
     helperOptions.gameName,
     helperOptions.enableHighScoreStorage === true,
@@ -212,33 +346,45 @@ export function initStandardTextGame(
   });
 }
 
-/**
- * Plays a sound effect using crisp-game-lib.
- * @param sound The type of sound effect to play.
- */
+export function initStandardTextGameForClass(
+  gameFactory: ClassGameFactory,
+  helperOptions: Partial<StandardGameHelperOptions> = {},
+  cglOptions?: Partial<Options>,
+  audioFiles?: { [key: string]: string }
+): void {
+  const defaultOptions = createStandardGameOptions();
+  const _cglOptions = { ...defaultOptions, ...cglOptions };
+
+  const { gameUpdate, reinitializeGame } = createStandardGameLoopForClass(
+    gameFactory,
+    helperOptions.gameName,
+    helperOptions.enableHighScoreStorage === true,
+    VIRTUAL_SCREEN_WIDTH,
+    VIRTUAL_SCREEN_HEIGHT,
+    4,
+    6,
+    helperOptions.enableGlobalReset === true
+  );
+
+  init({
+    update: gameUpdate,
+    options: _cglOptions,
+    audioFiles,
+  });
+}
+
 export function playSoundEffect(sound: SoundEffectType, seed?: number): void {
   play(sound, { seed });
 }
 
-/**
- * Plays a MML (Music Macro Language) string using crisp-game-lib.
- * @param mml The MML string to play.
- */
 export function playMml(mmlStrings: string[]): void {
   sss.playMml(mmlStrings, { isLooping: false });
 }
 
-/**
- * Plays a background music (BGM) using crisp-game-lib.
- * The BGM must be defined in the `audioFiles` option during `init`.
- */
 export function startPlayingBgm(): void {
   playBgm();
 }
 
-/**
- * Stops the currently playing background music (BGM) using crisp-game-lib.
- */
 export function stopPlayingBgm(): void {
   stopBgm();
 }

@@ -1,9 +1,10 @@
 import { HopwayGameManager, HopwayGameManagerOptions } from "./GameManager.js";
 import {
-  ConsoleSimulator,
+  createConsoleSimulator,
+  runSimulation as runConsoleSimulation,
   ConsoleSimulatorOptions,
 } from "../../utils/consoleSimulator.js";
-import { NodeAudioService } from "../../utils/NodeAudioService.js";
+import { createNodeAudioService } from "../../utils/nodeAudioService.js";
 import {
   InputState,
   VIRTUAL_SCREEN_HEIGHT,
@@ -19,7 +20,7 @@ async function runSimulation() {
   const gameOptions: HopwayGameManagerOptions = {
     isBrowserEnvironment: false,
     enableHighScoreStorage: false,
-    audioService: new NodeAudioService(),
+    audioService: createNodeAudioService(),
     startInPlayingState: true, // Skip title screen for simulation
   };
 
@@ -31,10 +32,14 @@ async function runSimulation() {
     totalTicks: 1000,
   };
 
-  const simulator = new ConsoleSimulator(game, "interactive", simOnlyOptions);
+  const simulatorState = createConsoleSimulator(
+    game,
+    "interactive",
+    simOnlyOptions
+  );
 
   console.log("--- Hopway Game Simulation ---");
-  await simulator.run();
+  runConsoleSimulation(simulatorState);
 
   console.log("--- Simulation Finished ---");
   console.log("Final Score:", game.getScore());

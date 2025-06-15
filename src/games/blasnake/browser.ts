@@ -1,20 +1,28 @@
 import "crisp-game-lib";
 import { GameManager } from "./GameManager.js";
-import { initStandardTextGame } from "../../utils/browserHelper.js";
-import { BrowserAudioService } from "../../utils/BrowserAudioService.js";
-import { BaseGameOptions } from "../../core/coreTypes.js";
+import { createBrowserAudioService } from "../../utils/browserAudioService.js";
+import {
+  initStandardTextGameForClass,
+  StandardGameHelperOptions,
+} from "../../utils/browserHelper.js";
 
-initStandardTextGame(
-  (options?: Partial<BaseGameOptions>) =>
-    new GameManager({
-      audioService: new BrowserAudioService(),
-      ...options,
-    }),
-  {
-    gameName: "blasnake",
-    enableHighScoreStorage: true,
-    enableGlobalReset: false,
-  },
+// Factory function for GameManager
+function createBlasnakeGame(options: any = {}) {
+  return new GameManager({
+    ...options,
+    audioService: createBrowserAudioService(),
+  });
+}
+
+const helperOptions: StandardGameHelperOptions = {
+  enableGlobalReset: true,
+  gameName: "blasnake",
+  enableHighScoreStorage: true,
+};
+
+initStandardTextGameForClass(
+  createBlasnakeGame,
+  helperOptions,
   {
     isSoundEnabled: true,
     audioSeed: 1,

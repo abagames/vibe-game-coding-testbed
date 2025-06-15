@@ -1,4 +1,3 @@
-import { BaseGame } from "../core/BaseGame.js";
 import { smallTextPatterns } from "./textPatternSmall.js";
 import { CellAttributes } from "../core/coreTypes.js";
 
@@ -81,7 +80,12 @@ function getPatternForChar(char: string): string[] | null {
  * @param attributes Optional CellAttributes to apply to the drawn characters.
  */
 export function drawLargeText(
-  game: BaseGame,
+  drawText: (
+    text: string,
+    x: number,
+    y: number,
+    attributes?: CellAttributes
+  ) => void,
   text: string,
   startX: number,
   startY: number,
@@ -115,7 +119,7 @@ export function drawLargeText(
       const line = patternLines[lineIndex];
       for (let xOffset = 0; xOffset < line.length; xOffset++) {
         if (line[xOffset] === "l") {
-          game.drawText(
+          drawText(
             fillCharacter,
             currentX + xOffset,
             startY + lineIndex + yOffset,

@@ -7,8 +7,9 @@ import {
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
   AudioService,
+  BaseGameOptions,
 } from "../../core/coreTypes.js";
-import { BaseGame } from "../../core/BaseGame.js";
+import { BaseGame } from "./BaseGame.js";
 import { EnemySystemManager } from "./enemies/EnemySystemManager.js";
 import {
   Position,
@@ -53,8 +54,7 @@ interface GameMessage {
   color: cglColor;
 }
 
-export interface BlasnakeGameOptions {
-  initialLives?: number;
+export interface BlasnakeGameOptions extends BaseGameOptions {
   movementInterval?: number;
   enemyCount?: number;
   // Debug options
@@ -63,7 +63,6 @@ export interface BlasnakeGameOptions {
   timeAcceleration?: number; // Time progression multiplier (1.0 = normal, 2.0 = double speed)
   constrainToBounds?: boolean; // Movement constraint at screen boundaries
   startInPlayingState?: boolean; // Option to start the game directly in the playing state
-  audioService?: AudioService; // Add audioService for BaseGame, though CoreGameLogic itself doesn't use it directly for its own sounds, it's for the renderer (BaseGame)
 }
 
 export class CoreGameLogic {
@@ -205,6 +204,14 @@ export class CoreGameLogic {
 
   public isGameOver(): boolean {
     return this.baseGame.isGameOver();
+  }
+
+  public setHighScore(highScore: number): void {
+    this.baseGame.setHighScore(highScore);
+  }
+
+  public getHighScore(): number {
+    return this.baseGame.getHighScore();
   }
 
   public getSnakeHeadPosition(): Position | null {
