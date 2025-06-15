@@ -6,7 +6,7 @@ alwaysApply: false
 # Game Audio System Guide
 
 ## Overview
-VGCT provides a comprehensive audio system for adding sound effects and music to games through the AudioService interface and BaseGame's built-in audio methods.
+VGCT provides a comprehensive audio system for adding sound effects and music to games through the AudioService interface and BaseGame's built-in audio methods. The system supports both simple sound effects and complex MML (Music Macro Language) compositions.
 
 ## Audio Service Architecture
 
@@ -24,6 +24,16 @@ interface AudioService {
 ### Browser Implementation
 The [BrowserAudioService](mdc:src/utils/BrowserAudioService.ts) implements AudioService using the sounds-some-sounds library through [browserHelper.ts](mdc:src/utils/browserHelper.ts).
 
+### Functional Module Support
+For functional modules using [baseGameModule.ts](mdc:src/core/baseGameModule.ts):
+```typescript
+// Audio functions that don't modify state
+playSoundEffect(state, "powerUp", seed);
+playMml(state, mmlString);
+playBgm(state);
+stopBgm(state);
+```
+
 ## BaseGame Audio Methods
 
 ### Sound Effects
@@ -38,7 +48,7 @@ this.play("jump");        // Movement
 this.play("laser");       // Shooting/special action
 this.play("select");      // Menu selection
 
-// Randomized effects with seed
+// Randomized effects with seed for variation
 this.play("coin", 123);
 this.play("explosion", 456);
 ```
@@ -61,7 +71,10 @@ The `seed` parameter creates consistent variations:
 ```typescript
 // Same seed = same sound variation
 this.play("powerUp", 42);
-this.play("hit", 100);
+this.play("hit", car.id % 9);
+
+// Use game state for dynamic variation
+this.play("explosion", this.gameTickCounter % 9);
 ```
 
 ## MML (Music Macro Language) System
@@ -87,7 +100,7 @@ this.playMml("C4.D4E4F2G1");  // Different note lengths
 
 #### Basic Elements
 - **Notes**: `C`, `D`, `E`, `F`, `G`, `A`, `B`
-- **Octaves**: `o3` (low), `o4` (middle), `o5` (high) or `C3`, `C4`, `C5`
+- **Octaves**: `o4` (middle), `o5` (high), `o6`
 - **Sharps/Flats**: `C+` or `C#`, `D-` or `Db`
 - **Note Lengths**: `l1` (whole), `l2` (half), `l4` (quarter), `l8` (eighth), `l16` (sixteenth)
 - **Dotted Notes**: `C4.` (1.5x length)
@@ -98,12 +111,65 @@ this.playMml("C4.D4E4F2G1");  // Different note lengths
 - **Volume**: `v50` (0-127, where 127 is maximum volume)
 - **Octave Up/Down**: `>` (up one octave), `<` (down one octave)
 - **Default Length**: `l16` (sets default note length to sixteenth notes)
+- **Tempo**: `T120` (sets tempo to 120 BPM)
 
 #### Tone and Sound Effects
 - **Synth Tone**: `@synth` - Synthesized instrument sound
 - **Sound Effects**: `@explosion`, `@hit`, `@coin`, `@laser`, etc.
 - **Random Seed**: `@s123456789` - Sets random seed for tone generation
 - **Drum Parts**: `@d` - Designates track as drum/percussion
+
+### Audio Constants Pattern
+Define reusable audio patterns as constants (from [Hopway core.ts](mdc:src/games/hopway/core.ts)):
+
+```typescript
+const AUDIO_PATTERNS = {
+  // Emergency vehicle siren
+  EMERGENCY_SIREN: "@synth@s12345 v60 l8 o5 c>c<c>c<c>c<",
+
+  // Police siren
+  POLICE_SIREN: "@synth@s54321 v50 l4 o5 c>c<r4c>c<r4c>c<r4",
+
+  // Traffic jam horn sounds
+  TRAFFIC_JAM_HORNS: [
+    "@synth@s11111 v45 l4 o4 c2",
+    "@synth@s22222 v40 l4 o3 f2",
+    "@synth@s33333 v40 l4 o4 g2",
+  ],
+
+  // Construction machinery
+  CONSTRUCTION_NOISE: "@hit@d@s99999 v45 l16 o4 cr cr cr cr",
+
+  // Weather effects
+  RAIN_SOUND: "@synth@s77777 v36 l32 o6 crcrcrcrcrcrcr",
+  THUNDER: "@explosion@s88888 v70 l1 o3 c",
+
+  // Extra life jingle
+  EXTRA_LIFE_JINGLE: [
+    "@synth@s100 v90 l8 o6 ceg>c<egc",
+    "@synth@s200 v80 l4 o5 cg",
+  ],
+
+  // Danger warning
+  DANGER_WARNING: [
+    "@laser@s1000 v80 l16 o6 c r c r c r c r",
+    "@synth@s1100 v40 l8 o4 c+ r c+ r c+ r c+ r",
+  ],
+
+  // Time running out warning
+  TIME_WARNING: "@synth@s800 v50 l4 o5 c r c r c r >c<",
+
+  // Oil slick slip sound
+  OIL_SLIP: "@laser@s666 v40 l16 o4 c>c<c>c<c>c<",
+
+  // Animal crossing sounds
+  ANIMAL_SOUNDS: [
+    "@synth@s111 v40 l8 o4 ege", // Bird chirp
+    "@synth@s222 v35 l4 o3 c2", // Low animal sound
+    "@synth@s333 v45 l16 o5 crcrcr", // Quick animal movement
+  ],
+} as const;
+```
 
 ### Advanced MML Examples
 
@@ -134,8 +200,8 @@ this.playMml("@synth@s12345 v60 l8 o5 c6c5c6c5c6c5");
 
 // Power-up jingle with multiple parts
 this.playMml([
-  "@synth@s100 v50 l8 o4 ceg>c<egc",
-  "@synth@s200 v30 l4 o3 c1g1"
+  "@synth@s100 v50 l8 o5 ceg>c<egc",
+  "@synth@s200 v30 l4 o4 c1g1"
 ]);
 
 // Alarm with drum backing
@@ -146,8 +212,8 @@ this.playMml([
 
 // Victory fanfare
 this.playMml([
-  "@synth@s500 v60 l8 o4 c e g >c e g >c<",  // Trumpet melody
-  "@synth@s600 v40 l4 o3 c g c g c",          // Horn harmony
+  "@synth@s500 v60 l8 o5 c e g >c e g >c<",  // Trumpet melody
+  "@synth@s600 v40 l4 o c g c g c",          // Horn harmony
   "@explosion@d@s700 v50 l4 o4 c r c r c"     // Celebratory drums
 ]);
 ```
@@ -168,29 +234,6 @@ this.playMml([
 ]);
 ```
 
-### MML Best Practices
-
-#### Performance Optimization
-- Limit to 4-6 concurrent tracks maximum
-- Use shorter MML strings for frequently played sounds
-
-#### Sound Design Tips
-- Use different `@s` seeds for variation in similar sounds
-- Combine `@synth` with sound effect tones for unique sounds
-- Use `@d` drum parts for rhythm and percussion effects
-- Layer multiple tracks with different volumes for depth
-
-#### Common Patterns
-```typescript
-// Constants for reusable MML patterns
-const VICTORY_MELODY = "@synth@s123 v50 l8 o4 ceg>c<egc";
-const DANGER_ALARM = "@laser@s456 v70 l16 o6 cr cr cr cr";
-const DRUM_BEAT = "@hit@d@s789 v40 l8 o4 c r c r c r c r";
-
-// Use in game
-this.playMml([VICTORY_MELODY, DRUM_BEAT]);
-```
-
 ## Background Music (BGM)
 
 ### BGM Methods
@@ -207,13 +250,26 @@ BGM requires audio files to be defined in the browser initialization:
 ```typescript
 // In browser.ts
 initStandardTextGame(
-  () => new YourGame(),
+  gameFactory,
   { gameName: "YourGame" },
   undefined,
   {
     bgm: "path/to/your/bgm.mp3"  // Define BGM file
   }
 );
+```
+
+### BGM Best Practices
+```typescript
+// Start BGM only at game initialization
+public initializeGame(): void {
+  super.resetGame();
+  // ... other initialization
+  this.playBgm(); // Start background music once
+}
+
+// Don't restart BGM frequently to avoid audio spam
+// BGM continues playing across level transitions
 ```
 
 ## Game Integration Patterns
@@ -232,31 +288,108 @@ constructor(options: YourGameOptions = {}) {
 }
 ```
 
+### Event-Driven Audio System
+Create specialized audio methods for different game events:
+
+```typescript
+// Enhanced audio methods for event-specific sounds
+public playEventSound(eventType: string, variation?: number): void {
+  const seed = variation;
+
+  switch (eventType) {
+    case "EMERGENCY_VEHICLE":
+      this.playMml(AUDIO_PATTERNS.EMERGENCY_SIREN);
+      break;
+    case "POLICE_PRESENCE":
+      this.playMml(AUDIO_PATTERNS.POLICE_SIREN);
+      break;
+    case "TRAFFIC_JAM":
+      // Play random horn sound from the array
+      const hornIndex = seed % AUDIO_PATTERNS.TRAFFIC_JAM_HORNS.length;
+      this.playMml(AUDIO_PATTERNS.TRAFFIC_JAM_HORNS[hornIndex]);
+      break;
+    case "ROAD_CONSTRUCTION":
+      this.playMml(AUDIO_PATTERNS.CONSTRUCTION_NOISE);
+      break;
+    case "WEATHER_RAIN":
+      this.playMml(AUDIO_PATTERNS.RAIN_SOUND);
+      break;
+    case "WEATHER_STORM":
+      this.playMml(AUDIO_PATTERNS.THUNDER);
+      break;
+    default:
+      this.play("select", seed);
+      break;
+  }
+}
+
+// Method for ambient/continuous sounds
+public playAmbientEventSound(eventType: string, intensity: number = 1): void {
+  const volume = Math.min(70, 20 + intensity * 10); // Scale volume with intensity
+  const seed = 999 + Math.floor(Math.random() * 9);
+
+  switch (eventType) {
+    case "RUSH_HOUR":
+      // Continuous traffic noise
+      this.playMml(`@synth@s${seed} v${volume} l16 o3 crcrcrcr`);
+      break;
+    case "WEATHER_RAIN":
+      // Continuous rain sound
+      this.playMml(`@synth@s${seed} v${Math.min(volume, 30)} l32 o6 ${"cr".repeat(8)}`);
+      break;
+    case "CONSTRUCTION":
+      // Intermittent construction noise
+      if (this.gameTickCounter % 120 === 0) { // Every 2 seconds
+        this.playMml(`@hit@d@s${seed} v${volume} l16 o4 cr cr cr`);
+      }
+      break;
+  }
+}
+```
+
 ### Common Audio Patterns
 ```typescript
-// Player movement
+// Player movement (use sparingly to avoid audio spam)
 if (this.movePlayer(dx, dy)) {
-  this.play("click");
+  // Only play sound for special movements
+  this.play("select"); // First movement after respawn
 }
 
-// Item collection
+// Item collection with variation
 if (this.collectItem()) {
-  this.play("coin", this.gameTickCounter); // Vary by time
+  this.play("coin", 7); // Vary by time
 }
 
-// Enemy defeat
-this.play("explosion");
-this.playMml("T200 G4F4E4D4C4"); // Death sound
+// Enemy defeat with dynamic sound
+this.play("explosion", car.id % 9);
+if (car.speed && Math.abs(car.speed) > 0.5) {
+  // Enhanced crash sound for high-speed collisions
+  this.playMml("@explosion@s" + ((car.id % 9) || 123) + " v80 l8 o2 c4r4c4");
+}
 
-// Level completion
-this.play("powerUp");
-this.playMml([
-  "T160 C5E5G5C6",      // Victory melody
-  "C4G4C5G4"            // Harmony
-]);
+// Level completion with multiplier bonus
+if (multiplier > 1) {
+  // Special fanfare for multiplier zones
+  this.play("powerUp", 999 + multiplier);
+} else {
+  // Standard level complete sound
+  this.play("powerUp");
+}
 
-// Danger warning
-this.playMml("T300 C6R8C6R8C6R8"); // Beeping alert
+// Progressive warnings based on game state
+if (previousTimeScore > 100 && this.timeScore <= 100) {
+  this.playMml(AUDIO_PATTERNS.TIME_WARNING);
+} else if (previousTimeScore > 50 && this.timeScore <= 50) {
+  this.playMml([...AUDIO_PATTERNS.DANGER_WARNING]);
+} else if (previousTimeScore > 10 && this.timeScore <= 10) {
+  this.play("laser", 999);
+}
+
+// Extra life with special jingle
+if (currentScore >= nextThreshold) {
+  this.gainLife(1);
+  this.playMml([...AUDIO_PATTERNS.EXTRA_LIFE_JINGLE]);
+}
 ```
 
 ### Demo Mode Handling
@@ -269,37 +402,98 @@ if (this.isDemoPlay) {
 }
 ```
 
+## Audio Performance Guidelines
+
+### Avoid Audio Spam
+```typescript
+// ❌ Bad: Frequent movement sounds
+if (dx !== 0 || dy !== 0) {
+  this.play("click"); // Plays every movement - too much!
+}
+
+// ✅ Good: Selective audio feedback
+if (!this.playerCanMove && firstMovement) {
+  this.play("select"); // Only on first movement after respawn
+}
+
+// ✅ Good: Conditional ambient sounds
+if (this.gameTickCounter % 120 === 0) { // Every 2 seconds
+  this.playAmbientEventSound("CONSTRUCTION", intensity);
+}
+```
+
+### Volume Management
+```typescript
+// Scale volume based on game state
+const volume = Math.min(70, 20 + intensity * 10);
+this.playMml(`@synth@s${seed} v${volume} l16 o3 crcrcrcr`);
+
+// Use different volumes for different sound layers
+const AUDIO_PATTERNS = {
+  RAIN_SOUND: "@synth@s77777 v36 l32 o6 crcrcrcrcrcrcr", // Quiet ambient
+  THUNDER: "@explosion@s88888 v70 l1 o3 c", // Loud dramatic
+  EXTRA_LIFE_JINGLE: [
+    "@synth@s100 v90 l8 o6 ceg>c<egc", // Loud celebration
+    "@synth@s200 v80 l4 o5 cg", // Supporting harmony
+  ],
+};
+```
+
+### Performance Optimization
+- Limit to 4-6 concurrent MML tracks maximum
+- Use shorter MML strings for frequently played sounds
+- Cache audio patterns as constants
+- Use seeds for variation instead of creating new patterns
+
 ## Sound Design Guidelines
 
 ### Sound Effect Selection
-- **"coin"**: Item pickup, score increase
-- **"powerUp"**: Level complete, bonus achieved
-- **"explosion"**: Player death, enemy destruction
-- **"hit"**: Collision, damage taken
-- **"laser"**: Shooting, special abilities
-- **"click"**: Movement, UI interaction
-- **"jump"**: Player actions, menu navigation
+- **"coin"**: Item pickup, score increase, positive feedback
+- **"powerUp"**: Level complete, bonus achieved, major accomplishments
+- **"explosion"**: Player death, enemy destruction, dramatic events
+- **"hit"**: Collision, damage taken, impact events
+- **"laser"**: Shooting, special abilities, energy-based actions
+- **"click"**: Movement, UI interaction, minor feedback
+- **"select"**: Menu navigation, game start, mode changes
 
 ### MML for Special Effects
 Use MML when built-in sound effects aren't sufficient:
 ```typescript
-// Police siren
-this.playMml("T240 C5F5C5F5C5F5");
+// Environmental sounds
+const RAIN = "@synth@s77777 v36 l32 o6 crcrcrcrcrcrcr";
+const THUNDER = "@explosion@s88888 v70 l1 o3 c";
+const SIREN = "@synth@s12345 v60 l8 o5 c>c<c>c<c>c<";
 
-// Alarm
-this.playMml("T300 C6R4C6R4C6R4");
+// Game state warnings
+const TIME_WARNING = "@synth@s800 v50 l4 o5 c r c r c r >c<";
+const DANGER_ALERT = "@laser@s1000 v80 l16 o6 c r c r c r c r";
 
-// Countdown beep
-this.playMml("T120 C5R4C5R4C5R4C6");
+// Success and achievement sounds
+const EXTRA_LIFE = "@synth@s100 v90 l8 o6 ceg>c<egc";
+const LEVEL_COMPLETE = "@synth@s500 v60 l8 o4 c e g >c e g >c<";
+```
 
-// Success chime
-this.playMml("C4E4G4C5");
+### Layered Audio Design
+```typescript
+// Combine multiple tracks for rich soundscapes
+this.playMml([
+  "@synth@s500 v60 l8 o4 c e g >c e g >c<",  // Main melody
+  "@synth@s600 v40 l4 o3 c g c g c",          // Bass harmony
+  "@explosion@d@s700 v50 l4 o4 c r c r c"     // Rhythmic percussion
+]);
+
+// Progressive intensity
+const intensity = Math.min(3, Math.floor(this.gameTickCounter / 1800));
+const volume = 30 + intensity * 15;
+this.playMml(`@synth@s${seed} v${volume} l16 o${3 + intensity} crcrcrcr`);
 ```
 
 ## Example Implementation
 See [Hopway game](mdc:src/games/hopway/core.ts) for comprehensive audio usage:
-- Sound effects for player actions and collisions
-- MML for special event sounds
-- Proper audio service integration
-- Demo mode compatibility
+- Audio constants pattern with `AUDIO_PATTERNS`
+- Event-driven audio system with `playEventSound()`
+- Ambient sound management with `playAmbientEventSound()`
+- Progressive audio warnings based on game state
+- Proper BGM integration and demo mode handling
+- Performance-optimized audio feedback
 

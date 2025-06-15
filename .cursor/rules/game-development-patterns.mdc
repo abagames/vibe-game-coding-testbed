@@ -5,76 +5,138 @@ alwaysApply: true
 ---
 # Game Development Patterns
 
-## BaseGame Inheritance Pattern
+## Functional Module Pattern (Recommended)
 
-### Required Implementation
-All games must extend [BaseGame.ts](mdc:src/core/BaseGame.ts) and implement:
-```typescript
-abstract initializeGame(): void;
-abstract updateGame(inputState: InputState): void;
-```
+### Core Structure
+Games should use pure functions and immutable state management following [defaultGame core.ts](mdc:src/games/defaultGame/core.ts):
 
-### Constructor Pattern
-Use named arguments with interfaces:
 ```typescript
-interface YourGameOptions {
-  initialLives?: number;
-  gameSpeed?: number;
-  // Add game-specific options
+import { BaseGameState, createBaseGame } from "../../core/baseGame.js";
+
+export type YourGameState = BaseGameState & {
+  playerX: number;
+  playerY: number;
+  // Add game-specific state
+};
+
+export function createYourGame(options: YourGameOptions = {}): YourGameState {
+  const baseState = createBaseGame(options);
+  return { ...baseState, playerX: 0, playerY: 0 };
 }
 
-constructor(options: YourGameOptions = {}) {
-  super(options); // Passes relevant options to BaseGame
-  // Game-specific initialization
+export function initializeYourGame(state: YourGameState): YourGameState {
+  // Reset game state
+  return { ...state, playerX: startX, playerY: startY };
+}
+
+export function updateYourGame(state: YourGameState, inputState: InputState): YourGameState {
+  // Pure function - return new state
+  return { ...state, playerX: newX, playerY: newY };
 }
 ```
 
-### Available BaseGame Methods
-- `drawText(text, x, y, attributes?)`: Draw text to virtual screen.
-- `drawCenteredText(text, y, attributes?)`: Draw centered text at y coordinate.
-- `getCellInfo(x, y)`: Get cell information at coordinates.
-- `addScore(value)`: Modify score. Updates session high score if current score is higher.
-- `loseLife()`: Decrease lives. If lives reach 0, triggers game over.
-- `gainLife(count?: number)`: Increase lives by `count` (default 1).
-- `getScore()`: Get current score.
-- `getLives()`: Get current number of lives.
-- `isGameOver()`: Check if the game is over (returns boolean based on `gameOverState`).
-- `triggerGameOver()`: Manually end the game (sets `gameOverState` to true) and commit high score.
-- `getVirtualScreenData()`: Get the full grid data.
-- `renderStandardUI()`: Draws score, lives, and restart instruction. Typically called by `BaseGame.update()`.
-- `renderGameOverScreen()`: Draws the game over message, final score, high score, and restart prompt. Called by `BaseGame.update()` when `isGameOver()` is true. Note: Takes no arguments in `BaseGame.ts`.
-- `setIsDemoPlay(isDemo: boolean)`: Set demo play mode (mutes audio by default).
-- `play(sound: SoundEffectType, seed?: number)`: Play a sound effect (if not in demo mode and audioService is available).
-- `playMml(mml: string | string[])`: Play MML music (if not in demo mode and audioService is available).
-- `playBgm()`: Start background music (if not in demo mode and audioService is available).
-- `stopBgm()`: Stop background music (if not in demo mode and audioService is available).
-- `getHighScore()`: Get the current session's or stored high score.
-- `commitHighScoreToStorage()`: Manually trigger saving the current high score (also done automatically on game over if enabled).
-- `resetGame()` (protected): Resets score, lives to initial, `gameOverState` to false, and clears screen. Useful for restarting game logic, often called in the derived class's `initializeGame` or by a restart mechanism.
+### GameManager Pattern (Advanced)
+For games with complex flow states (title, playing, game over), use the GameManager pattern from [defaultGame gameManager.ts](mdc:src/games/defaultGame/gameManager.ts):
 
-### BaseGame Constructor Options
+```typescript
+// Game flow state constants
+const GAME_FLOW_STATE_TITLE = 0;
+const GAME_FLOW_STATE_PLAYING = 1;
+const GAME_FLOW_STATE_GAME_OVER = 2;
+
+export type YourGameManagerState = YourGameState & {
+  gameFlowState: number;
+  titleAnimationTimer: number;
+  gameOverTimer: number;
+  isDemoMode: boolean;
+};
+
+export function updateGameManager(
+  state: YourGameManagerState,
+  inputState: InputState
+): YourGameManagerState {
+  switch (state.gameFlowState) {
+    case GAME_FLOW_STATE_TITLE:
+      return updateTitleScreen(state, inputState);
+    case GAME_FLOW_STATE_PLAYING:
+      return updatePlayingState(state, inputState);
+    case GAME_FLOW_STATE_GAME_OVER:
+      return updateGameOverScreen(state, inputState);
+  }
+}
+```
+
+### Available BaseGame Module Functions
+From [baseGame.ts](mdc:src/core/baseGame.ts):
+
+#### State Management
+- `createBaseGame(options)`: Create initial base game state
+- `clearVirtualScreen(state)`: Clear the virtual screen and return new state
+- `updateBaseGame(state, input, operations)`: Update base game logic
+
+#### Drawing Functions
+- `drawText(state, text, x, y, attributes?)`: Draw text and return new state
+- `drawCenteredText(state, text, y, attributes?)`: Draw centered text and return new state
+
+#### Game State Functions
+- `getCellInfo(state, x, y)`: Get cell information at coordinates
+- `addScore(state, value)`: Add to score and return new state with updated high score
+- `loseLife(state)`: Decrease lives, handle game over, return new state
+- `gainLife(state, count?)`: Increase lives by count (default 1), return new state
+- `triggerGameOver(state)`: Manually end the game and return new state
+- `getScore(state)`, `getLives(state)`, `isGameOver(state)`: State getters
+- `getVirtualScreenData(state)`: Get the full grid data
+
+#### UI Rendering Functions
+- `renderStandardUI(state)`: Render score, lives, restart instruction, return new state
+- `renderGameOverScreen(state)`: Render game over screen with restart prompt, return new state
+
+#### Audio Functions
+- `playSoundEffect(state, sound, seed?)`: Play sound effect (does not modify state)
+- `playMml(state, mml)`: Play MML music (does not modify state)
+- `playBgm(state)`: Start background music (does not modify state)
+- `stopBgm(state)`: Stop background music (does not modify state)
+
+### BaseGame Module Options
 ```typescript
 interface BaseGameOptions {
   initialLives?: number;    // Default: 3
-  isDemoPlay?: boolean;     // Default: false. If true, audio might be disabled by game logic.
-  audioService?: AudioService; // Optional. For sound and music playback.
-  gameName?: string;        // Optional. Used for naming the game, e.g., in high score storage.
-  enableHighScoreStorage?: boolean; // Default: false. If true, game will attempt to store/retrieve high scores.
-  isBrowserEnvironment?: boolean; // Default: false. Must be true for high score storage to work (indicates localStorage availability).
+  isDemoPlay?: boolean;     // Default: false
+  audioService?: AudioService; // Optional for sound and music
+  gameName?: string;        // Used for high score storage
+  enableHighScoreStorage?: boolean; // Default: false
+  isBrowserEnvironment?: boolean; // Must be true for localStorage access
 }
 ```
 
 ## Frame-by-Frame Rendering Pattern
 
 ### Automatic Screen Clearing
-BaseGame automatically clears the screen each frame before calling `updateGame()`. This simplifies development by eliminating manual position tracking.
+Both functional and class-based approaches automatically clear the screen each frame before calling update functions.
 
 ### Critical: Draw Order and Collision Detection
 When using screen-based collision detection with `getCellInfo()`, **static elements must be drawn before collision checks**:
 
 ```typescript
-public updateGame(inputState: InputState): void {
+// Functional approach
+export function updateYourGame(state: YourGameState, inputState: InputState): YourGameState {
   // 1. FIRST: Draw all static elements (walls, obstacles, items)
+  let newState = drawStaticElements(state);
+  
+  // 2. THEN: Process movement with collision detection
+  if (isPassable(newX, newY)) {
+    newState = { ...newState, playerX: newX, playerY: newY };
+  }
+  
+  // 3. FINALLY: Draw dynamic elements (player, enemies)
+  newState = drawPlayer(newState);
+  
+  return newState;
+}
+
+// Class-based approach
+public updateGame(inputState: InputState): void {
+  // 1. FIRST: Draw all static elements
   this.drawStaticElements();
   
   // 2. THEN: Process movement with collision detection
@@ -83,7 +145,7 @@ public updateGame(inputState: InputState): void {
     this.playerY = newY;
   }
   
-  // 3. FINALLY: Draw dynamic elements (player, enemies)
+  // 3. FINALLY: Draw dynamic elements
   this.drawPlayer();
 }
 ```
@@ -93,6 +155,14 @@ public updateGame(inputState: InputState): void {
 #### 1. Array-Based Detection (Recommended)
 Store game state in arrays, independent of screen rendering:
 ```typescript
+// Functional approach
+const obstacles: Position[] = [{ x: 10, y: 5 }, { x: 15, y: 8 }];
+
+function isPassable(state: YourGameState, x: number, y: number): boolean {
+  return !state.obstacles.some(obs => obs.x === x && obs.y === y);
+}
+
+// Class-based approach  
 private obstacles: Array<{x: number, y: number}> = [];
 
 private isPassable(x: number, y: number): boolean {
@@ -100,15 +170,16 @@ private isPassable(x: number, y: number): boolean {
 }
 ```
 
-**Advantages:**
-- Drawing order independent
-- Better performance
-- Clearer game logic
-- Easier debugging
-
 #### 2. Screen-Based Detection
 Use `getCellInfo()` for collision detection:
 ```typescript
+// Functional approach
+function isPassable(state: YourGameState, x: number, y: number): boolean {
+  const cell = getCellInfo(state, x, y);
+  return cell?.attributes.isPassable !== false;
+}
+
+// Class-based approach
 private isPassable(x: number, y: number): boolean {
   const cell = this.getCellInfo(x, y);
   return cell?.attributes.isPassable !== false;
@@ -122,6 +193,7 @@ private isPassable(x: number, y: number): boolean {
 - Use screen-based detection only for visual effects or simple cases
 - Always document your collision detection strategy
 - Test collision edge cases thoroughly
+- Use immutable state updates in functional modules
 
 ## Development Workflow
 
@@ -130,39 +202,97 @@ private isPassable(x: number, y: number): boolean {
 mkdir src/games/yourGame
 ```
 
-### 2. Implement Core Logic
-Start with [core.ts](mdc:src/games/defaultGame/core.ts) as reference:
-- Extend BaseGame with proper options interface
+### 2. Choose Your Approach
+
+#### Option A: Functional Module (Recommended)
+Start with [defaultGame core.ts](mdc:src/games/defaultGame/core.ts) as reference:
+- Create pure functions for state management
+- Use `BaseGameState` extension for your game state
+- Implement `createGame`, `initializeGame`, `updateGame` functions
+
+#### Option B: GameManager (Complex Games)
+Use [defaultGame gameManager.ts](mdc:src/games/defaultGame/gameManager.ts) for games with:
+- Title screens
+- Demo mode
+- Complex game flow states
+- Multiple game phases
+
+#### Option C: Class-based (Legacy)
+Extend BaseGame for simpler migration from existing code:
 - Implement required abstract methods
-- Use established patterns (see coding standards)
+- Use established inheritance patterns
 
 ### 3. Set Up Testing
-Create [sim.ts](mdc:src/games/defaultGame/sim.ts) for simulation testing:
-- Use `npm run sim:yourGame` for rapid iteration
+
+#### Functional Module Testing
+Create [sim.ts](mdc:src/games/defaultGame/sim.ts):
+```typescript
+import { createYourGame, initializeYourGame, updateYourGame } from "./core.js";
+
+let gameState = createYourGame();
+gameState = initializeYourGame(gameState);
+
+// Test with input
+gameState = updateYourGame(gameState, inputState);
+```
+
+#### GameManager Testing  
+Create [gameManagerSim.ts](mdc:src/games/defaultGame/gameManagerSim.ts):
+```typescript
+import { createYourGameManager, updateGameManager } from "./gameManager.js";
+
+let gameState = createYourGameManager();
+gameState = updateGameManager(gameState, inputState);
+```
 
 ### 4. Browser Integration
+
+#### Functional Module
 Create [browser.ts](mdc:src/games/defaultGame/browser.ts):
 ```typescript
 import { initStandardTextGame } from "../../utils/browserHelper.js";
+import { createYourGame, initializeYourGame, updateYourGame } from "./core.js";
 
-const winCondition = (game: any) => {
-  // Define your win condition logic here
-  return game.isGameWon(); // Use BaseGame's built-in win state
+const gameFactory = (options: any = {}) => {
+  const state = createYourGame(options);
+  const operations = {
+    initializeGame: initializeYourGame,
+    updateGame: updateYourGame,
+  };
+  return { state, operations };
 };
 
-initStandardTextGame(
+initStandardTextGame(gameFactory, {
+  gameName: "Your Game",
+  enableHighScoreStorage: true,
+});
+```
+
+#### GameManager
+For GameManager-based games, use the GameManager's update function instead.
+
+#### Class-based
+```typescript
+import { initStandardTextGameForClass } from "../../utils/browserHelper.js";
+
+initStandardTextGameForClass(
   () => new YourGame(),
-  winCondition
+  { gameName: "Your Game", enableHighScoreStorage: true }
 );
 ```
 
-### 5. Add NPM Script
+### 5. Add NPM Scripts
 Add to [package.json](mdc:package.json):
 ```json
-"sim:yourGame": "npx tsx src/games/yourGame/sim.ts"
+{
+  "sim:yourGame": "npx tsx src/games/yourGame/sim.ts",
+  "sim:yourGame-manager": "npx tsx src/games/yourGame/gameManagerSim.ts"
+}
 ```
 
 ## Testing Strategy
 - **Primary**: Use simulation (`npm run sim:yourGame`) for rapid development
+- **GameManager**: Use `npm run sim:yourGame-manager` for flow testing
 - **Secondary**: Browser testing with `npm run dev`
+- **Functional Testing**: Easy to unit test pure functions
 

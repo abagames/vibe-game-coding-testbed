@@ -11,58 +11,106 @@ Use types from [coreTypes.ts](mdc:src/core/coreTypes.ts):
 - `CellAttributes` for cell styling
 - `CellInfo` for grid data
 - `GridData` for the full screen
-- `cglColor` for color values
+- `BaseGameOptions` for game configuration
+- `BaseGameState` for functional game state (when using modules)
 
-## Performance Guidelines
+## Architectural Patterns
+
+### Functional Module Pattern (Recommended)
+Follow the modular functional approach from [defaultGame core.ts](mdc:src/games/defaultGame/core.ts):
+- Use pure functions that take state and return new state
+- Define game state types extending `BaseGameState`
+- Use functions from [baseGame.ts](mdc:src/core/baseGame.ts)
+
+```typescript
+export type YourGameState = BaseGameState & {
+  playerX: number;
+  playerY: number;
+  // Add game-specific state
+};
+
+export function createYourGame(options: YourGameOptions = {}): YourGameState {
+  const baseState = createBaseGame(options);
+  return { ...baseState, playerX: 0, playerY: 0 };
+}
+
+export function updateYourGame(state: YourGameState, input: InputState): YourGameState {
+  // Pure function that returns new state
+  return { ...state, playerX: newX, playerY: newY };
+}
+```
+
+### Class-based Pattern (Legacy Support)
+When using the class approach, extend [BaseGame.ts](mdc:src/core/BaseGame.ts):
+- Use named arguments with interfaces
+- Implement required abstract methods
+- Follow established inheritance patterns
+
+### Performance Guidelines
 - Optimize for 40×25 grid operations
 - Minimize object creation in game loops
 - Use array indexing for frequent lookups
 - Cache frequently accessed values
 - **Prefer array-based collision detection** over screen-based
+- Use immutable state updates in functional modules
 
 ## Code Organization
-- Keep game logic in `core.ts`
-- Separate simulation setup in `sim.ts`
-- Minimal browser integration in `browser.ts`
-- Follow [defaultGame example](mdc:src/games/defaultGame) structure
 
-## Example Reference
-See [defaultGame core.ts](mdc:src/games/defaultGame/core.ts) for examples of:
-- Proper BaseGame inheritance with named arguments
+### Module-based Games
+- Game logic in `core.ts` with pure functions
+- GameManager in `gameManager.ts` for flow control (optional)
+- Simulation setup in `sim.ts` and `gameManagerSim.ts`
+- Browser integration in `browser.ts`
+- Follow [defaultGame structure](mdc:src/games/defaultGame)
+
+### File Structure Pattern
+```
+src/games/[gameName]/
+├── core.ts          // Pure game logic functions
+├── gameManager.ts   // Game flow management (optional)
+├── sim.ts           // Basic simulation
+├── gameManagerSim.ts // GameManager simulation
+├── browser.ts       // Browser entry point
+└── index.html       // Browser execution
+```
+
+## Example References
+See [defaultGame](mdc:src/games/defaultGame) for examples of:
+- Functional state management with [core.ts](mdc:src/games/defaultGame/core.ts)
+- GameManager pattern with [gameManager.ts](mdc:src/games/defaultGame/gameManager.ts)
 - Array-based collision detection (`obstacles`, `items` arrays)
-- Efficient direction handling with numeric constants
-- Custom BaseGame method overriding (`loseLife()`)
-- Proper game state management
+- Pure function composition
+- Proper state immutability
 
-## Commenting
-- Focus on *Why* not *What* in comments. Explain the reasoning behind code choices, not just what the code does.
-- Comments must be written in English.
+## Commenting Standards
+- Focus on *Why* not *What* in comments
+- Explain reasoning behind code choices
+- Comments must be written in English
+- Document state transformations in functional code
 
 ## AI Assistant Communication Standards
-- The AI assistant must not use comments like 'Add this code' or 'Update that variable' when describing the edits it performs.
+- Do not use directive comments like 'Add this code' or 'Update that variable'
+- Focus on describing the logic and reasoning
 
 ## Architectural Style
-- Prefer functions over classes. Aim for a more functional programming style where appropriate, using classes sparingly and only when their benefits (e.g., clear state encapsulation, inheritance) are significant.
+- **Prefer functional programming**: Use pure functions and immutable state
+- **Classes sparingly**: Only when clear benefits (inheritance, encapsulation)
+- **Composition over inheritance**: Build complex behavior through function composition
 
 ## Type Safety Guidelines
 
 ### ❌ Avoid Type Weakening Features
-**Minimize use of type assertions and `any`** except for debugging purposes:
+**Minimize use of type assertions and `any`** except for debugging:
 
 ```typescript
 // ✅ Correct - Use type guards
-function isEnemy(obj: unknown): obj is Enemy {
-  return typeof obj === 'object' && obj !== null && 'type' in obj;
-}
-
-if (isEnemy(entity)) {
-  // TypeScript knows entity is Enemy here
-  entity.moveCounter++;
+function isValidPosition(obj: unknown): obj is Position {
+  return typeof obj === 'object' && obj !== null && 'x' in obj && 'y' in obj;
 }
 
 // ✅ Correct - Use type predicates
-const splitters = enemies.filter((enemy): enemy is SplitterEnemy => 
-  enemy.type === EnemyType.SPLITTER
+const validPositions = positions.filter((pos): pos is Position => 
+  isValidPosition(pos)
 );
 
 // ✅ Acceptable - String literal types with const assertion
@@ -72,16 +120,12 @@ const CONFIG = {
 };
 
 // ❌ Avoid - Type assertions without proper guards
-const enemy = getEntity() as Enemy; // Dangerous!
+const position = getPosition() as Position; // Dangerous!
 
 // ❌ Avoid - any type (except for debugging)
 function processData(data: any) { // Loses all type safety
   return data.someProperty;
 }
-
-// ⚠️ Debug only - Temporary type escape for investigation
-const debugData = unknownObject as any; // Only for debugging!
-console.log('Debug:', debugData.someProperty);
 ```
 
 ### ✅ Preferred Type Safety Patterns
@@ -107,52 +151,54 @@ enum GameConstants { INITIAL_LIVES = 3, MOVEMENT_INTERVAL = 3 }
 ### ✅ Use Named Arguments
 For optional parameters, use interface-based options:
 ```typescript
-// ✅ Correct
+// ✅ Correct - Functional approach
 interface GameOptions {
   initialLives?: number;
-  gameSpeed?: number;
   movementInterval?: number;
   obstacleCount?: number;
 }
-constructor(options: GameOptions = {}) {
+
+export function createGame(options: GameOptions = {}): GameState {
   const { 
     initialLives = 3, 
-    gameSpeed = 1.0,
     movementInterval = 3,
     obstacleCount = 20 
   } = options;
-  super({ initialLives, gameSpeed });
+  return createBaseGame({ initialLives });
 }
 
 // ❌ Incorrect
-constructor(initialLives: number = 3, gameSpeed: number = 1.0, interval: number = 3) {}
+function createGame(initialLives: number = 3, interval: number = 3) {}
 ```
 
-## BaseGame Built-in Methods
+## BaseGame Module Functions (Functional Approach)
 
-All games extending BaseGame have access to these core methods:
+### Core State Functions
+- `createBaseGame(options)`: Create initial base game state
+- `clearVirtualScreen(state)`: Clear the virtual screen
+- `updateBaseGame(state, input, operations)`: Update base game logic
 
-### Drawing Methods
-- `drawText(text, x, y, attributes?)`: Draw text to virtual screen
-- `drawCenteredText(text, y, attributes?)`: Draw centered text at y coordinate
+### Drawing Functions
+- `drawText(state, text, x, y, attributes?)`: Draw text to virtual screen
+- `drawCenteredText(state, text, y, attributes?)`: Draw centered text
 
-### Game State Methods
-- `getCellInfo(x, y)`: Get cell information at coordinates
-- `addScore(value)`: Modify score
-- `loseLife()`: Decrease lives, handle game over
-- `winGame()`: Mark game as won and trigger game over
-- `getScore()`, `getLives()`, `isGameOver()`, `isGameWon()`: State getters
-- `getVirtualScreenData()`: Get the full grid
+### Game State Functions
+- `getCellInfo(state, x, y)`: Get cell information at coordinates
+- `addScore(state, value)`: Add to score and return new state
+- `loseLife(state)`: Decrease lives and handle game over
+- `triggerGameOver(state)`: Manually end the game
+- `getScore(state)`, `getLives(state)`, `isGameOver(state)`: State getters
+- `getVirtualScreenData(state)`: Get the full grid
 
-### Speed Control Methods
-- `setGameSpeed(speed)`: Set game speed (0.1-3.0 range)
-- `getGameSpeed()`: Get current game speed
-- `adjustGameSpeed(delta)`: Adjust speed by delta amount
+### UI Rendering Functions
+- `renderStandardUI(state)`: Render score, lives, and restart instruction
+- `renderGameOverScreen(state)`: Render game over screen with restart prompt
 
-### Automatic UI Methods
-These methods are called automatically by BaseGame:
-- `renderStandardUI()`: Renders restart instruction
-- `renderGameOverScreen(wonGame?)`: Renders game over screen with restart prompt
+### Audio Functions
+- `playSoundEffect(state, sound, seed?)`: Play sound effect
+- `playMml(state, mml)`: Play MML music
+- `playBgm(state)`: Start background music
+- `stopBgm(state)`: Stop background music
 
 ## Browser Helper Functions
 
@@ -161,10 +207,17 @@ These methods are called automatically by BaseGame:
   - Maps Arrow keys + WASD → directional input
   - Maps Space/Enter/Z/X → action1
 
-### Game Setup
-- `initStandardTextGame(gameFactory, customOptions?)`: Complete game initialization
-- `createStandardGameOptions()`: Creates standard crisp-game-lib options for 40×25 text games
-- `createStandardGameLoop(gameFactory)`: Creates game loop with input handling
+### Game Setup (Module-based)
+- `initStandardTextGame(gameFactory, helperOptions?, cglOptions?)`: Complete module game initialization
+- `createStandardGameLoop(gameFactory, gameName?, enableHighScore?)`: Creates game loop for modules
+
+### Game Setup (Class-based)
+- `initStandardTextGameForClass(gameFactory, helperOptions?, cglOptions?)`: Complete class game initialization
+- `createStandardGameLoopForClass(gameFactory, gameName?, enableHighScore?)`: Creates game loop for classes
 
 ### Rendering
 - `renderVirtualScreen(virtualScreenData, width, height, charWidth, charHeight)`: Draws the 40×25 grid to canvas
+
+### High Score Management
+- `loadHighScoreFromStorage(gameName)`: Load high score from localStorage
+- `saveHighScoreToStorage(gameName, score)`: Save high score to localStorage

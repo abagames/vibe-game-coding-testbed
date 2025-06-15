@@ -13,209 +13,361 @@ Don't wait for bugs to surface naturally - actively hunt them down using control
 ### Simulation-Based Testing Pattern
 
 #### 1. Create Dedicated Test Simulations
-For each game in `src/games/[gameName]/`, create a `sim.ts` file. This file should:
-- Import the game's core logic (e.g., `YourGameClass` from `./core.js`).
-- Instantiate the game, often with modified parameters for specific test scenarios.
-- Use controlled input sequences or input generation strategies.
-- Provide detailed logging of internal state and a visual representation of the game state.
+For each game in `src/games/[gameName]/`, create simulation files. Choose based on your game architecture:
 
-**Example Structure (Option A: Using a utility like `ConsoleSimulator` - Recommended for structured tests):**
+**A. Functional Module Testing (Recommended)**
+Create `sim.ts` for basic functional module testing:
 ```typescript
 // src/games/[gameName]/sim.ts
-import { YourGameClass, YourGameOptions } from "./core.js";
-import { ConsoleSimulator } from "../../utils/consoleSimulator.js";
-// import { NodeAudioService } from "../../utils/NodeAudioService.js"; // If audio testing is needed
+import { 
+  createYourGame, 
+  initializeYourGame, 
+  updateYourGame,
+  YourGameOptions 
+} from "./core.js";
+import { InputState } from "../../core/coreTypes.js";
 
 const gameOptions: YourGameOptions = {
   // Modified parameters for testing
   initialLives: 1,
-  // gameSpecificParameter: testValue,
-  // audioService: new NodeAudioService(), // Example for audio
+  movementInterval: 1, // Fast movement for testing
+  obstacleCount: 5,    // Fewer obstacles
 };
 
-const game = new YourGameClass(gameOptions);
-
-// Example: Predefined input sequence (ConsoleSimulator uses single char codes)
-const predefinedMoves: string[] = "rrrr.a.dddd.a.llll".split(""); // . for no-op, a for action1
-
-const simulator = new ConsoleSimulator(game, "predefined", {
-  totalTicks: 100, // How many frames to simulate
-  tickDurationMs: 50, // Speed of simulation (ms per tick)
-  predefinedMoves: predefinedMoves,
-});
-
-game.initializeGame(); // Ensure game is initialized before simulation
-simulator.run();
-```
-*The `ConsoleSimulator` (from `src/utils/consoleSimulator.ts`) provides modes like "predefined", "random", "fixed" input, and handles structured screen rendering and tick management.*
-
-**Example Structure (Option B: Direct simulation loop - For simpler or highly custom tests):**
-```typescript
-// src/games/[gameName]/sim.ts
-import { YourGameClass, YourGameOptions } from "./core.js";
-import { InputState, VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT } from "../../core/coreTypes.js";
-
-function printGameScreen(game: YourGameClass) { /* ... see visualization section ... */ }
-
-const gameOptions: YourGameOptions = { initialLives: 1 };
-const game = new YourGameClass(gameOptions);
-game.initializeGame();
+let gameState = createYourGame(gameOptions);
+gameState = initializeYourGame(gameState);
 
 let frame = 0;
 const maxFrames = 200;
 
-while(frame < maxFrames && !game.isGameOver()) {
-  const input: InputState = { /* construct desired input for the frame */ };
-  // Example: input.right = true; if (frame % 10 === 0) input.action1 = true;
+while(frame < maxFrames && !gameState.gameOverState) {
+  const input: InputState = constructTestInput(frame);
   
-  game.update(input);
-  printGameScreen(game); // Visualize state
-  console.log(`Frame: ${frame}, Score: ${game.getScore()}, Lives: ${game.getLives()}`);
+  gameState = updateYourGame(gameState, input);
+  printGameScreen(gameState);
+  console.log(`Frame: ${frame}, Score: ${gameState.score}, Lives: ${gameState.lives}`);
   frame++;
 }
 console.log("Simulation ended.");
 ```
 
+**B. GameManager Testing (Complex Games)**
+Create `gameManagerSim.ts` for games with flow states:
+```typescript
+// src/games/[gameName]/gameManagerSim.ts
+import { 
+  createYourGameManager, 
+  updateGameManager,
+  GameFlowState 
+} from "./gameManager.js";
+import { ConsoleSimulator } from "../../utils/consoleSimulator.js";
+
+const gameOptions = {
+  initialLives: 1,
+  startInPlayingState: false, // Test from title screen
+};
+
+let gameState = createYourGameManager(gameOptions);
+
+// Test title screen to playing transition
+console.log("Testing title screen...");
+const titleInput: InputState = { action1: true /* other inputs false */ };
+gameState = updateGameManager(gameState, titleInput);
+
+// Test playing state
+console.log("Testing playing state...");
+const playingInput: InputState = { right: true /* other inputs false */ };
+gameState = updateGameManager(gameState, playingInput);
+```
+
+**C. ConsoleSimulator Integration (Structured Testing)**
+Use ConsoleSimulator for automated input sequences:
+```typescript
+import { ConsoleSimulator } from "../../utils/consoleSimulator.js";
+
+// For functional games - wrap in compatible interface
+class GameWrapper {
+  constructor(private gameState: any, private updateFn: any) {}
+  
+  update(input: InputState) {
+    this.gameState = this.updateFn(this.gameState, input);
+  }
+  
+  getVirtualScreenData() {
+    return this.gameState.virtualScreen;
+  }
+  
+  getScore() { return this.gameState.score; }
+  getLives() { return this.gameState.lives; }
+  isGameOver() { return this.gameState.gameOverState; }
+}
+
+const gameState = createYourGame();
+const gameWrapper = new GameWrapper(gameState, updateYourGame);
+
+const predefinedMoves = "rrrr.a.dddd.a.llll".split("");
+const simulator = new ConsoleSimulator(gameWrapper, "predefined", {
+  totalTicks: 100,
+  tickDurationMs: 50,
+  predefinedMoves: predefinedMoves,
+});
+
+simulator.run();
+```
+
 #### 2. Parameter Manipulation for Edge Cases
 Temporarily modify game parameters to expose edge cases:
 
-**Snake Length Manipulation:**
+**Functional Module Approach:**
 ```typescript
-// Test with unusually long snake
-const initialSnakeLength = 20; // vs normal 10
-(game as any).snake = createLongSnake(initialSnakeLength);
+// Test with extreme parameters
+const testGameState = createYourGame({
+  movementInterval: 1,     // Very fast movement
+  obstacleCount: 50,       // Many obstacles
+  initialLives: 1,         // Single life testing
+});
 ```
 
-**Speed Manipulation:**
+**State Manipulation:**
 ```typescript
-// Test rapid movement for timing issues
-movementInterval: 1, // vs normal 8
+// Test with unusual game states
+let testState = createYourGame();
+testState = { 
+  ...testState, 
+  playerX: 39,    // Edge position
+  playerY: 24,    // Edge position
+  score: 999999,  // High score
+};
 ```
 
 **Enemy System Manipulation:**
 ```typescript
 // Disable enemies to isolate mechanics
-enemySystem.updateSpawnSettings({
-  minEnemyCount: 0,
-  spawnInterval: 1000000,
-});
+const testOptions = {
+  enemySpawnInterval: 1000000, // Effectively disable spawning
+  initialEnemyCount: 0,
+};
 ```
 
 #### 3. State Visualization and Logging
-Add comprehensive logging to expose internal state. For screen visualization in the console, a helper function is useful:
+Essential for understanding game behavior:
 
 ```typescript
-// Example printGameScreen function (adapt VIRTUAL_SCREEN_WIDTH/HEIGHT if needed)
-import { VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT } from "../../core/coreTypes.js"; // Or from your game's constants
-
-function printGameScreen(game: YourGameClass): void { // YourGameClass should implement getVirtualScreenData()
-  const screenData = game.getVirtualScreenData();
-  let headerFooter = "+" + "-".repeat(VIRTUAL_SCREEN_WIDTH) + "+";
+// Screen visualization function for functional games
+function printGameScreen(gameState: YourGameState): void {
+  const screenData = gameState.virtualScreen;
+  let headerFooter = "+" + "-".repeat(40) + "+";
   console.log("\n" + headerFooter);
-  for (let y = 0; y < VIRTUAL_SCREEN_HEIGHT; y++) {
+  
+  for (let y = 0; y < 25; y++) {
     let row = "|";
-    for (let x = 0; x < VIRTUAL_SCREEN_WIDTH; x++) {
-      row += screenData[y][x]?.char || " "; // Access char safely
+    for (let x = 0; x < 40; x++) {
+      row += screenData[y][x]?.char || " ";
     }
     row += "|";
     console.log(row);
   }
+  
   console.log(headerFooter);
-  console.log(`Score: ${game.getScore()}, Lives: ${game.getLives()}, GameOver: ${game.isGameOver()}`);
-  // Add any other relevant game-specific state here
+  console.log(`Score: ${gameState.score}, Lives: ${gameState.lives}, GameOver: ${gameState.gameOverState}`);
+  
+  // Game-specific state logging
+  console.log(`Player: (${gameState.playerX}, ${gameState.playerY})`);
+  console.log(`Obstacles: ${gameState.obstacles.length}`);
 }
 
-// Internal state logging (remains as is)
-// console.log(`Snake Head: (${head.x},${head.y}), Length: ${snake.length}`);
-// console.log(`Guidelines: [${guidelines.map(g => `(${g.x},${g.y})`).join(" ")}]`);
+// Input construction for testing
+function constructTestInput(frame: number): InputState {
+  return {
+    up: frame % 60 === 0,
+    down: frame % 80 === 0,
+    left: frame % 70 === 0,
+    right: frame % 90 === 0,
+    action1: frame % 120 === 0,
+    action2: false,
+    space: false,
+    enter: false,
+    r: false,
+  };
+}
+```
+
+### Testing Different Architectural Patterns
+
+#### Functional Module Testing
+```typescript
+// Test pure functions independently
+const initialState = createYourGame();
+const afterMove = updatePlayerPosition(initialState, { x: 5, y: 5 });
+const afterCollision = checkCollisions(afterMove);
+
+console.log("State transitions:");
+console.log("Initial:", initialState.playerX, initialState.playerY);
+console.log("After move:", afterMove.playerX, afterMove.playerY);
+console.log("After collision:", afterCollision.lives);
+```
+
+#### GameManager Flow Testing
+```typescript
+// Test flow state transitions
+let managerState = createYourGameManager();
+
+// Test title → playing transition
+console.log("Flow state:", managerState.gameFlowState); // Should be TITLE (0)
+managerState = updateGameManager(managerState, { action1: true });
+console.log("Flow state:", managerState.gameFlowState); // Should be PLAYING (1)
+
+// Test playing → game over transition
+managerState = { ...managerState, lives: 0 };
+managerState = updateGameManager(managerState, {});
+console.log("Flow state:", managerState.gameFlowState); // Should be GAME_OVER (2)
+```
+
+#### Class-based Testing (Legacy)
+```typescript
+// Traditional class testing
+const game = new YourGameClass({ initialLives: 1 });
+game.initializeGame();
+
+while (!game.isGameOver()) {
+  const input = constructTestInput(frame);
+  game.update(input);
+  console.log(`Score: ${game.getScore()}, Lives: ${game.getLives()}`);
+}
 ```
 
 ### Specific Testing Strategies
 
-#### Area Enclosure Testing
-When testing area-based mechanics:
-1. **Vary enclosure sizes**: Test tiny (3-5 cells) to large (50+ cells) areas
-2. **Test boundary conditions**: Areas touching screen edges
-3. **Test complex shapes**: L-shapes, spirals, nested areas
-4. **Test guideline intersections**: Snake body crossing its own path
-
 #### Collision Detection Testing
-1. **Boundary testing**: Movement at screen edges
-2. **Self-collision**: Snake hitting its own body at various angles
-3. **Enemy collision**: Different enemy types and positions
-4. **Multi-object collision**: Simultaneous collisions
+```typescript
+// Test boundary conditions
+function testBoundaryCollisions(gameState: YourGameState) {
+  const testPositions = [
+    { x: -1, y: 10 },   // Left boundary
+    { x: 40, y: 10 },   // Right boundary  
+    { x: 10, y: -1 },   // Top boundary
+    { x: 10, y: 25 },   // Bottom boundary
+  ];
+  
+  testPositions.forEach(pos => {
+    const result = isValidPosition(gameState, pos.x, pos.y);
+    console.log(`Position (${pos.x}, ${pos.y}): ${result ? "valid" : "invalid"}`);
+  });
+}
+```
 
-#### Timing and Synchronization Testing
-1. **Rapid input changes**: Direction changes every frame
-2. **Frame-perfect scenarios**: Actions on exact frame boundaries
-3. **State transition testing**: Game over, restart, pause scenarios
+#### State Transition Testing
+```typescript
+// Test game state transitions
+function testGameOverTransition(gameState: YourGameState) {
+  // Force low lives
+  let testState = { ...gameState, lives: 1 };
+  
+  // Trigger life loss
+  testState = loseLife(testState);
+  
+  console.log(`Lives after loss: ${testState.lives}`);
+  console.log(`Game over state: ${testState.gameOverState}`);
+  
+  // Verify game over triggered correctly
+  console.assert(testState.gameOverState === true, "Game over should be triggered");
+  console.assert(testState.lives === 0, "Lives should be 0");
+}
+```
+
+#### Performance Testing
+```typescript
+// Test with high entity counts
+function performanceTest() {
+  const startTime = Date.now();
+  
+  let gameState = createYourGame({
+    obstacleCount: 100,  // Many obstacles
+    itemCount: 50,       // Many items
+  });
+  
+  for (let i = 0; i < 1000; i++) {
+    gameState = updateYourGame(gameState, { right: true });
+  }
+  
+  const duration = Date.now() - startTime;
+  console.log(`1000 updates took ${duration}ms`);
+}
+```
 
 ### Implementation Guidelines
 
 #### Debug Logging Strategy
 ```typescript
-// Use conditional logging for specific areas
-if (x >= 10 && x <= 20 && y >= 10 && y <= 13) {
-  console.log(`[DebugArea] Checking (${x},${y}). State: ${state}`);
+// Conditional logging for specific areas
+function debugLog(area: string, message: string, condition?: boolean) {
+  if (condition !== false) {
+    console.log(`[${area}] ${message}`);
+  }
 }
 
-// Use prefixed logging for different systems
-console.log(`[AreaDetection] Found area: size=${size}`);
-console.log(`[Explosion] Covering ${cellCount} cells`);
-console.log(`[Movement] Snake head moved to (${x},${y})`);
+// Usage in game logic
+if (x >= 10 && x <= 20 && y >= 10 && y <= 13) {
+  debugLog("DebugArea", `Checking (${x},${y}). State: ${state}`);
+}
+
+debugLog("Movement", `Player moved to (${newX}, ${newY})`);
+debugLog("Collision", `Collision with obstacle at (${obsX}, ${obsY})`);
 ```
 
-#### Avoid Masking Real Issues with Manual Overrides
+#### Avoid Masking Real Issues
 
-**DO NOT** use simulation to work around broken game logic. Manual positioning and forced spawning can hide actual implementation problems.
+**DO NOT** use simulation to work around broken game logic:
 
-**Bad Practice Example:**
+**❌ Bad Practice:**
 ```typescript
-// ❌ This masks the real issue that Guards don't spawn near food automatically
-const guard1Id = guardManager.spawnGuard(
-  { x: 20, y: 9 }, // Manually positioned near food
-  { x: 20, y: 12 },
-  true
-);
+// Manually positioning to avoid broken spawn logic
+let gameState = createYourGame();
+gameState = {
+  ...gameState,
+  enemies: [
+    { x: 20, y: 9, type: "GUARD" },  // Manually positioned
+    { x: 15, y: 12, type: "PATROL" } // This masks spawn issues
+  ]
+};
 ```
 
-**Good Practice Example:**
+**✅ Good Practice:**
 ```typescript
-// ✅ Test the actual game logic first
-enemySystem.updateSpawnSettings({
-  minEnemyCount: 3, // Enable automatic spawning
-  spawnInterval: 120,
+// Test the actual spawn system
+let gameState = createYourGame({
+  enemySpawnSettings: {
+    minEnemyCount: 3,
+    spawnInterval: 120,
+    spawnNearFood: true // Test real logic
+  }
 });
 
 // Let the system spawn naturally, then verify behavior
-// If Guards don't spawn near food, fix the spawn logic, don't override it
+for (let i = 0; i < 200; i++) {
+  gameState = updateYourGame(gameState, {});
+  
+  if (gameState.enemies.length > 0) {
+    console.log("Enemies spawned:", gameState.enemies);
+    // Test actual spawn positions relative to food
+    gameState.enemies.forEach(enemy => {
+      const nearFood = gameState.food.some(food => 
+        Math.abs(food.x - enemy.x) < 5 && Math.abs(food.y - enemy.y) < 5
+      );
+      console.log(`Enemy (${enemy.x}, ${enemy.y}) near food: ${nearFood}`);
+    });
+    break;
+  }
+}
 ```
 
-**Key Principles:**
-1. **Test real behavior first**: Always verify the actual game logic before adding manual overrides
-2. **Manual setup for specific scenarios only**: Use manual positioning only to test specific edge cases, not to work around broken systems
-3. **Document when overriding**: Clearly comment why manual setup is necessary
-4. **Fix root causes**: If manual setup is needed to make something work, there's likely a bug in the core logic
-
-**Case Study: Guard Enemy Spawn Issue**
-- **Problem**: Guards were spawning randomly instead of near food
-- **Wrong approach**: Manually spawn Guards near food in simulation
-- **Right approach**: Fix the `EnemySystemManager` to include food-aware spawn logic
-- **Result**: Discovered and fixed the actual issue in `findValidSpawnPositionNearFood`
-
-#### Temporary Code Modifications
-When hunting specific bugs:
-1. **Add boundary visualization**: Draw debug markers
-2. **Slow down time**: Reduce movement intervals
-3. **Add invincibility**: Skip collision detection temporarily
-4. **Force specific states**: Set exact positions/conditions
-
-#### NPM Script Integration
+### NPM Script Integration
 Add simulation scripts to [package.json](mdc:package.json):
 ```json
 {
   "scripts": {
     "sim:gameName": "npx tsx src/games/gameName/sim.ts",
+    "sim:gameName-manager": "npx tsx src/games/gameName/gameManagerSim.ts",
     "sim:debug": "npx tsx src/games/gameName/sim.ts --debug"
   }
 }
@@ -224,49 +376,37 @@ Add simulation scripts to [package.json](mdc:package.json):
 ### Bug Discovery Checklist
 
 #### Before Implementing New Features
-- [ ] Create simulation for the new mechanic
+- [ ] Create simulation for the new mechanic (functional or class-based)
 - [ ] Test with extreme parameters (very fast, very slow, very large, very small)
-- [ ] Test boundary conditions
+- [ ] Test boundary conditions and edge cases
 - [ ] Test interaction with existing systems
+- [ ] Verify state immutability (for functional modules)
 
 #### When Bug Reports Come In
-- [ ] Reproduce in simulation first
-- [ ] Isolate the specific conditions
+- [ ] Reproduce in simulation first (isolate from browser environment)
+- [ ] Create minimal test case
 - [ ] Add logging to suspected code paths
-- [ ] Test variations of the scenario
+- [ ] Test variations of the scenario  
 - [ ] Verify fix doesn't break other scenarios
+- [ ] Add regression test
 
 #### Regular Regression Testing
 - [ ] Run existing simulations after code changes
 - [ ] Test with different parameter combinations
 - [ ] Verify visual output matches expectations
 - [ ] Check performance with extreme scenarios
-
-### Case Study: Blasnake Area Explosion Bug
-
-**Problem**: Vertical area creation caused horizontal explosion spread
-
-**Discovery Process**:
-1. Created simulation with controlled snake movement
-2. Used long snake (20 segments) to amplify the issue
-3. Added detailed logging to area detection functions
-4. Visualized screen state at key moments
-5. Compared expected vs actual explosion boundaries
-
-**Key Insight**: Boundary checking inconsistency between area detection and explosion filling
-
-**Resolution**: Unified boundary logic across both systems
-
-This demonstrates how proactive simulation testing can uncover subtle bugs that might otherwise go unnoticed in normal gameplay.
+- [ ] Test both functional modules and GameManager (if applicable)
 
 ### Best Practices
 
-1. **Start simple**: Begin with basic scenarios, then add complexity
-2. **Document scenarios**: Comment what each test is trying to achieve
-3. **Version control simulations**: Keep successful test cases for regression testing
-4. **Share findings**: Document discovered edge cases for team knowledge
-5. **Automate when possible**: Convert manual tests to automated checks
+1. **Test Architecture Appropriately**: Use functional testing for pure functions, flow testing for GameManager
+2. **Start Simple**: Begin with basic scenarios, then add complexity
+3. **Document Scenarios**: Comment what each test is trying to achieve
+4. **Version Control Simulations**: Keep successful test cases for regression testing
+5. **Share Findings**: Document discovered edge cases for team knowledge
+6. **Automate When Possible**: Convert manual tests to automated checks
+7. **Test State Immutability**: Ensure functional modules don't mutate input state
 
-Remember: The goal is not just to find bugs, but to understand the system deeply enough to prevent similar issues in the future.
+Remember: The goal is not just to find bugs, but to understand the system deeply enough to prevent similar issues in the future. Different architectural patterns (functional modules vs classes vs GameManager) require different testing approaches.
 
 
