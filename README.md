@@ -24,6 +24,12 @@ Play Blasnake in your PC web browser: [Play Blasnake](https://abagames.github.io
 
 https://github.com/user-attachments/assets/0737d99b-65cc-47e4-819c-e803a222bdb2
 
+### Hopway
+
+Cross busy highway lanes filled with cars (#) moving at different speeds. Avoid collisions with vehicles and various road obstacles. Use Arrow keys or W/A/S/D to move your character (P). Time your crossings carefully and aim for score multiplier zones to maximize your points!
+
+Play Hopway in your PC web browser: [Play Hopway](https://abagames.github.io/vibe-game-coding-testbed/hopway/)
+
 ## Quick Start
 
 ### Prerequisites
