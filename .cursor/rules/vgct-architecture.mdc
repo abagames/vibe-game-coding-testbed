@@ -12,11 +12,11 @@ Vibe Game Coding Testbed (VGCT) is a framework for developing text-based games i
 
 ### Module Structure
 - **Core Module** ([src/core/](mdc:src/core)): Base classes and type definitions
-  - [BaseGame.ts](mdc:src/core/BaseGame.ts): Abstract base class for class-based games
   - [baseGame.ts](mdc:src/core/baseGame.ts): Functional module approach with pure functions
   - [coreTypes.ts](mdc:src/core/coreTypes.ts): Shared interfaces and constants
 - **Utils Module** ([src/utils/](mdc:src/utils)): Common utilities
   - [browserHelper.ts](mdc:src/utils/browserHelper.ts): Browser integration helpers with dual support
+  - [browserAudioService.ts](mdc:src/utils/browserAudioService.ts): Browser audio service implementation
   - [consoleSimulator.ts](mdc:src/utils/consoleSimulator.ts): Console-based testing utility
 - **Games Module** ([src/games/](mdc:src/games)): Individual game implementations
 
@@ -68,21 +68,6 @@ export type GameManagerState = GameState & {
 - Complex state transitions
 - Multi-phase gameplay
 
-#### 3. Class-based Architecture (Legacy Support)
-Traditional object-oriented approach:
-
-```typescript
-export class YourGame extends BaseGame {
-  abstract initializeGame(): void;
-  abstract updateGame(inputState: InputState): void;
-}
-```
-
-**When to use:**
-- Migrating existing code
-- Strong OOP preference
-- Complex inheritance needs
-
 ### Game Structure Patterns
 
 #### Standard Functional Module Structure
@@ -105,61 +90,95 @@ src/games/[gameName]/
 └── index.html           // Browser execution HTML
 ```
 
-#### Class-based Structure (Legacy)
-```
-src/games/[gameName]/
-├── core.ts              // Game class definition
-├── sim.ts               // Simulation testing
-├── browser.ts           // Browser entry point
-└── index.html           // Browser execution HTML
-```
-
 ### Browser Integration Patterns
 
-#### Functional Module Integration
+#### Modern Functional Module Integration (Recommended)
 ```typescript
-// browser.ts
-import { initStandardTextGame } from "../../utils/browserHelper.js";
-import { createYourGame, initializeYourGame, updateYourGame } from "./core.js";
+// browser.ts - Latest pattern using initGame
+import "crisp-game-lib";
+import { initGame } from "../../utils/browserHelper.js";
+import { createBrowserAudioService } from "../../utils/browserAudioService.js";
+import {
+  createYourGameState,
+  initializeYourGame,
+  updateYourGame,
+  YourGameState,
+  YourGameOptions,
+} from "./core.js";
 
-const gameFactory = (options: any = {}) => {
-  const state = createYourGame(options);
-  const operations = {
-    initializeGame: initializeYourGame,
-    updateGame: updateYourGame,
-  };
-  return { state, operations };
-};
-
-initStandardTextGame(gameFactory, {
-  gameName: "Your Game",
-  enableHighScoreStorage: true,
+initGame<YourGameState, YourGameOptions>({
+  createState: createYourGameState,
+  initializeGame: initializeYourGame,
+  updateGame: updateYourGame,
+  defaultAudioService: createBrowserAudioService,
+  gameSettings: {
+    gameName: "yourGame",
+    enableHighScoreStorage: true,
+    enableGlobalReset: true,
+  },
+  cglOptions: {
+    isSoundEnabled: true,
+    audioSeed: 42,
+  },
 });
 ```
 
 #### GameManager Integration
 ```typescript
 // browser.ts for GameManager
-import { createYourGameManager, updateGameManager } from "./gameManager.js";
+import "crisp-game-lib";
+import { initGame } from "../../utils/browserHelper.js";
+import { createBrowserAudioService } from "../../utils/browserAudioService.js";
+import {
+  createYourGameManagerState,
+  updateGameManager,
+  YourGameManagerState,
+  YourGameManagerOptions,
+} from "./gameManager.js";
 
-const gameFactory = (options: any = {}) => {
-  const state = createYourGameManager(options);
-  const operations = {
-    initializeGame: (state: any) => state, // GameManager handles its own init
-    updateGame: updateGameManager,
-  };
-  return { state, operations };
-};
+initGame<YourGameManagerState, YourGameManagerOptions>({
+  createState: createYourGameManagerState,
+  initializeGame: (state) => state, // GameManager handles its own init
+  updateGame: updateGameManager,
+  defaultAudioService: createBrowserAudioService,
+  gameSettings: {
+    gameName: "yourGame",
+    enableHighScoreStorage: true,
+    enableGlobalReset: true,
+  },
+  cglOptions: {
+    isSoundEnabled: true,
+    audioSeed: 42,
+  },
+});
 ```
 
-#### Class-based Integration
+#### Class-based Integration (Legacy Support)
 ```typescript
-// browser.ts
+// browser.ts for class-based games
+import "crisp-game-lib";
+import { YourGameClass } from "./YourGameClass.js";
+import { createBrowserAudioService } from "../../utils/browserAudioService.js";
 import { initStandardTextGameForClass } from "../../utils/browserHelper.js";
 
+function createYourGame(options: any = {}) {
+  return new YourGameClass({
+    ...options,
+    audioService: createBrowserAudioService(),
+  });
+}
+
 initStandardTextGameForClass(
-  () => new YourGame(),
-  { gameName: "Your Game", enableHighScoreStorage: true }
+  createYourGame,
+  {
+    enableGlobalReset: true,
+    gameName: "yourGame",
+    enableHighScoreStorage: true,
+  },
+  {
+    isSoundEnabled: true,
+    audioSeed: 1,
+  }
 );
 ```
 
@@ -185,16 +204,6 @@ export function updateGame(state: GameState, input: InputState): GameState {
 }
 ```
 
-#### Mutable State (Class-based)
-```typescript
-// Direct property modification
-public updateGame(inputState: InputState): void {
-  this.playerX = newX;
-  this.playerY = newY;
-  this.addScore(points);
-}
-```
-
 ### Testing Architecture
 
 #### Functional Module Testing
@@ -216,15 +225,6 @@ managerState = updateGameManager(managerState, { action1: true });
 expect(managerState.gameFlowState).toBe(GAME_FLOW_STATE_PLAYING);
 ```
 
-#### Class-based Testing
-```typescript
-// Traditional testing
-const game = new YourGame();
-game.initializeGame();
-game.update(inputState);
-expect(game.getScore()).toBe(expectedScore);
-```
-
 ### Performance Characteristics
 
 #### Functional Modules
@@ -237,26 +237,26 @@ expect(game.getScore()).toBe(expectedScore);
 - **Cons**: Additional complexity layer
 - **Best for**: Games with multiple screens/phases
 
-#### Class-based
-- **Pros**: Familiar OOP patterns, direct state mutation
-- **Cons**: Harder to test, potential side effects
-- **Best for**: Simple games, legacy migration
-
 ### High Score and Persistence
 
-#### Browser Environment
+#### Browser Environment Configuration
 ```typescript
-// Automatic high score management
-const gameFactory = (options: any = {}) => {
-  return {
-    state: createYourGame({
-      ...options,
-      isBrowserEnvironment: true,
-      enableHighScoreStorage: true,
-    }),
-    operations: { /* ... */ }
-  };
-};
+// Modern initGame configuration with high score support
+initGame<YourGameState, YourGameOptions>({
+  createState: createYourGameState,
+  initializeGame: initializeYourGame,
+  updateGame: updateYourGame,
+  defaultAudioService: createBrowserAudioService,
+  gameSettings: {
+    gameName: "yourGame",
+    enableHighScoreStorage: true,  // Enable localStorage high scores
+    enableGlobalReset: true,       // Enable R key reset
+  },
+  cglOptions: {
+    isSoundEnabled: true,
+    audioSeed: 42,
+  },
+});
 ```
 
 #### localStorage Integration
@@ -267,20 +267,25 @@ const gameFactory = (options: any = {}) => {
 
 ### Audio Integration
 
-#### Functional Approach
+#### Modern Audio Service Pattern
 ```typescript
-// Audio functions don't modify state
-playSoundEffect(state, "powerUp", seed);
-playBgm(state);
-stopBgm(state);
-```
+// Import and use browser audio service
+import { createBrowserAudioService } from "../../utils/browserAudioService.js";
 
-#### Class-based Approach
-```typescript
-// Direct method calls
-this.play("powerUp", seed);
-this.playBgm();
-this.stopBgm();
+// Configure in initGame
+initGame<YourGameState, YourGameOptions>({
+  // ... other config
+  defaultAudioService: createBrowserAudioService,
+  cglOptions: {
+    isSoundEnabled: true,
+    audioSeed: 42,
+    audioTempo: 156,
+    bgmVolume: 6,
+  },
+  audioFiles: {
+    bgm: "your_music.mp3",
+  },
+});
 ```
 
 ### Development Workflow
@@ -289,16 +294,16 @@ this.stopBgm();
 2. **Implement Core Logic**: Create state types and update functions
 3. **Add GameManager** (if needed): For complex flow states
 4. **Set Up Testing**: Create simulation files for rapid iteration
-5. **Browser Integration**: Configure browser entry point
+5. **Browser Integration**: Use modern `initGame` API
 6. **Add NPM Scripts**: Set up build and test commands
 
 ### Migration Path
 
-#### Class to Functional
-1. Extract state to interfaces
-2. Convert methods to pure functions
-3. Update browser integration
-4. Maintain parallel testing during transition
+#### Legacy to Modern Browser Integration
+1. Replace `initStandardTextGame` with `initGame`
+2. Add `createBrowserAudioService` import
+3. Update configuration structure
+4. Add TypeScript generics for type safety
 
 #### Functional to GameManager
 1. Add flow state enum
@@ -306,10 +311,33 @@ this.stopBgm();
 3. Create manager update function
 4. Update browser integration
 
+### Browser Helper API Reference
+
+#### initGame Function
+```typescript
+interface GameConfig<TState, TOptions extends BaseGameOptions> {
+  createState: (options: TOptions) => TState;
+  initializeGame: (state: TState) => TState;
+  updateGame: (state: TState, input: InputState) => TState;
+  defaultAudioService?: () => any;
+  gameSettings: {
+    gameName?: string;
+    enableHighScoreStorage?: boolean;
+    enableGlobalReset?: boolean;
+  };
+  cglOptions?: Partial<Options>;
+  audioFiles?: { [key: string]: string };
+}
+
+export function initGame<TState, TOptions extends BaseGameOptions>(
+  config: GameConfig<TState, TOptions>
+): void;
+```
+
 ## Reference Implementation
 See [defaultGame](mdc:src/games/defaultGame) for a complete example demonstrating:
 - [Functional core logic](mdc:src/games/defaultGame/core.ts)
 - [GameManager pattern](mdc:src/games/defaultGame/gameManager.ts)
-- [Dual simulation setup](mdc:src/games/defaultGame/sim.ts) and [GameManager simulation](mdc:src/games/defaultGame/gameManagerSim.ts)
-- [Browser integration](mdc:src/games/defaultGame/browser.ts)
+- [Dual simulation setup](mdc:src/games/defaultGame/sim.ts) and [GameManager simulation](mdc:src/games/defaultGame/simGameManager.ts)
+- [Modern browser integration](mdc:src/games/defaultGame/browser.ts) with switchable implementation
 - [Complete architecture](mdc:src/games/defaultGame) in action
