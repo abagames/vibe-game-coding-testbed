@@ -30,6 +30,8 @@ Cross busy highway lanes filled with cars (#) moving at different speeds. Avoid 
 
 Play Hopway in your PC web browser: [Play Hopway](https://abagames.github.io/vibe-game-coding-testbed/hopway/)
 
+https://github.com/user-attachments/assets/dea428d2-1ec1-43c1-900f-a19e3e4aebda
+
 ## Quick Start
 
 ### Prerequisites
