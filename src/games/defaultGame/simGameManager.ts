@@ -6,12 +6,10 @@ import {
   ConsoleSimulatorOptions,
 } from "../../utils/consoleSimulator.js";
 import {
-  createDefaultGameManager,
+  createDefaultGameManagerState,
   updateGameManager,
   renderGameManager,
-  DefaultGameManagerState,
   getCurrentFlowState,
-  isGameManagerOver,
   getGameManagerScore,
   getGameManagerLives,
 } from "./gameManager.js";
@@ -34,7 +32,7 @@ function runDefaultGameManagerSimulation() {
   const audioService = createNodeAudioService();
 
   // Create initial game state with GameManager
-  let gameState = createDefaultGameManager({
+  let gameState = createDefaultGameManagerState({
     initialLives: 3,
     audioService: audioService,
     gameName: "Default Game Manager",

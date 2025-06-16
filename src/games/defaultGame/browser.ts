@@ -1,52 +1,57 @@
 import "crisp-game-lib";
-import { initStandardTextGame } from "../../utils/browserHelper.js";
+import { initGame } from "../../utils/browserHelper.js";
 import { createBrowserAudioService } from "../../utils/browserAudioService.js";
-import { BaseGameOptions } from "../../core/coreTypes.js";
 //*
 // === Simple core game version ===
-import { createDefaultGame, defaultGameOperations } from "./core.js";
+import {
+  createDefaultGameState,
+  initializeDefaultGame,
+  updateDefaultGame,
+  DefaultGameState,
+  DefaultGameOptions,
+} from "./core.js";
 /*/
 // === GameManager version (with title screen) ===
 import {
-  createDefaultGameManager,
-  defaultGameManagerOperations,
+  createDefaultGameManagerState,
+  updateGameManager,
+  DefaultGameManagerState,
   DefaultGameManagerOptions,
 } from "./gameManager.js";
 //*/
 
-initStandardTextGame(
-  (options?: Partial<BaseGameOptions>) => {
-    //*
-    // === Simple core game version ===
-    const state = createDefaultGame({
-      audioService: createBrowserAudioService(),
-      ...options,
-    });
-    return {
-      state,
-      operations: defaultGameOperations,
-    };
-    /*/
-    // === GameManager version ===
-    const managerOptions: DefaultGameManagerOptions = {
-      audioService: createBrowserAudioService(),
-      isBrowserEnvironment: true,
-      ...options,
-    };
-    const state = createDefaultGameManager(managerOptions);
-    return {
-      state,
-      operations: defaultGameManagerOperations,
-    };
-    //*/
-  },
-  {
+//*
+// === Simple core game version ===
+initGame<DefaultGameState, DefaultGameOptions>({
+  createState: createDefaultGameState,
+  initializeGame: initializeDefaultGame,
+  updateGame: updateDefaultGame,
+  defaultAudioService: createBrowserAudioService,
+  gameSettings: {
     gameName: "defaultGame",
     enableHighScoreStorage: false,
     enableGlobalReset: true,
   },
-  {
+  cglOptions: {
     isSoundEnabled: true,
     audioSeed: 42,
-  }
-);
+  },
+});
+/*/
+// === GameManager version (with title screen) ===
+initGame<DefaultGameManagerState, DefaultGameManagerOptions>({
+  createState: createDefaultGameManagerState,
+  initializeGame: (state) => state,
+  updateGame: updateGameManager,
+  defaultAudioService: createBrowserAudioService,
+  gameSettings: {
+    gameName: "defaultGame",
+    enableHighScoreStorage: false,
+    enableGlobalReset: true,
+  },
+  cglOptions: {
+    isSoundEnabled: true,
+    audioSeed: 42,
+  },
+});
+//*/

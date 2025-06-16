@@ -24,7 +24,7 @@ type Position = {
   y: number;
 };
 
-type DefaultGameOptions = BaseGameOptions & {
+export type DefaultGameOptions = BaseGameOptions & {
   movementInterval?: number;
   obstacleCount?: number;
   itemCount?: number;
@@ -40,7 +40,7 @@ export type DefaultGameState = BaseGameState & {
   items: Position[];
 };
 
-export function createDefaultGame(
+export function createDefaultGameState(
   options: DefaultGameOptions = {}
 ): DefaultGameState {
   const {
@@ -182,6 +182,7 @@ function drawStaticElements(state: DefaultGameState): DefaultGameState {
 
   return newState;
 }
+
 function drawPlayer(state: DefaultGameState): DefaultGameState {
   return drawText(state, "@", state.playerX, state.playerY, {
     entityType: "player",

@@ -1,7 +1,7 @@
 import { InputState } from "../../core/coreTypes.js";
 import { updateBaseGame } from "../../core/baseGame.js";
 import {
-  createDefaultGame,
+  createDefaultGameState,
   defaultGameOperations,
   type DefaultGameState,
 } from "./core.js";
@@ -15,7 +15,7 @@ import { createNodeAudioService } from "../../utils/nodeAudioService.js";
 function runDefaultGameSimulation() {
   console.log("=== Default Game Module Simulation ===");
 
-  let gameState = createDefaultGame({
+  let gameState = createDefaultGameState({
     initialLives: 3,
     obstacleCount: 5,
     itemCount: 3,
@@ -90,7 +90,7 @@ function runDefaultGameSimulation() {
 }
 
 runDefaultGameSimulation();
-let gameStateFunctional = createDefaultGame({
+let gameStateFunctional = createDefaultGameState({
   audioService: createNodeAudioService(),
   initialLives: 3,
 });

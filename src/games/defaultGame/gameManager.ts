@@ -5,14 +5,11 @@ import {
   BaseGameOptions,
 } from "../../core/coreTypes.js";
 import {
-  BaseGameState,
-  createBaseGame,
   drawText,
   drawCenteredText,
   renderStandardUI,
   renderGameOverScreen,
   clearVirtualScreen,
-  playSoundEffect,
   playBgm,
   stopBgm,
   isGameOver,
@@ -22,7 +19,7 @@ import {
 } from "../../core/baseGame.js";
 import {
   DefaultGameState,
-  createDefaultGame,
+  createDefaultGameState,
   initializeDefaultGame,
   updateDefaultGame,
 } from "./core.js";
@@ -53,15 +50,13 @@ export type DefaultGameManagerOptions = BaseGameOptions & {
 const GAME_OVER_SCREEN_DURATION = 300;
 const GAME_OVER_INPUT_DELAY = 60;
 const BLINK_INTERVAL_FRAMES = 30;
-const TITLE_TO_DEMO_DELAY_FRAMES = 300;
-const DEMO_PLAY_DURATION_FRAMES = 900;
 
-export function createDefaultGameManager(
+export function createDefaultGameManagerState(
   options: DefaultGameManagerOptions = {}
 ): DefaultGameManagerState {
   const { startInPlayingState = false, ...gameOptions } = options;
 
-  const baseGameState = createDefaultGame({
+  const baseGameState = createDefaultGameState({
     ...gameOptions,
     gameName: "Default Game",
   });

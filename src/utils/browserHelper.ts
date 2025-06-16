@@ -8,9 +8,6 @@ import {
   BaseGameOptions,
 } from "../core/coreTypes.js";
 import {
-  BaseGameState,
-  GameOperations,
-  createBaseGame,
   updateBaseGame,
   getVirtualScreenData,
   isGameOver,
@@ -70,7 +67,7 @@ export function renderVirtualScreen(
   }
 }
 
-export function createStandardGameOptions(
+export function createStandardCglOptions(
   screenWidth: number = VIRTUAL_SCREEN_WIDTH,
   screenHeight: number = VIRTUAL_SCREEN_HEIGHT,
   charWidth: number = 4,
@@ -87,15 +84,13 @@ export function createStandardGameOptions(
   };
 }
 
-type ModuleGameFactory = (options?: Partial<BaseGameOptions>) => {
+type GameFactory = (options?: Partial<BaseGameOptions>) => {
   state: any;
   operations: any;
 };
 
-type ClassGameFactory = (options?: Partial<BaseGameOptions>) => any;
-
 export function createStandardGameLoop(
-  gameFactory: ModuleGameFactory,
+  gameFactory: GameFactory,
   gameName?: string,
   enableHighScoreStorage?: boolean,
   screenWidth: number = VIRTUAL_SCREEN_WIDTH,
@@ -193,93 +188,14 @@ export function createStandardGameLoop(
     );
   }
 
-  return { gameUpdate, reinitializeGame };
-}
-
-export function createStandardGameLoopForClass(
-  gameFactory: ClassGameFactory,
-  gameName?: string,
-  enableHighScoreStorage?: boolean,
-  screenWidth: number = VIRTUAL_SCREEN_WIDTH,
-  screenHeight: number = VIRTUAL_SCREEN_HEIGHT,
-  charWidth: number = 4,
-  charHeight: number = 6,
-  enableGlobalReset: boolean = true
-) {
-  let game: any;
-
-  function reinitializeGame() {
-    const gameOptions = {
-      isBrowserEnvironment: true,
-      gameName: gameName,
-      enableHighScoreStorage: enableHighScoreStorage === true,
-    };
-    game = gameFactory(gameOptions);
-
-    // Load high score from localStorage if enabled
-    if (
-      enableHighScoreStorage &&
-      gameName &&
-      game.internalHighScore !== undefined
-    ) {
-      const storedHighScore = loadHighScoreFromStorage(gameName);
-      game.internalHighScore = Math.max(
-        game.internalHighScore,
-        storedHighScore
-      );
-    }
-  }
-
-  function gameUpdate() {
-    if (!game) {
-      reinitializeGame();
-    }
-
-    const gameInputState: InputState = mapCrispInputToGameInputState();
-    const wasGameOver = game.isGameOver ? game.isGameOver() : false;
-
-    if (
-      enableGlobalReset &&
-      gameInputState.r &&
-      keyboard.code.KeyR.isJustPressed
-    ) {
-      if (wasGameOver) {
-        game.update(gameInputState);
-      } else {
-        console.log(
-          "[browserHelper] Global R pressed, reinitializing game via reinitializeGame()."
-        );
-        reinitializeGame();
-      }
-    } else {
-      game.update(gameInputState);
-    }
-
-    // Save high score when game becomes over
-    const isGameOverNow = game.isGameOver ? game.isGameOver() : false;
-    if (!wasGameOver && isGameOverNow && enableHighScoreStorage && gameName) {
-      if (game.internalHighScore !== undefined) {
-        saveHighScoreToStorage(gameName, game.internalHighScore);
-      }
-    }
-
-    const virtualScreenData = game.getVirtualScreenData();
-    renderVirtualScreen(
-      virtualScreenData,
-      screenWidth,
-      screenHeight,
-      charWidth,
-      charHeight
-    );
-  }
-
-  return { gameUpdate, reinitializeGame };
+  return { gameUpdate };
 }
 
 export interface StandardGameHelperOptions {
-  enableGlobalReset?: boolean;
   gameName?: string;
+  enableGlobalReset?: boolean;
   enableHighScoreStorage?: boolean;
+  audioQuantize?: number;
 }
 
 // High score localStorage operations
@@ -320,15 +236,15 @@ export function saveHighScoreToStorage(gameName: string, score: number): void {
 }
 
 export function initStandardTextGame(
-  gameFactory: ModuleGameFactory,
+  gameFactory: GameFactory,
   helperOptions: Partial<StandardGameHelperOptions> = {},
   cglOptions?: Partial<Options>,
   audioFiles?: { [key: string]: string }
 ): void {
-  const defaultOptions = createStandardGameOptions();
-  const _cglOptions = { ...defaultOptions, ...cglOptions };
+  const defaultCglOptions = createStandardCglOptions();
+  const _cglOptions = { ...defaultCglOptions, ...cglOptions };
 
-  const { gameUpdate, reinitializeGame } = createStandardGameLoop(
+  const { gameUpdate } = createStandardGameLoop(
     gameFactory,
     helperOptions.gameName,
     helperOptions.enableHighScoreStorage === true,
@@ -344,33 +260,7 @@ export function initStandardTextGame(
     options: _cglOptions,
     audioFiles,
   });
-}
-
-export function initStandardTextGameForClass(
-  gameFactory: ClassGameFactory,
-  helperOptions: Partial<StandardGameHelperOptions> = {},
-  cglOptions?: Partial<Options>,
-  audioFiles?: { [key: string]: string }
-): void {
-  const defaultOptions = createStandardGameOptions();
-  const _cglOptions = { ...defaultOptions, ...cglOptions };
-
-  const { gameUpdate, reinitializeGame } = createStandardGameLoopForClass(
-    gameFactory,
-    helperOptions.gameName,
-    helperOptions.enableHighScoreStorage === true,
-    VIRTUAL_SCREEN_WIDTH,
-    VIRTUAL_SCREEN_HEIGHT,
-    4,
-    6,
-    helperOptions.enableGlobalReset === true
-  );
-
-  init({
-    update: gameUpdate,
-    options: _cglOptions,
-    audioFiles,
-  });
+  sss.setQuantize(helperOptions.audioQuantize || 8);
 }
 
 export function playSoundEffect(sound: SoundEffectType, seed?: number): void {
@@ -387,4 +277,83 @@ export function startPlayingBgm(): void {
 
 export function stopPlayingBgm(): void {
   stopBgm();
+}
+
+export function createGameFactory<TState, TOptions extends BaseGameOptions>(
+  createState: (options: TOptions) => TState,
+  operations: {
+    initializeGame: (state: TState) => TState;
+    updateGame: (state: TState, input: InputState) => TState;
+  },
+  defaultAudioService?: () => any
+): GameFactory {
+  return (options?: Partial<BaseGameOptions>) => {
+    const gameOptions = {
+      ...(defaultAudioService ? { audioService: defaultAudioService() } : {}),
+      ...options,
+    } as TOptions;
+
+    const state = createState(gameOptions);
+    return { state, operations };
+  };
+}
+
+export function createSimpleGameFactory<
+  TState,
+  TOptions extends BaseGameOptions
+>(
+  createState: (options: TOptions) => TState,
+  initializeGame: (state: TState) => TState,
+  updateGame: (state: TState, input: InputState) => TState,
+  defaultAudioService?: () => any
+): GameFactory {
+  return createGameFactory(
+    createState,
+    { initializeGame, updateGame },
+    defaultAudioService
+  );
+}
+
+/**
+ * Configuration object for game initialization
+ * @template TState Game state type
+ * @template TOptions Game options type
+ */
+export interface GameConfig<TState, TOptions extends BaseGameOptions> {
+  /** Function to create game state */
+  createState: (options: TOptions) => TState;
+  /** Function to initialize the game */
+  initializeGame: (state: TState) => TState;
+  /** Function to update the game */
+  updateGame: (state: TState, input: InputState) => TState;
+  /** Default audio service (typically createBrowserAudioService) */
+  defaultAudioService?: () => any;
+  /** Basic game settings (name, high score storage, etc.) */
+  gameSettings: Partial<StandardGameHelperOptions>;
+  /** crisp-game-lib options (sound, theme, etc.) */
+  cglOptions?: Partial<Options>;
+  /** Audio file mappings */
+  audioFiles?: { [key: string]: string };
+}
+
+/**
+ * Initialize game from configuration object
+ * Provides a cleaner and more type-safe alternative to the gameFactory pattern
+ */
+export function initGame<TState, TOptions extends BaseGameOptions>(
+  config: GameConfig<TState, TOptions>
+): void {
+  const gameFactory = createSimpleGameFactory(
+    config.createState,
+    config.initializeGame,
+    config.updateGame,
+    config.defaultAudioService
+  );
+
+  initStandardTextGame(
+    gameFactory,
+    config.gameSettings,
+    config.cglOptions,
+    config.audioFiles
+  );
 }
