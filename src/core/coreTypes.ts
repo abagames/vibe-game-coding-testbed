@@ -8,7 +8,6 @@ export type cglColor =
   | "purple"
   | "cyan"
   | "light_black"
-  | "light_white"
   | "light_red"
   | "light_green"
   | "light_blue"
@@ -71,6 +70,7 @@ export interface BaseGameOptions {
   initialLives?: number; // Default: 3
   isDemoPlay?: boolean; // Default: false. If true, disables sound and other features for automated testing or demonstration.
   audioService?: AudioService; // Optional audio service for sound and music
+  audioQuantize?: number; // Optional audio quantize value for sound and music
 
   // High score related options
   gameName?: string; // Name of the game, used for high score storage key
