@@ -265,7 +265,7 @@ export class HopwayGameManager extends BaseGame {
       titleText,
       titleX,
       titleY,
-      "#",
+      "W",
       {
         color: "cyan",
       }
