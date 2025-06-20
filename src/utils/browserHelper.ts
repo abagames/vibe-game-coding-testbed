@@ -260,7 +260,9 @@ export function initStandardTextGame(
     options: _cglOptions,
     audioFiles,
   });
-  sss.setQuantize(helperOptions.audioQuantize || 8);
+  if (helperOptions.audioQuantize) {
+    sss.setQuantize(helperOptions.audioQuantize);
+  }
 }
 
 export function playSoundEffect(sound: SoundEffectType, seed?: number): void {
