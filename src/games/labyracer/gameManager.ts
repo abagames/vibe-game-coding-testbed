@@ -260,7 +260,7 @@ function updateTitleScreen(
     inputState.space ||
     inputState.enter
   ) {
-    return startGameFromTitle(state);
+    return startGame(state);
   }
 
   let newState = { ...state };
@@ -349,7 +349,7 @@ function updateGameOverScreen(
       inputState.space ||
       inputState.enter)
   ) {
-    return startGameFromTitle(state);
+    return startGame(state);
   }
 
   if (newState.gameOverTimer <= 0) {
@@ -361,12 +361,11 @@ function updateGameOverScreen(
   return newState;
 }
 
-function startGameFromTitle(
-  state: LabyracerManagerState
-): LabyracerManagerState {
+function startGame(state: LabyracerManagerState): LabyracerManagerState {
   let newState = initializeLabyracer(state) as LabyracerManagerState;
   newState.gameFlowState = GAME_FLOW_STATE_PLAYING;
   newState.isDemoPlay = false;
+  playBgm(newState);
   return newState;
 }
 
@@ -420,26 +419,6 @@ function resetTitleAnimationStates(
   };
 }
 
-function startGameFromDemo(
-  state: LabyracerManagerState
-): LabyracerManagerState {
-  let newState = initializeLabyracer(state) as LabyracerManagerState;
-
-  newState = {
-    ...newState,
-    gameFlowState: GAME_FLOW_STATE_PLAYING,
-    isDemoPlay: false,
-    // lastScore: 0, // この行を削除してlastScoreを保持
-  };
-
-  newState = resetTitleAnimationStates(newState);
-
-  // デモモードから通常ゲームに移行する際にBGMを開始
-  playBgm(newState);
-
-  return newState;
-}
-
 function updateDemoScreen(
   state: LabyracerManagerState,
   inputState: InputState
@@ -451,7 +430,7 @@ function updateDemoScreen(
     inputState.space ||
     inputState.enter
   ) {
-    return startGameFromDemo(state);
+    return startGame(state);
   }
 
   let newState = { ...state };

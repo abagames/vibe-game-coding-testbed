@@ -17,7 +17,6 @@ import {
   renderStandardUI,
   playSoundEffect,
   playMml,
-  playBgm,
   getHighScore,
 } from "../../core/baseGame.js";
 
@@ -812,7 +811,7 @@ export function initializeLabyracer(state: LabyracerState): LabyracerState {
   if (isTestMode_Active) {
   }
 
-  // ゲーム開始時にBGMを開始
+  // ゲーム状態を返す（BGMの制御はGameManagerが担当）
   const finalState = {
     ...newState,
     maze,
@@ -823,9 +822,6 @@ export function initializeLabyracer(state: LabyracerState): LabyracerState {
     enemies,
     rocks,
   };
-
-  // BGMを開始
-  playBgm(finalState);
 
   return finalState;
 }
