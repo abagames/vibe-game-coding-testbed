@@ -10,6 +10,8 @@ import {
   BaseGameOptions,
 } from "./coreTypes.js";
 
+const EMPTY_CELL: CellInfo = Object.freeze({ char: " ", attributes: {} });
+
 export type BaseGameState = {
   virtualScreen: GridData;
   score: number;
@@ -54,7 +56,7 @@ export function createBaseGame(options: BaseGameOptions = {}): BaseGameState {
     gameName,
     enableHighScoreStorage,
     isBrowserEnvironment,
-    internalHighScore: 0, // Initialize to 0, actual loading handled by browserHelper
+    internalHighScore: 0,
   };
 
   return state;
@@ -65,7 +67,7 @@ function initializeVirtualScreen(): GridData {
   for (let y = 0; y < VIRTUAL_SCREEN_HEIGHT; y++) {
     const row: CellInfo[] = [];
     for (let x = 0; x < VIRTUAL_SCREEN_WIDTH; x++) {
-      row.push({ char: " ", attributes: {} });
+      row.push(EMPTY_CELL);
     }
     screen.push(row);
   }
@@ -73,15 +75,7 @@ function initializeVirtualScreen(): GridData {
 }
 
 export function clearVirtualScreen(state: BaseGameState): BaseGameState {
-  const newScreen: GridData = [];
-  for (let y = 0; y < VIRTUAL_SCREEN_HEIGHT; y++) {
-    const row: CellInfo[] = [];
-    for (let x = 0; x < VIRTUAL_SCREEN_WIDTH; x++) {
-      row.push({ char: " ", attributes: {} });
-    }
-    newScreen.push(row);
-  }
-
+  const newScreen = state.virtualScreen.map((row) => row.map(() => EMPTY_CELL));
   return {
     ...state,
     virtualScreen: newScreen,
@@ -102,18 +96,27 @@ export function drawText(
     return state;
   }
 
-  const newScreen = state.virtualScreen.map((row) => [...row]);
+  const newScreen = [...state.virtualScreen];
+  const targetRow = [...newScreen[y]];
 
+  let modified = false;
   for (let i = 0; i < text.length; i++) {
     const currentX = x + i;
     if (currentX < 0 || currentX >= VIRTUAL_SCREEN_WIDTH) {
       continue;
     }
-    newScreen[y][currentX] = {
+    targetRow[currentX] = {
       char: text[i],
       attributes: { ...attributes },
     };
+    modified = true;
   }
+
+  if (!modified) {
+    return state;
+  }
+
+  newScreen[y] = targetRow;
 
   return {
     ...state,
@@ -131,43 +134,123 @@ export function drawCenteredText(
   return drawText(state, text, startX, y, attributes);
 }
 
+export type TextDrawCommand = {
+  text: string;
+  x: number;
+  y: number;
+  attributes?: CellAttributes;
+};
+
+export function drawTextBatch(
+  state: BaseGameState,
+  commands: TextDrawCommand[]
+): BaseGameState {
+  if (commands.length === 0) {
+    return state;
+  }
+
+  const modifiedRows = new Set<number>();
+  const validCommands: TextDrawCommand[] = [];
+
+  for (const cmd of commands) {
+    const y = Math.floor(cmd.y);
+    if (y >= 0 && y < VIRTUAL_SCREEN_HEIGHT) {
+      modifiedRows.add(y);
+      validCommands.push({ ...cmd, y });
+    }
+  }
+
+  if (validCommands.length === 0) {
+    return state;
+  }
+
+  const newScreen = [...state.virtualScreen];
+  const copiedRows = new Map<number, CellInfo[]>();
+
+  for (const rowIndex of modifiedRows) {
+    copiedRows.set(rowIndex, [...newScreen[rowIndex]]);
+  }
+
+  for (const cmd of validCommands) {
+    const x = Math.floor(cmd.x);
+    const y = cmd.y;
+    const row = copiedRows.get(y)!;
+
+    for (let i = 0; i < cmd.text.length; i++) {
+      const currentX = x + i;
+      if (currentX >= 0 && currentX < VIRTUAL_SCREEN_WIDTH) {
+        row[currentX] = {
+          char: cmd.text[i],
+          attributes: { ...cmd.attributes },
+        };
+      }
+    }
+  }
+
+  for (const [rowIndex, row] of copiedRows) {
+    newScreen[rowIndex] = row;
+  }
+
+  return {
+    ...state,
+    virtualScreen: newScreen,
+  };
+}
+
 export function renderStandardUI(state: BaseGameState): BaseGameState {
-  let newState = state;
-
-  newState = drawText(newState, `Score: ${state.score}`, 1, 0, {
-    color: "white",
-  });
-
-  newState = drawText(newState, `Lives: ${state.lives}`, 31, 0, {
-    color: "white",
-  });
-
-  newState = drawText(newState, "R: Restart", 1, VIRTUAL_SCREEN_HEIGHT - 1, {
-    color: "light_black",
-  });
-
-  return newState;
+  return drawTextBatch(state, [
+    {
+      text: `Score: ${state.score}`,
+      x: 1,
+      y: 0,
+      attributes: { color: "white" },
+    },
+    {
+      text: `Lives: ${state.lives}`,
+      x: 31,
+      y: 0,
+      attributes: { color: "white" },
+    },
+    {
+      text: "R: Restart",
+      x: 1,
+      y: VIRTUAL_SCREEN_HEIGHT - 1,
+      attributes: { color: "light_black" },
+    },
+  ]);
 }
 
 export function renderGameOverScreen(state: BaseGameState): BaseGameState {
   const gameOverMessage = "Game Over!";
-  const messageColor = "red";
   const gameOverMessageY = Math.floor(VIRTUAL_SCREEN_HEIGHT / 2) - 2;
-
-  let newState = drawCenteredText(state, gameOverMessage, gameOverMessageY, {
-    color: messageColor as any,
-  });
-
   const finalScoreY = gameOverMessageY + 1;
-  newState = drawCenteredText(newState, `Score: ${state.score}`, finalScoreY, {
-    color: "white",
-  });
-
   const highScore = getHighScore(state);
+
+  const drawCommands: TextDrawCommand[] = [
+    {
+      text: gameOverMessage,
+      x: Math.floor(VIRTUAL_SCREEN_WIDTH / 2 - gameOverMessage.length / 2),
+      y: gameOverMessageY,
+      attributes: { color: "red" },
+    },
+    {
+      text: `Score: ${state.score}`,
+      x: Math.floor(
+        VIRTUAL_SCREEN_WIDTH / 2 - `Score: ${state.score}`.length / 2
+      ),
+      y: finalScoreY,
+      attributes: { color: "white" },
+    },
+  ];
+
   if (highScore > 0) {
+    const highScoreText = `High: ${highScore}`;
     const highScoreY = finalScoreY + 1;
-    newState = drawCenteredText(newState, `High: ${highScore}`, highScoreY, {
-      color: "light_cyan",
+    drawCommands.push({
+      text: highScoreText,
+      x: Math.floor(VIRTUAL_SCREEN_WIDTH / 2 - highScoreText.length / 2),
+      y: highScoreY,
+      attributes: { color: "light_cyan" },
     });
   }
 
@@ -175,11 +258,15 @@ export function renderGameOverScreen(state: BaseGameState): BaseGameState {
     highScore > 0
       ? Math.floor(VIRTUAL_SCREEN_HEIGHT / 2) + 2
       : Math.floor(VIRTUAL_SCREEN_HEIGHT / 2) + 1;
-  newState = drawCenteredText(newState, "Press R to restart", restartPromptY, {
-    color: "white",
+  const restartText = "Press R to restart";
+  drawCommands.push({
+    text: restartText,
+    x: Math.floor(VIRTUAL_SCREEN_WIDTH / 2 - restartText.length / 2),
+    y: restartPromptY,
+    attributes: { color: "white" },
   });
 
-  return newState;
+  return drawTextBatch(state, drawCommands);
 }
 
 export function getCellInfo(
@@ -322,13 +409,10 @@ export function updateBaseGame(
     newState = operations.initializeGame(newState);
   }
 
+  newState = clearVirtualScreen(newState);
   if (!isGameOver(newState)) {
-    newState = clearVirtualScreen(newState);
     newState = operations.updateGame(newState, inputState);
-  }
-
-  if (isGameOver(newState)) {
-    newState = clearVirtualScreen(newState);
+  } else {
     newState = renderGameOverScreen(newState);
   }
 
