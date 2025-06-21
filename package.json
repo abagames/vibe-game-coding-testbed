@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "sim:default": "npx tsx src/games/defaultGame/sim.ts",
     "sim:blasnake": "npx tsx src/games/blasnake/sim.ts",
-    "sim:hopway": "npx tsx src/games/hopway/sim.ts"
+    "sim:hopway": "npx tsx src/games/hopway/sim.ts",
+    "sim:labyracer": "npx tsx src/games/labyracer/sim.ts"
   },
   "keywords": [
     "vibe-coding",
