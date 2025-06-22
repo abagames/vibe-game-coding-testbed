@@ -38,6 +38,8 @@ Navigate through dynamic mazes while being chased by enemy cars! Only the maze a
 
 Play Labyracer in your PC web browser: [Play Labyracer](https://abagames.github.io/vibe-game-coding-testbed/labyracer/)
 
+https://github.com/user-attachments/assets/10feebda-69ef-43e0-8cfc-3c68d5787faf
+
 ## Quick Start
 
 ### Prerequisites
