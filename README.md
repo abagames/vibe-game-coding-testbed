@@ -32,6 +32,12 @@ Play Hopway in your PC web browser: [Play Hopway](https://abagames.github.io/vib
 
 https://github.com/user-attachments/assets/dea428d2-1ec1-43c1-900f-a19e3e4aebda
 
+### Labyracer
+
+Navigate through dynamic mazes while being chased by enemy cars! Only the maze around your car (@) is visible. Use this limited visibility to cleverly evade enemies. Press Z/X/Space keys to deploy smoke trails from your car that stun enemies on contact - but watch your fuel consumption! Collect flags (F) scattered throughout the maze to score points. When you collect all flags on one side, a special flag appears on the opposite side - collect it to freeze and eliminate enemies. Use Arrow keys or W/A/S/D to control your car.
+
+Play Labyracer in your PC web browser: [Play Labyracer](https://abagames.github.io/vibe-game-coding-testbed/labyracer/)
+
 ## Quick Start
 
 ### Prerequisites
