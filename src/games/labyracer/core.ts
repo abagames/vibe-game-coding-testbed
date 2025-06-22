@@ -421,11 +421,12 @@ function generateSpecialFlag(
   return null;
 }
 
-function generateRocks(
+function generateRocksForSide(
   maze: boolean[][],
   width: number,
   height: number,
-  difficulty: number
+  difficulty: number,
+  side: "left" | "right"
 ): Position[] {
   const rocks: Position[] = [];
   const rockCount = Math.floor(difficulty);
@@ -434,9 +435,13 @@ function generateRocks(
     return rocks;
   }
 
+  const halfWidth = Math.floor(width / 2);
+  const startX = side === "left" ? 0 : halfWidth;
+  const endX = side === "left" ? halfWidth : width;
+
   const wallPositions: Position[] = [];
   for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
+    for (let x = startX; x < endX; x++) {
       if ((y % 2 === 0 && x % 2 === 0) || (y % 2 === 1 && x % 2 === 1)) {
         continue;
       }
@@ -583,12 +588,17 @@ function regenerateHalf(
     for (const flag of state.specialFlags) {
       maze[flag.y][flag.x] = false;
     }
-    const newRocks = generateRocks(
+
+    // 右側の岩を保持し、左側のみ新しい岩を生成
+    const rightRocks = state.rocks.filter((rock) => rock.x >= halfWidth);
+    const leftRocks = generateRocksForSide(
       maze,
       state.mazeWidth,
       state.mazeHeight,
-      state.difficulty
+      state.difficulty,
+      "left"
     );
+    const newRocks = [...leftRocks, ...rightRocks];
 
     return {
       ...state,
@@ -620,12 +630,17 @@ function regenerateHalf(
     for (const flag of state.specialFlags) {
       maze[flag.y][flag.x] = false;
     }
-    const newRocks = generateRocks(
+
+    // 左側の岩を保持し、右側のみ新しい岩を生成
+    const leftRocks = state.rocks.filter((rock) => rock.x < halfWidth);
+    const rightRocks = generateRocksForSide(
       maze,
       state.mazeWidth,
       state.mazeHeight,
-      state.difficulty
+      state.difficulty,
+      "right"
     );
+    const newRocks = [...leftRocks, ...rightRocks];
 
     return {
       ...state,
@@ -685,13 +700,6 @@ export function initializeLabyracer(state: LabyracerState): LabyracerState {
     newState.mazeHeight
   );
 
-  const rocks = generateRocks(
-    maze,
-    newState.mazeWidth,
-    newState.mazeHeight,
-    newState.difficulty
-  );
-
   const enemies: Enemy[] = [];
 
   const isTestMode_Active = false;
@@ -705,7 +713,7 @@ export function initializeLabyracer(state: LabyracerState): LabyracerState {
     hasCollectedAllLeftFlags: false,
     hasCollectedAllRightFlags: false,
     enemies,
-    rocks,
+    rocks: [],
   };
 
   return finalState;
