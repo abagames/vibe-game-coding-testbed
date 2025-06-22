@@ -2,12 +2,10 @@ import {
   InputState,
   VIRTUAL_SCREEN_WIDTH,
   VIRTUAL_SCREEN_HEIGHT,
-  BaseGameOptions,
 } from "../../core/coreTypes.js";
 import {
   drawText,
   drawCenteredText,
-  renderStandardUI,
   clearVirtualScreen,
   playBgm,
   stopBgm,
@@ -25,7 +23,6 @@ import {
   updateLabyracer,
 } from "./core.js";
 
-// Game flow state constants
 const GAME_FLOW_STATE_TITLE = 0;
 const GAME_FLOW_STATE_DEMO = 1;
 const GAME_FLOW_STATE_PLAYING = 2;
@@ -34,44 +31,40 @@ const GAME_FLOW_STATE_GAME_OVER = 3;
 const GAME_OVER_SCREEN_DURATION = 300;
 const GAME_OVER_INPUT_DELAY = 60;
 const BLINK_INTERVAL_FRAMES = 30;
-const TITLE_TO_DEMO_DELAY_FRAMES = 1800; // 30 seconds at 60FPS (デモンストレーションを複数回見られるように延長)
-const DEMO_PLAY_DURATION_FRAMES = 900; // 15 seconds at 60FPS
-const DEMO_AI_INPUT_COOLDOWN_FRAMES = 20; // AI changes input every ~0.33s
+const TITLE_TO_DEMO_DELAY_FRAMES = 1800;
+const DEMO_PLAY_DURATION_FRAMES = 900;
+const DEMO_AI_INPUT_COOLDOWN_FRAMES = 20;
 
-// タイトル画面のフェーズ定数
-const TITLE_PHASE_INITIAL_DISPLAY = 0; // 初期表示
-const TITLE_PHASE_MOVING_UP = 1; // タイトルが上に移動
-const TITLE_PHASE_DEMONSTRATION = 2; // デモンストレーション実行
-const TITLE_PHASE_WAITING_FOR_DEMO = 3; // デモ画面への移行待機
+const TITLE_PHASE_INITIAL_DISPLAY = 0;
+const TITLE_PHASE_MOVING_UP = 1;
+const TITLE_PHASE_DEMONSTRATION = 2;
+const TITLE_PHASE_WAITING_FOR_DEMO = 3;
 
-// タイトル関連の定数
-const TITLE_INITIAL_Y = 12; // タイトルの初期Y座標（中央付近）
-const TITLE_FINAL_Y = 4; // タイトルの最終Y座標（上方向）
-const TITLE_MOVE_DURATION = 120; // タイトル移動時間（2秒）
-const DEMONSTRATION_START_DELAY = 60; // デモンストレーション開始前の待機時間（1秒）
-const POST_DEMO_WAIT_TIME = 180; // デモンストレーション終了後の待機時間（3秒）
+const TITLE_INITIAL_Y = 12;
+const TITLE_FINAL_Y = 4;
+const TITLE_MOVE_DURATION = 120;
+const DEMONSTRATION_START_DELAY = 60;
+const POST_DEMO_WAIT_TIME = 180;
 
-// デモンストレーション関連の定数
-const DEMO_PHASE_DURATION = 120; // 各フェーズの継続時間（2秒）
-const DEMO_PASSAGE_Y = 16; // 通路のY座標
-const DEMO_PASSAGE_START_X = 8; // 通路の開始X座標
-const DEMO_PASSAGE_END_X = 32; // 通路の終了X座標
-const DEMO_CAR_INITIAL_X = 10; // 自車の初期X座標
-const DEMO_FLAG_X = 28; // 旗のX座標
-const DEMO_ENEMY_X = 30; // 敵のX座標
-const DEMO_SPECIAL_FLAG_X = 12; // 特別な旗のX座標
+const DEMO_PHASE_DURATION = 120;
+const DEMO_PASSAGE_Y = 16;
+const DEMO_PASSAGE_START_X = 8;
+const DEMO_PASSAGE_END_X = 32;
+const DEMO_CAR_INITIAL_X = 10;
+const DEMO_FLAG_X = 28;
+const DEMO_ENEMY_X = 30;
+const DEMO_SPECIAL_FLAG_X = 12;
 
-// デモンストレーションのフェーズ定数
-const DEMO_PHASE_SHOW_PASSAGE = 0; // 通路と初期配置を表示
-const DEMO_PHASE_MOVE_TO_FLAG = 1; // 自車が旗に向かって移動
-const DEMO_PHASE_COLLECT_FLAG = 2; // 旗を取得
-const DEMO_PHASE_ENEMY_SPAWN = 3; // 敵が出現
-const DEMO_PHASE_SPECIAL_FLAG_SPAWN = 4; // 特別な旗が出現
-const DEMO_PHASE_MOVE_TO_SPECIAL_FLAG = 5; // 自車が特別な旗に向かって移動
-const DEMO_PHASE_COLLECT_SPECIAL_FLAG = 6; // 特別な旗を取得
-const DEMO_PHASE_MAZE_TRANSITION = 7; // 迷路変更エフェクト
-const DEMO_PHASE_SCORE_EFFECT = 8; // スコアエフェクト表示
-const DEMO_PHASE_RESET = 9; // リセット準備
+const DEMO_PHASE_SHOW_PASSAGE = 0;
+const DEMO_PHASE_MOVE_TO_FLAG = 1;
+const DEMO_PHASE_COLLECT_FLAG = 2;
+const DEMO_PHASE_ENEMY_SPAWN = 3;
+const DEMO_PHASE_SPECIAL_FLAG_SPAWN = 4;
+const DEMO_PHASE_MOVE_TO_SPECIAL_FLAG = 5;
+const DEMO_PHASE_COLLECT_SPECIAL_FLAG = 6;
+const DEMO_PHASE_MAZE_TRANSITION = 7;
+const DEMO_PHASE_SCORE_EFFECT = 8;
+const DEMO_PHASE_RESET = 9;
 
 export type LabyracerManagerState = LabyracerState & {
   gameFlowState: number;
@@ -85,12 +78,10 @@ export type LabyracerManagerState = LabyracerState & {
   demoCurrentInput: InputState;
   demoInputCooldown: number;
   gameTickCounter: number;
-  // タイトル画面のフェーズ管理
   titlePhase: number;
   titleY: number;
   titleMoveTimer: number;
   postDemoWaitTimer: number;
-  // デモンストレーション用の状態
   demonstrationPhase: number;
   demonstrationTimer: number;
   demoCarX: number;
@@ -106,13 +97,11 @@ export type LabyracerManagerState = LabyracerState & {
   demoScoreEffectTimer: number;
   demoScoreEffectX: number;
   demoScoreEffectY: number;
-  // 煙とスタン機能
-  demoSmokeTrails: Array<{ x: number; timer: number }>; // 煙の軌跡
-  demoSmokeCount: number; // 出現させた煙の数
-  demoEnemyStunned: boolean; // 敵のスタン状態
-  demoEnemyStunnedTimer: number; // 敵のスタンタイマー
-  demoEnemyStunnedDirection: number; // スタン中の回転方向
-  // デモンストレーション完了フラグ
+  demoSmokeTrails: Array<{ x: number; timer: number }>;
+  demoSmokeCount: number;
+  demoEnemyStunned: boolean;
+  demoEnemyStunnedTimer: number;
+  demoEnemyStunnedDirection: number;
   demonstrationCompleted: boolean;
 };
 
@@ -125,14 +114,11 @@ export function createLabyracerManagerState(
 ): LabyracerManagerState {
   const { startInPlayingState = false, ...gameOptions } = options;
 
-  // GameManagerではタイトル画面から開始するため、ゲーム状態は初期化しない
-  // ただし、startInPlayingStateがtrueの場合は初期化を行う
   let baseGameState = createLabyracerState({
     ...gameOptions,
     gameName: "Labyracer",
   });
 
-  // プレイ状態から開始する場合のみ、ゲームを初期化
   if (startInPlayingState) {
     baseGameState = initializeLabyracer(baseGameState);
   }
@@ -160,16 +146,14 @@ export function createLabyracerManagerState(
     },
     demoInputCooldown: 0,
     gameTickCounter: 0,
-    // タイトル画面のフェーズ管理を初期化
     titlePhase: TITLE_PHASE_INITIAL_DISPLAY,
     titleY: TITLE_INITIAL_Y,
     titleMoveTimer: 0,
     postDemoWaitTimer: 0,
-    // デモンストレーション用の状態を初期化
     demonstrationPhase: DEMO_PHASE_SHOW_PASSAGE,
     demonstrationTimer: 0,
     demoCarX: DEMO_CAR_INITIAL_X,
-    demoCarDirection: 1, // 右向き
+    demoCarDirection: 1,
     demoFlagVisible: true,
     demoEnemyVisible: false,
     demoEnemyX: DEMO_ENEMY_X,
@@ -181,13 +165,11 @@ export function createLabyracerManagerState(
     demoScoreEffectTimer: 0,
     demoScoreEffectX: 0,
     demoScoreEffectY: 0,
-    // 煙とスタン機能
     demoSmokeTrails: [],
     demoSmokeCount: 0,
     demoEnemyStunned: false,
     demoEnemyStunnedTimer: 0,
     demoEnemyStunnedDirection: 1,
-    // デモンストレーション完了フラグ
     demonstrationCompleted: false,
   };
 }
@@ -195,8 +177,6 @@ export function createLabyracerManagerState(
 export function initializeGameManager(
   state: LabyracerManagerState
 ): LabyracerManagerState {
-  // GameManagerではタイトル画面から開始するため、ゲーム状態は初期化しない
-  // lastScoreは保持する
   const newState = {
     ...state,
     gameFlowState: GAME_FLOW_STATE_TITLE,
@@ -204,7 +184,7 @@ export function initializeGameManager(
     blinkTimer: 0,
     showStartMessage: true,
     gameOverTimer: 0,
-    // lastScore: 0, // この行を削除してlastScoreを保持
+
     demoPlayTimer: 0,
     isDemoPlay: false,
     titleToDemoTimer: 0,
@@ -216,16 +196,14 @@ export function initializeGameManager(
     },
     demoInputCooldown: 0,
     gameTickCounter: 0,
-    // タイトル画面のフェーズ管理をリセット
     titlePhase: TITLE_PHASE_INITIAL_DISPLAY,
     titleY: TITLE_INITIAL_Y,
     titleMoveTimer: 0,
     postDemoWaitTimer: 0,
-    // デモンストレーション用の状態をリセット
     demonstrationPhase: DEMO_PHASE_SHOW_PASSAGE,
     demonstrationTimer: 0,
     demoCarX: DEMO_CAR_INITIAL_X,
-    demoCarDirection: 1, // 右向き
+    demoCarDirection: 1,
     demoFlagVisible: true,
     demoEnemyVisible: false,
     demoEnemyX: DEMO_ENEMY_X,
@@ -237,13 +215,11 @@ export function initializeGameManager(
     demoScoreEffectTimer: 0,
     demoScoreEffectX: 0,
     demoScoreEffectY: 0,
-    // 煙とスタン機能
     demoSmokeTrails: [],
     demoSmokeCount: 0,
     demoEnemyStunned: false,
     demoEnemyStunnedTimer: 0,
     demoEnemyStunnedDirection: 1,
-    // デモンストレーション完了フラグ
     demonstrationCompleted: false,
   };
 
@@ -273,10 +249,8 @@ function updateTitleScreen(
     newState.blinkTimer = 0;
   }
 
-  // タイトル画面のフェーズ管理
   switch (newState.titlePhase) {
     case TITLE_PHASE_INITIAL_DISPLAY:
-      // 初期表示フェーズ（1秒間）
       if (newState.titleAnimationTimer >= 60) {
         newState.titlePhase = TITLE_PHASE_MOVING_UP;
         newState.titleMoveTimer = 0;
@@ -284,7 +258,6 @@ function updateTitleScreen(
       break;
 
     case TITLE_PHASE_MOVING_UP:
-      // タイトルが上方向に移動するフェーズ
       newState.titleMoveTimer++;
       const progress = Math.min(
         newState.titleMoveTimer / TITLE_MOVE_DURATION,
@@ -297,28 +270,22 @@ function updateTitleScreen(
       if (newState.titleMoveTimer >= TITLE_MOVE_DURATION) {
         newState.titlePhase = TITLE_PHASE_DEMONSTRATION;
         newState.titleY = TITLE_FINAL_Y;
-        // デモンストレーション開始前の待機時間を設定
         newState.demonstrationTimer = -DEMONSTRATION_START_DELAY;
       }
       break;
 
     case TITLE_PHASE_DEMONSTRATION:
-      // デモンストレーション実行フェーズ
       newState = updateDemonstration(newState);
 
-      // デモンストレーションが完了したかチェック
       if (newState.demonstrationCompleted) {
-        // デモンストレーションが1巡完了
         newState.titlePhase = TITLE_PHASE_WAITING_FOR_DEMO;
         newState.postDemoWaitTimer = 0;
       }
       break;
 
     case TITLE_PHASE_WAITING_FOR_DEMO:
-      // デモ画面への移行待機フェーズ
       newState.postDemoWaitTimer++;
       if (newState.postDemoWaitTimer >= POST_DEMO_WAIT_TIME) {
-        // デモ画面に移行
         newState.gameFlowState = GAME_FLOW_STATE_DEMO;
         newState.isDemoPlay = true;
         newState = initializeLabyracer(newState) as LabyracerManagerState;
@@ -387,16 +354,14 @@ function resetTitleAnimationStates(
       enter: false,
     },
     demoInputCooldown: 0,
-    // タイトル画面のフェーズ管理をリセット
     titlePhase: TITLE_PHASE_INITIAL_DISPLAY,
     titleY: TITLE_INITIAL_Y,
     titleMoveTimer: 0,
     postDemoWaitTimer: 0,
-    // デモンストレーション用の状態を初期化
     demonstrationPhase: DEMO_PHASE_SHOW_PASSAGE,
     demonstrationTimer: 0,
     demoCarX: DEMO_CAR_INITIAL_X,
-    demoCarDirection: 1, // 右向き
+    demoCarDirection: 1,
     demoFlagVisible: true,
     demoEnemyVisible: false,
     demoEnemyX: DEMO_ENEMY_X,
@@ -408,13 +373,11 @@ function resetTitleAnimationStates(
     demoScoreEffectTimer: 0,
     demoScoreEffectX: 0,
     demoScoreEffectY: 0,
-    // 煙とスタン機能をリセット
     demoSmokeTrails: [],
     demoSmokeCount: 0,
     demoEnemyStunned: false,
     demoEnemyStunnedTimer: 0,
     demoEnemyStunnedDirection: 1,
-    // デモンストレーション完了フラグをリセット
     demonstrationCompleted: false,
   };
 }
@@ -538,7 +501,6 @@ export function renderGameManager(
       break;
 
     case GAME_FLOW_STATE_PLAYING:
-      // ゲーム中の描画は updateLabyracer 内で行われるため、ここでは何もしない
       break;
 
     case GAME_FLOW_STATE_GAME_OVER:
@@ -554,13 +516,10 @@ function renderTitleScreen(
 ): LabyracerManagerState {
   let newState = state;
 
-  // 大きなタイトル文字を描画（動的なY座標を使用）
   const titleText = "LABYRACER";
   const titleStartX = Math.floor(
     (VIRTUAL_SCREEN_WIDTH - titleText.length * 4) / 2
   );
-
-  // drawLargeTextを使用するためのヘルパー関数
   const drawTextHelper = (
     text: string,
     x: number,
@@ -580,9 +539,7 @@ function renderTitleScreen(
     color: "cyan",
   });
 
-  // タイトル移動が完了してからゲーム説明とデモを表示
   if (state.titlePhase >= TITLE_PHASE_DEMONSTRATION) {
-    // ゲーム説明
     const subtitleLine1 = "Navigate the maze and collect flags";
     const subtitleLine2 = "Use smoke to stun enemies";
     const subtitleY1 = state.titleY + 8;
@@ -594,19 +551,15 @@ function renderTitleScreen(
       color: "white",
     }) as LabyracerManagerState;
 
-    // デモンストレーションの描画（タイマーが正の値になってから）
     if (state.demonstrationTimer >= 0) {
       newState = renderDemonstration(newState);
     }
   }
 
-  // 前回のスコア表示
   const lastScoreText = `SCORE ${state.lastScore}`;
   newState = drawText(newState, lastScoreText, 1, 0, {
     color: "white",
   }) as LabyracerManagerState;
-
-  // ハイスコア表示
   const highScoreText = `HI ${getHighScore(state)}`;
   newState = drawText(
     newState,
@@ -616,7 +569,6 @@ function renderTitleScreen(
     { color: "yellow" }
   ) as LabyracerManagerState;
 
-  // 点滅するスタートメッセージ
   if (state.showStartMessage) {
     const startText = "Press SPACE/Z/X to Start";
     const startY = VIRTUAL_SCREEN_HEIGHT - 3;
@@ -625,7 +577,6 @@ function renderTitleScreen(
     }) as LabyracerManagerState;
   }
 
-  // 操作説明
   const controlsText = "Arrow Keys: Move  Space/Z/X: Smoke";
   const controlsY = VIRTUAL_SCREEN_HEIGHT - 2;
   newState = drawCenteredText(newState, controlsText, controlsY, {
@@ -651,7 +602,6 @@ export function getCurrentFlowState(state: LabyracerManagerState): number {
   return state.gameFlowState;
 }
 
-// labyracer専用のゲームオーバー画面描画関数（Rキーメッセージなし）
 function renderLabyracerManagerGameOverScreen(
   state: LabyracerManagerState
 ): LabyracerManagerState {
@@ -661,18 +611,14 @@ function renderLabyracerManagerGameOverScreen(
 
   let newState = state;
 
-  // ゲームオーバーメッセージ
   newState = drawCenteredText(newState, gameOverMessage, gameOverMessageY, {
     color: "red",
   }) as LabyracerManagerState;
 
-  // 最終スコア
   const scoreText = `Score: ${state.score}`;
   newState = drawCenteredText(newState, scoreText, finalScoreY, {
     color: "white",
   }) as LabyracerManagerState;
-
-  // ハイスコア（存在する場合）
   const highScore = getHighScore(state);
   if (highScore > 0) {
     const highScoreText = `High: ${highScore}`;
@@ -715,7 +661,6 @@ function renderDemoScreen(state: LabyracerManagerState): LabyracerManagerState {
   return newState;
 }
 
-// デモンストレーションの描画処理
 function renderDemonstration(
   state: LabyracerManagerState
 ): LabyracerManagerState {
@@ -782,20 +727,16 @@ function renderDemonstration(
     }
   ) as LabyracerManagerState;
 
-  // 自車を描画
   const carChar = state.demoCarDirection === 1 ? ">" : "<";
   newState = drawText(newState, carChar, state.demoCarX, DEMO_PASSAGE_Y, {
     color: "cyan",
   }) as LabyracerManagerState;
-
-  // 通常の旗を描画
   if (state.demoFlagVisible) {
     newState = drawText(newState, "F", DEMO_FLAG_X, DEMO_PASSAGE_Y, {
       color: "yellow",
     }) as LabyracerManagerState;
   }
 
-  // 敵を描画
   if (state.demoEnemyVisible) {
     let shouldShowEnemy = true;
 
@@ -820,20 +761,18 @@ function renderDemonstration(
     }
   }
 
-  // 煙の軌跡を描画
   for (const smoke of state.demoSmokeTrails) {
-    // タイマーに応じて煙の見た目を変える
     let smokeChar = "*";
     let smokeColor: "white" | "light_black" = "white";
 
     if (smoke.timer > 40) {
-      smokeChar = "*"; // 濃い煙
+      smokeChar = "*";
       smokeColor = "white";
     } else if (smoke.timer > 20) {
-      smokeChar = "o"; // 中程度の煙
+      smokeChar = "o";
       smokeColor = "white";
     } else {
-      smokeChar = "."; // 薄い煙
+      smokeChar = ".";
       smokeColor = "light_black";
     }
 
@@ -842,14 +781,12 @@ function renderDemonstration(
     }) as LabyracerManagerState;
   }
 
-  // 特別な旗を描画
   if (state.demoSpecialFlagVisible) {
     newState = drawText(newState, "S", DEMO_SPECIAL_FLAG_X, DEMO_PASSAGE_Y, {
       color: "cyan",
     }) as LabyracerManagerState;
   }
 
-  // 迷路変更エフェクトの線を描画
   if (state.demoTransitionActive) {
     for (let y = DEMO_PASSAGE_Y - 1; y <= DEMO_PASSAGE_Y + 1; y++) {
       newState = drawText(newState, "|", state.demoTransitionLineX, y, {
@@ -858,7 +795,6 @@ function renderDemonstration(
     }
   }
 
-  // スコアエフェクトを描画
   if (state.demoScoreEffectVisible) {
     newState = drawText(
       newState,
@@ -874,7 +810,6 @@ function renderDemonstration(
   return newState;
 }
 
-// デモンストレーションの更新処理
 function updateDemonstration(
   state: LabyracerManagerState
 ): LabyracerManagerState {
@@ -884,7 +819,6 @@ function updateDemonstration(
 
   switch (newState.demonstrationPhase) {
     case DEMO_PHASE_SHOW_PASSAGE:
-      // 通路と初期配置を表示（2秒間）
       if (newState.demonstrationTimer >= DEMO_PHASE_DURATION) {
         newState.demonstrationPhase = DEMO_PHASE_MOVE_TO_FLAG;
         newState.demonstrationTimer = 0;
@@ -892,9 +826,7 @@ function updateDemonstration(
       break;
 
     case DEMO_PHASE_MOVE_TO_FLAG:
-      // 自車が旗に向かって移動
       if (newState.demonstrationTimer % 8 === 0) {
-        // 8フレームごとに移動
         if (newState.demoCarX < DEMO_FLAG_X - 1) {
           newState.demoCarX++;
         } else {
@@ -905,175 +837,138 @@ function updateDemonstration(
       break;
 
     case DEMO_PHASE_COLLECT_FLAG:
-      // 旗を取得（フラグを消す）
       newState.demoFlagVisible = false;
       if (newState.demonstrationTimer >= 30) {
-        // 0.5秒待機
         newState.demonstrationPhase = DEMO_PHASE_ENEMY_SPAWN;
         newState.demonstrationTimer = 0;
       }
       break;
 
     case DEMO_PHASE_ENEMY_SPAWN:
-      // 敵が出現
       newState.demoEnemyVisible = true;
       if (newState.demonstrationTimer >= 60) {
-        // 1秒待機
         newState.demonstrationPhase = DEMO_PHASE_SPECIAL_FLAG_SPAWN;
         newState.demonstrationTimer = 0;
       }
-      // 敵が出現後、自車を追いかける動作
       if (
         newState.demonstrationTimer > 30 &&
         newState.demonstrationTimer % 12 === 0
       ) {
-        // 0.5秒後から、12フレームごとに移動
         if (newState.demoEnemyX > newState.demoCarX + 2) {
-          // 自車より右にいる場合
-          newState.demoEnemyX--; // 左に移動して追いかける
-          newState.demoEnemyDirection = 3; // 左向き
+          newState.demoEnemyX--;
+          newState.demoEnemyDirection = 3;
         }
       }
       break;
 
     case DEMO_PHASE_SPECIAL_FLAG_SPAWN:
-      // 特別な旗が出現
       newState.demoSpecialFlagVisible = true;
       if (newState.demonstrationTimer >= 60) {
-        // 1秒待機
         newState.demonstrationPhase = DEMO_PHASE_MOVE_TO_SPECIAL_FLAG;
         newState.demonstrationTimer = 0;
       }
-      // 敵が継続して自車を追いかける動作
       if (newState.demonstrationTimer % 12 === 0) {
-        // 12フレームごとに移動
         if (newState.demoEnemyX > newState.demoCarX + 2) {
-          // 自車より右にいる場合
-          newState.demoEnemyX--; // 左に移動して追いかける
-          newState.demoEnemyDirection = 3; // 左向き
+          newState.demoEnemyX--;
+          newState.demoEnemyDirection = 3;
         } else if (newState.demoEnemyX < newState.demoCarX - 2) {
-          // 自車より左にいる場合
-          newState.demoEnemyX++; // 右に移動して追いかける
-          newState.demoEnemyDirection = 1; // 右向き
+          newState.demoEnemyX++;
+          newState.demoEnemyDirection = 1;
         }
       }
       break;
 
     case DEMO_PHASE_MOVE_TO_SPECIAL_FLAG:
-      // 自車が特別な旗に向かって移動
       if (newState.demonstrationTimer % 8 === 0) {
-        // 8フレームごとに移動
         if (newState.demoCarX > DEMO_SPECIAL_FLAG_X + 1) {
-          // 煙を出しながら左に移動（最大3つまで）
           if (newState.demoSmokeCount < 3) {
             newState.demoSmokeTrails.push({
               x: newState.demoCarX,
-              timer: 60, // 1秒間表示
+              timer: 60,
             });
             newState.demoSmokeCount++;
           }
           newState.demoCarX--;
-          newState.demoCarDirection = 3; // 左向き
+          newState.demoCarDirection = 3;
         } else {
           newState.demonstrationPhase = DEMO_PHASE_COLLECT_SPECIAL_FLAG;
           newState.demonstrationTimer = 0;
         }
       }
 
-      // 煙の軌跡を更新
       newState.demoSmokeTrails = newState.demoSmokeTrails
         .map((smoke) => ({ ...smoke, timer: smoke.timer - 1 }))
         .filter((smoke) => smoke.timer > 0);
 
-      // 敵が自車を追いかける動作（自車より少し遅く）
       if (
         !newState.demoEnemyStunned &&
         newState.demonstrationTimer % 15 === 0
       ) {
-        // 15フレームごとに移動（自車より遅い）
         if (newState.demoEnemyX > newState.demoCarX + 2) {
-          // 自車より右にいる場合
-          // 敵が移動する前に煙との衝突をチェック
           const nextEnemyX = newState.demoEnemyX - 1;
           const hitSmoke = newState.demoSmokeTrails.some(
             (smoke) => smoke.x === nextEnemyX
           );
 
           if (hitSmoke) {
-            // 煙に当たったらスタン状態にする
             newState.demoEnemyStunned = true;
             newState.demoEnemyStunnedTimer = 0;
-            newState.demoEnemyStunnedDirection = Math.random() > 0.5 ? 1 : -1; // ランダムな回転方向
-            // 当たった煙を除去
+            newState.demoEnemyStunnedDirection = Math.random() > 0.5 ? 1 : -1;
             newState.demoSmokeTrails = newState.demoSmokeTrails.filter(
               (smoke) => smoke.x !== nextEnemyX
             );
           } else {
             newState.demoEnemyX--;
-            newState.demoEnemyDirection = 3; // 左向き
+            newState.demoEnemyDirection = 3;
           }
         } else if (newState.demoEnemyX < newState.demoCarX - 2) {
-          // 自車より左にいる場合
-          newState.demoEnemyX++; // 右に移動して追いかける
-          newState.demoEnemyDirection = 1; // 右向き
+          newState.demoEnemyX++;
+          newState.demoEnemyDirection = 1;
         }
       }
 
-      // スタン中の敵の処理
       if (newState.demoEnemyStunned) {
         newState.demoEnemyStunnedTimer++;
 
-        // スタン中は回転
         if (newState.demoEnemyStunnedTimer % 10 === 0) {
-          // 10フレームごとに回転
           if (newState.demoEnemyStunnedDirection > 0) {
-            // 時計回り
             newState.demoEnemyDirection = (newState.demoEnemyDirection + 1) % 4;
           } else {
-            // 反時計回り
             newState.demoEnemyDirection = (newState.demoEnemyDirection + 3) % 4;
           }
         }
 
-        // スタン時間終了（約2秒）
         if (newState.demoEnemyStunnedTimer >= 120) {
           newState.demoEnemyStunned = false;
           newState.demoEnemyStunnedTimer = 0;
-          newState.demoEnemyDirection = 3; // 左向きに戻す
+          newState.demoEnemyDirection = 3;
         }
       }
       break;
 
     case DEMO_PHASE_COLLECT_SPECIAL_FLAG:
-      // 特別な旗を取得
       newState.demoSpecialFlagVisible = false;
       if (newState.demonstrationTimer >= 30) {
-        // 0.5秒待機
         newState.demonstrationPhase = DEMO_PHASE_MAZE_TRANSITION;
         newState.demonstrationTimer = 0;
         newState.demoTransitionActive = true;
-        newState.demoTransitionLineX = 20; // 中央から開始
+        newState.demoTransitionLineX = 20;
       }
       break;
 
     case DEMO_PHASE_MAZE_TRANSITION:
-      // 迷路変更エフェクト
       if (newState.demonstrationTimer < 45) {
-        // 0.75秒間のアニメーション（延長）
         const progress = newState.demonstrationTimer / 45;
-        // 線を通路の右端まで進める
-        const startX = 20; // 中央から開始
-        const endX = DEMO_PASSAGE_END_X; // 通路の右端まで
+        const startX = 20;
+        const endX = DEMO_PASSAGE_END_X;
         newState.demoTransitionLineX = Math.floor(
           startX + (endX - startX) * progress
         );
 
-        // 線が敵に到達したら敵を消してスコアエフェクトを表示
         if (
           newState.demoTransitionLineX >= newState.demoEnemyX &&
           newState.demoEnemyVisible
         ) {
-          // 敵の位置を記録してからスコアエフェクトを表示
           newState.demoScoreEffectX = newState.demoEnemyX;
           newState.demoScoreEffectY = DEMO_PASSAGE_Y;
           newState.demoEnemyVisible = false;
@@ -1088,20 +983,15 @@ function updateDemonstration(
       break;
 
     case DEMO_PHASE_SCORE_EFFECT:
-      // スコアエフェクト表示
       newState.demoScoreEffectTimer++;
       if (newState.demonstrationTimer >= 120) {
-        // 2秒間表示
         newState.demonstrationPhase = DEMO_PHASE_RESET;
         newState.demonstrationTimer = 0;
       }
       break;
 
     case DEMO_PHASE_RESET:
-      // リセット準備
       if (newState.demonstrationTimer >= 60) {
-        // 1秒待機
-        // デモンストレーション完了フラグを設定
         newState.demonstrationCompleted = true;
       }
       break;
