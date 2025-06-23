@@ -25,7 +25,7 @@ interface AudioService {
 The [BrowserAudioService](mdc:src/utils/BrowserAudioService.ts) implements AudioService using the sounds-some-sounds library through [browserHelper.ts](mdc:src/utils/browserHelper.ts).
 
 ### Functional Module Support
-For functional modules using [baseGameModule.ts](mdc:src/core/baseGameModule.ts):
+For functional modules using [baseGame.ts](mdc:src/core/baseGame.ts):
 ```typescript
 // Audio functions that don't modify state
 playSoundEffect(state, "powerUp", seed);
@@ -495,5 +495,3 @@ See [Hopway game](mdc:src/games/hopway/core.ts) for comprehensive audio usage:
 - Ambient sound management with `playAmbientEventSound()`
 - Progressive audio warnings based on game state
 - Proper BGM integration and demo mode handling
-- Performance-optimized audio feedback
-

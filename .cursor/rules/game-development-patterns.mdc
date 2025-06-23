@@ -66,32 +66,35 @@ export function updateGameManager(
 }
 ```
 
-### Available BaseGame Module Functions
+## Available BaseGame Module Functions
 From [baseGame.ts](mdc:src/core/baseGame.ts):
 
-#### State Management
+### State Management
 - `createBaseGame(options)`: Create initial base game state
 - `clearVirtualScreen(state)`: Clear the virtual screen and return new state
 - `updateBaseGame(state, input, operations)`: Update base game logic
 
-#### Drawing Functions
+### Drawing Functions
 - `drawText(state, text, x, y, attributes?)`: Draw text and return new state
 - `drawCenteredText(state, text, y, attributes?)`: Draw centered text and return new state
+- `drawTextBatch(state, commands)`: Draw multiple text elements efficiently and return new state
 
-#### Game State Functions
+### Game State Functions
 - `getCellInfo(state, x, y)`: Get cell information at coordinates
 - `addScore(state, value)`: Add to score and return new state with updated high score
 - `loseLife(state)`: Decrease lives, handle game over, return new state
 - `gainLife(state, count?)`: Increase lives by count (default 1), return new state
 - `triggerGameOver(state)`: Manually end the game and return new state
 - `getScore(state)`, `getLives(state)`, `isGameOver(state)`: State getters
+- `getHighScore(state)`: Get current high score
 - `getVirtualScreenData(state)`: Get the full grid data
+- `setIsDemoPlay(state, isDemo)`: Set demo mode state and return new state
 
-#### UI Rendering Functions
+### UI Rendering Functions
 - `renderStandardUI(state)`: Render score, lives, restart instruction, return new state
 - `renderGameOverScreen(state)`: Render game over screen with restart prompt, return new state
 
-#### Audio Functions
+### Audio Functions
 - `playSoundEffect(state, sound, seed?)`: Play sound effect (does not modify state)
 - `playMml(state, mml)`: Play MML music (does not modify state)
 - `playBgm(state)`: Start background music (does not modify state)
@@ -112,7 +115,7 @@ interface BaseGameOptions {
 ## Frame-by-Frame Rendering Pattern
 
 ### Automatic Screen Clearing
-Both functional and class-based approaches automatically clear the screen each frame before calling update functions.
+The screen is cleared automatically each frame before calling update functions.
 
 ### Critical: Draw Order and Collision Detection
 When using screen-based collision detection with `getCellInfo()`, **static elements must be drawn before collision checks**:
@@ -271,28 +274,19 @@ initStandardTextGame(gameFactory, {
 #### GameManager
 For GameManager-based games, use the GameManager's update function instead.
 
-#### Class-based
-```typescript
-import { initStandardTextGameForClass } from "../../utils/browserHelper.js";
-
-initStandardTextGameForClass(
-  () => new YourGame(),
-  { gameName: "Your Game", enableHighScoreStorage: true }
-);
-```
-
 ### 5. Add NPM Scripts
 Add to [package.json](mdc:package.json):
 ```json
 {
-  "sim:yourGame": "npx tsx src/games/yourGame/sim.ts",
-  "sim:yourGame-manager": "npx tsx src/games/yourGame/gameManagerSim.ts"
+  "sim": "npx tsx src/games/yourGame/sim.ts",
+  "sim:gameManager": "npx tsx src/games/yourGame/gameManagerSim.ts"
 }
 ```
 
-## Testing Strategy
-- **Primary**: Use simulation (`npm run sim:yourGame`) for rapid development
-- **GameManager**: Use `npm run sim:yourGame-manager` for flow testing
-- **Secondary**: Browser testing with `npm run dev`
-- **Functional Testing**: Easy to unit test pure functions
-
+## Example References
+See [defaultGame](mdc:src/games/defaultGame) for examples of:
+- Functional state management with [core.ts](mdc:src/games/defaultGame/core.ts)
+- GameManager pattern with [gameManager.ts](mdc:src/games/defaultGame/gameManager.ts)
+- Array-based collision detection (`obstacles`, `items` arrays)
+- Pure function composition
+- Proper state immutability

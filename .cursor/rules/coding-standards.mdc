@@ -14,73 +14,18 @@ Use types from [coreTypes.ts](mdc:src/core/coreTypes.ts):
 - `BaseGameOptions` for game configuration
 - `BaseGameState` for functional game state (when using modules)
 
-## Architectural Patterns
+## Basic File Organization
 
-### Functional Module Pattern (Recommended)
-Follow the modular functional approach from [defaultGame core.ts](mdc:src/games/defaultGame/core.ts):
-- Use pure functions that take state and return new state
-- Define game state types extending `BaseGameState`
-- Use functions from [baseGame.ts](mdc:src/core/baseGame.ts)
-
-```typescript
-export type YourGameState = BaseGameState & {
-  playerX: number;
-  playerY: number;
-  // Add game-specific state
-};
-
-export function createYourGame(options: YourGameOptions = {}): YourGameState {
-  const baseState = createBaseGame(options);
-  return { ...baseState, playerX: 0, playerY: 0 };
-}
-
-export function updateYourGame(state: YourGameState, input: InputState): YourGameState {
-  // Pure function that returns new state
-  return { ...state, playerX: newX, playerY: newY };
-}
-```
-
-### Class-based Pattern (Legacy Support)
-When using the class approach, extend [BaseGame.ts](mdc:src/core/BaseGame.ts):
-- Use named arguments with interfaces
-- Implement required abstract methods
-- Follow established inheritance patterns
-
-### Performance Guidelines
-- Optimize for 40×25 grid operations
-- Minimize object creation in game loops
-- Use array indexing for frequent lookups
-- Cache frequently accessed values
-- **Prefer array-based collision detection** over screen-based
-- Use immutable state updates in functional modules
-
-## Code Organization
-
-### Module-based Games
-- Game logic in `core.ts` with pure functions
-- GameManager in `gameManager.ts` for flow control (optional)
-- Simulation setup in `sim.ts` and `gameManagerSim.ts`
-- Browser integration in `browser.ts`
-- Follow [defaultGame structure](mdc:src/games/defaultGame)
-
-### File Structure Pattern
+### Standard File Structure
 ```
 src/games/[gameName]/
-├── core.ts          // Pure game logic functions
+├── core.ts          // Game logic (functional approach)
 ├── gameManager.ts   // Game flow management (optional)
 ├── sim.ts           // Basic simulation
 ├── gameManagerSim.ts // GameManager simulation
 ├── browser.ts       // Browser entry point
 └── index.html       // Browser execution
 ```
-
-## Example References
-See [defaultGame](mdc:src/games/defaultGame) for examples of:
-- Functional state management with [core.ts](mdc:src/games/defaultGame/core.ts)
-- GameManager pattern with [gameManager.ts](mdc:src/games/defaultGame/gameManager.ts)
-- Array-based collision detection (`obstacles`, `items` arrays)
-- Pure function composition
-- Proper state immutability
 
 ## Commenting Standards
 - Focus on *Why* not *What* in comments
@@ -171,34 +116,12 @@ export function createGame(options: GameOptions = {}): GameState {
 function createGame(initialLives: number = 3, interval: number = 3) {}
 ```
 
-## BaseGame Module Functions (Functional Approach)
-
-### Core State Functions
-- `createBaseGame(options)`: Create initial base game state
-- `clearVirtualScreen(state)`: Clear the virtual screen
-- `updateBaseGame(state, input, operations)`: Update base game logic
-
-### Drawing Functions
-- `drawText(state, text, x, y, attributes?)`: Draw text to virtual screen
-- `drawCenteredText(state, text, y, attributes?)`: Draw centered text
-
-### Game State Functions
-- `getCellInfo(state, x, y)`: Get cell information at coordinates
-- `addScore(state, value)`: Add to score and return new state
-- `loseLife(state)`: Decrease lives and handle game over
-- `triggerGameOver(state)`: Manually end the game
-- `getScore(state)`, `getLives(state)`, `isGameOver(state)`: State getters
-- `getVirtualScreenData(state)`: Get the full grid
-
-### UI Rendering Functions
-- `renderStandardUI(state)`: Render score, lives, and restart instruction
-- `renderGameOverScreen(state)`: Render game over screen with restart prompt
-
-### Audio Functions
-- `playSoundEffect(state, sound, seed?)`: Play sound effect
-- `playMml(state, mml)`: Play MML music
-- `playBgm(state)`: Start background music
-- `stopBgm(state)`: Stop background music
+## Performance Guidelines
+- Optimize for 40×25 grid operations
+- Minimize object creation in game loops
+- Use array indexing for frequent lookups
+- Cache frequently accessed values
+- Use immutable state updates in functional modules
 
 ## Browser Helper Functions
 
@@ -210,10 +133,6 @@ function createGame(initialLives: number = 3, interval: number = 3) {}
 ### Game Setup (Module-based)
 - `initStandardTextGame(gameFactory, helperOptions?, cglOptions?)`: Complete module game initialization
 - `createStandardGameLoop(gameFactory, gameName?, enableHighScore?)`: Creates game loop for modules
-
-### Game Setup (Class-based)
-- `initStandardTextGameForClass(gameFactory, helperOptions?, cglOptions?)`: Complete class game initialization
-- `createStandardGameLoopForClass(gameFactory, gameName?, enableHighScore?)`: Creates game loop for classes
 
 ### Rendering
 - `renderVirtualScreen(virtualScreenData, width, height, charWidth, charHeight)`: Draws the 40×25 grid to canvas

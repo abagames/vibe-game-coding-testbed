@@ -223,19 +223,6 @@ managerState = updateGameManager(managerState, {});
 console.log("Flow state:", managerState.gameFlowState); // Should be GAME_OVER (2)
 ```
 
-#### Class-based Testing (Legacy)
-```typescript
-// Traditional class testing
-const game = new YourGameClass({ initialLives: 1 });
-game.initializeGame();
-
-while (!game.isGameOver()) {
-  const input = constructTestInput(frame);
-  game.update(input);
-  console.log(`Score: ${game.getScore()}, Lives: ${game.getLives()}`);
-}
-```
-
 ### Specific Testing Strategies
 
 #### Collision Detection Testing
@@ -272,26 +259,6 @@ function testGameOverTransition(gameState: YourGameState) {
   // Verify game over triggered correctly
   console.assert(testState.gameOverState === true, "Game over should be triggered");
   console.assert(testState.lives === 0, "Lives should be 0");
-}
-```
-
-#### Performance Testing
-```typescript
-// Test with high entity counts
-function performanceTest() {
-  const startTime = Date.now();
-  
-  let gameState = createYourGame({
-    obstacleCount: 100,  // Many obstacles
-    itemCount: 50,       // Many items
-  });
-  
-  for (let i = 0; i < 1000; i++) {
-    gameState = updateYourGame(gameState, { right: true });
-  }
-  
-  const duration = Date.now() - startTime;
-  console.log(`1000 updates took ${duration}ms`);
 }
 ```
 
@@ -366,9 +333,8 @@ Add simulation scripts to [package.json](mdc:package.json):
 ```json
 {
   "scripts": {
-    "sim:gameName": "npx tsx src/games/gameName/sim.ts",
-    "sim:gameName-manager": "npx tsx src/games/gameName/gameManagerSim.ts",
-    "sim:debug": "npx tsx src/games/gameName/sim.ts --debug"
+    "sim": "npx tsx src/games/gameName/sim.ts",
+    "sim:gameManager": "npx tsx src/games/gameName/gameManagerSim.ts",
   }
 }
 ```
@@ -408,5 +374,3 @@ Add simulation scripts to [package.json](mdc:package.json):
 7. **Test State Immutability**: Ensure functional modules don't mutate input state
 
 Remember: The goal is not just to find bugs, but to understand the system deeply enough to prevent similar issues in the future. Different architectural patterns (functional modules vs classes vs GameManager) require different testing approaches.
-
-
