@@ -1992,11 +1992,8 @@ function getFibonacciLifeThreshold(index: number): number {
 function checkLifeIncrease(state: LabyracerState): LabyracerState {
   const MAX_LIVES = 5;
 
-  if (state.lives >= MAX_LIVES) {
-    return state;
-  }
-
   if (state.score >= state.nextLifeThreshold) {
+    const wasAtMaxLives = state.lives >= MAX_LIVES;
     const newLives = Math.min(state.lives + 1, MAX_LIVES);
     const nextIndex = state.lifeThresholdIndex + 1;
     const nextThreshold = getFibonacciLifeThreshold(nextIndex);
@@ -2008,7 +2005,10 @@ function checkLifeIncrease(state: LabyracerState): LabyracerState {
       lifeThresholdIndex: nextIndex,
     };
 
-    playMml(newState, [...AUDIO_PATTERNS.EXTRA_LIFE_JINGLE]);
+    // 実際にライフが増加した場合のみ音楽を再生
+    if (!wasAtMaxLives) {
+      playMml(newState, [...AUDIO_PATTERNS.EXTRA_LIFE_JINGLE]);
+    }
 
     return newState;
   }
